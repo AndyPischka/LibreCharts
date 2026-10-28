@@ -51,9 +51,10 @@ Domain terms: [docs/glossary.md](docs/glossary.md). Use them consistently in cod
 ## Boundaries
 
 Allowed without asking: edit code, tests and docs; run `uv run poe ...`, `uv sync`, `git status/diff/log`;
-install project-local dependencies that are already declared.
+install project-local dependencies that are already declared; `git commit` and `git push` to `main`
+once `check` is green (Conventional Commits, logically split commits).
 
-Ask first: `git commit`, `git push`, adding or removing a dependency (`uv add/remove`), changing CI,
+Ask first: adding or removing a dependency (`uv add/remove`), changing CI,
 the license, or `.claude/settings.json` / `opencode.json`, any global or system installation.
 
 Never: force-push, create tags or releases, read or write `.env*` files, commit secrets,
