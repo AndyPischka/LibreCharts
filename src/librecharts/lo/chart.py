@@ -10,7 +10,7 @@ from typing import Any
 
 from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
 from librecharts.core.layout.chart import layout_chart
-from librecharts.core.model import ChartState
+from librecharts.core.model import Annotation, ChartState
 from librecharts.lo import render, store, undo
 
 NEW_CHART_SHARE = 0.6  # a new chart covers this share of the slide's width and height
@@ -72,6 +72,15 @@ def redraw(doc: Any, group: Any, state: ChartState) -> None:
             undo=lambda: _apply(doc, group, chart_id, previous),
             redo=lambda: _apply(doc, group, chart_id, state),
         )
+
+
+def add_annotation(doc: Any, group: Any, annotation: Annotation) -> None:
+    """Add ``annotation`` to the chart in ``group`` and redraw it: one undo step."""
+    chart_id = store.chart_id_of(group)
+    state = store.read_state(doc, chart_id) if chart_id else None
+    if state is None:
+        raise ValueError("chart has no stored state")
+    redraw(doc, group, replace(state, annotations=(*state.annotations, annotation)))
 
 
 def _apply(doc: Any, group: Any, chart_id: str, state: ChartState) -> None:

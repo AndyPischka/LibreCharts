@@ -61,6 +61,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.edit_data(self.ctx, self.frame)
             elif url.Path.startswith("AddAnnotation"):
                 commands.add_annotation(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("PickAnnotation"):
+                commands.pick_annotation(self.ctx, self.frame, _query(url))
         except Exception:
             # An exception escaping a Python dispatch can take LibreOffice down with it.
             traceback.print_exc()

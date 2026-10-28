@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Any
 
 from librecharts.core import annotations
 from librecharts.core.messages import text
+from librecharts.core.model import AnnotationKind, ChartState
+from librecharts.core.picking import PickSession, supports
 from librecharts.core.state_io import StateError
-from librecharts.lo import chart, resize, store, ui
+from librecharts.lo import chart, pick, resize, store, ui
 from librecharts.lo.datasheet import OrphanedChartError, open_datasheet
 
 
@@ -65,31 +66,46 @@ def edit_data(ctx: Any, frame: Any) -> None:
 
 def add_annotation(ctx: Any, frame: Any, query: str) -> None:
     """Add the annotation described by ``query`` (see ``annotations.from_query``) to the selected
-    chart; one undo step."""
+    chart; one undo step. Used by tests and scripts; users pick columns instead."""
     annotation = annotations.from_query(query)
+    found = _annotatable_chart(ctx, frame, annotation.kind)
+    if found is not None:
+        group, _ = found
+        chart.add_annotation(frame.getController().getModel(), group, annotation)
+
+
+def pick_annotation(ctx: Any, frame: Any, query: str) -> None:
+    """Start pick mode for the annotation kind (and style) in ``query`` on the selected chart."""
+    session = PickSession.from_query(query)
+    found = _annotatable_chart(ctx, frame, session.kind)
+    if found is not None:
+        group, state = found
+        pick.start(ctx, frame, group, state, session)
+
+
+def _annotatable_chart(ctx: Any, frame: Any, kind: AnnotationKind) -> tuple[Any, ChartState] | None:
+    """The selected chart and its state if it can get an annotation of ``kind``; else tell the
+    user why not and return ``None``."""
     controller = frame.getController()
     locale = ui.ui_locale(ctx)
     group = selected_chart(controller)
     if group is None:
         ui.show_info(ctx, frame, text("select_chart", locale))
-        return
+        return None
     doc = controller.getModel()
     chart_id = store.claim(doc, group)
-    if chart_id is None:
-        ui.show_info(ctx, frame, text("orphaned_chart", locale))
-        return
     try:
-        state = store.read_state(doc, chart_id)
+        state = store.read_state(doc, chart_id) if chart_id else None
     except StateError as exc:
         ui.show_info(ctx, frame, text("corrupt_chart", locale, detail=str(exc)))
-        return
+        return None
     if state is None:
         ui.show_info(ctx, frame, text("orphaned_chart", locale))
-        return
-    if annotation.kind not in annotations.SUPPORTED.get(state.kind, frozenset()):
+        return None
+    if not supports(state, kind):
         ui.show_info(ctx, frame, text("annotation_unsupported", locale))
-        return
-    chart.redraw(doc, group, replace(state, annotations=(*state.annotations, annotation)))
+        return None
+    return group, state
 
 
 def selected_chart(controller: Any) -> Any:

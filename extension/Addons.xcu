@@ -82,6 +82,32 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m3" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Add difference arrow</value>
+              <value xml:lang="de">Differenzpfeil hinzufügen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:PickAnnotation?kind=difference</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="m4" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Add CAGR arrow</value>
+              <value xml:lang="de">CAGR-Pfeil hinzufügen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:PickAnnotation?kind=cagr</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
         </node>
       </node>
     </node>
@@ -167,6 +193,38 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      <node oor:name="t3" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:PickAnnotation?kind=difference</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Add difference arrow</value>
+          <value xml:lang="de">Differenzpfeil hinzufügen</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
+      <node oor:name="t4" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:PickAnnotation?kind=cagr</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Add CAGR arrow</value>
+          <value xml:lang="de">CAGR-Pfeil hinzufügen</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
       </node>
     </node>
     <node oor:name="Images">
@@ -232,6 +290,32 @@
           </prop>
           <prop oor:name="ImageBigURL" oor:type="xs:string">
             <value>%origin%/images/edit_26.png</value>
+          </prop>
+        </node>
+      </node>
+      <node oor:name="org.librecharts.image3" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:PickAnnotation?kind=difference</value>
+        </prop>
+        <node oor:name="UserDefinedImages">
+          <prop oor:name="ImageSmallURL" oor:type="xs:string">
+            <value>%origin%/images/difference_16.png</value>
+          </prop>
+          <prop oor:name="ImageBigURL" oor:type="xs:string">
+            <value>%origin%/images/difference_26.png</value>
+          </prop>
+        </node>
+      </node>
+      <node oor:name="org.librecharts.image4" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:PickAnnotation?kind=cagr</value>
+        </prop>
+        <node oor:name="UserDefinedImages">
+          <prop oor:name="ImageSmallURL" oor:type="xs:string">
+            <value>%origin%/images/cagr_16.png</value>
+          </prop>
+          <prop oor:name="ImageBigURL" oor:type="xs:string">
+            <value>%origin%/images/cagr_26.png</value>
           </prop>
         </node>
       </node>
