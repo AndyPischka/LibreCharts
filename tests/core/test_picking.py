@@ -11,13 +11,14 @@ from librecharts.core.picking import PickSession, supports, target_at
 STACKED = sample_state()  # three categories, three series
 CLUSTERED = replace(STACKED, grouping="clustered")
 WIDTH = 3000.0  # slots of 1000, columns of 700 from 150 to 850, clustered bars ~233 wide
+HEIGHT = 8000.0
 
 
 @pytest.mark.parametrize(
     ("x", "target"), [(0, (0, None)), (500, (0, None)), (1500, (1, None)), (2999, (2, None))]
 )
 def test_stacked_targets_are_whole_columns(x: float, target: tuple[int, None]) -> None:
-    assert target_at(STACKED, WIDTH, x, 5000) == target
+    assert target_at(STACKED, WIDTH, HEIGHT, x, 5000) == target
 
 
 @pytest.mark.parametrize(
@@ -27,25 +28,27 @@ def test_stacked_targets_are_whole_columns(x: float, target: tuple[int, None]) -
 def test_clustered_targets_are_single_bars_or_the_column(
     x: float, target: tuple[int, int | None]
 ) -> None:
-    assert target_at(CLUSTERED, WIDTH, x, 5000) == target
+    assert target_at(CLUSTERED, WIDTH, HEIGHT, x, 5000) == target
 
 
 def test_points_outside_the_box_or_in_arrow_lanes_hit_nothing() -> None:
-    assert target_at(STACKED, WIDTH, -1, 5000) is None
-    assert target_at(STACKED, WIDTH, WIDTH, 5000) is None
+    assert target_at(STACKED, WIDTH, HEIGHT, -1, 5000) is None
+    assert target_at(STACKED, WIDTH, HEIGHT, WIDTH, 5000) is None
     with_arrow = replace(STACKED, annotations=(Annotation("difference", 0, 1),))
-    assert target_at(with_arrow, WIDTH, 500, LANE_HEIGHT - 1) is None
-    assert target_at(with_arrow, WIDTH, 500, LANE_HEIGHT) == (0, None)
+    assert target_at(with_arrow, WIDTH, HEIGHT, 500, LANE_HEIGHT - 1) is None
+    assert target_at(with_arrow, WIDTH, HEIGHT, 500, LANE_HEIGHT) == (0, None)
 
 
-def test_only_column_charts_have_targets() -> None:
-    assert target_at(replace(STACKED, kind="bar"), WIDTH, 500, 5000) is None
-    assert target_at(sample_mekko_state(), WIDTH, 500, 5000) is None
+def test_bar_charts_have_targets_and_other_charts_do_not() -> None:
+    bar = replace(STACKED, kind="bar")
+    assert target_at(bar, 12000, 3000, 4000, 100) == (0, None)
+    assert target_at(bar, 12000, 3000, 4000, 2900) == (2, None)
+    assert target_at(sample_mekko_state(), WIDTH, HEIGHT, 500, 5000) is None
 
 
 def test_empty_chart_has_no_targets() -> None:
     empty = replace(STACKED, cells=(("",),), values=((None,),))
-    assert target_at(empty, WIDTH, 500, 5000) is None
+    assert target_at(empty, WIDTH, HEIGHT, 500, 5000) is None
 
 
 def test_session_asks_for_start_then_end_and_returns_the_arrow() -> None:
@@ -100,5 +103,5 @@ def test_every_prompt_has_a_message() -> None:
 def test_level_lanes_right_of_the_plot_hit_nothing() -> None:
     level = replace(STACKED, annotations=(Annotation("difference", 0, 1, style="level"),))
     # the plot shrinks to 3000 - LEVEL_LANE_WIDTH = 1000: slots of 333
-    assert target_at(level, WIDTH, 500, 5000) == (1, None)
-    assert target_at(level, WIDTH, 1500, 5000) is None
+    assert target_at(level, WIDTH, HEIGHT, 500, 5000) == (1, None)
+    assert target_at(level, WIDTH, HEIGHT, 1500, 5000) is None

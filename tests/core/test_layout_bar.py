@@ -1,18 +1,26 @@
+from dataclasses import replace
+
 import pytest
 
 from librecharts.core.datasheet import ChartData, Series, parse, sample_state
 from librecharts.core.layout.bar import (
+    BRACKET_INSET,
+    BRACKET_LABEL_GAP,
+    BRACKET_LANE_WIDTH,
     LABEL_GAP,
     LABEL_HEIGHT,
     LABEL_WIDTH,
     LEFT_BAND,
+    LEVEL_LANE_HEIGHT,
     RIGHT_BAND,
+    bar_at,
     layout_bar,
 )
 from librecharts.core.layout.chart import layout_chart
+from librecharts.core.layout.column import BREAK_GAP, MIN_ARROW_LABEL_WIDTH
 from librecharts.core.layout.common import format_value
-from librecharts.core.model import Grouping
-from librecharts.core.primitives import Line, Rect, Text
+from librecharts.core.model import Annotation, Grouping
+from librecharts.core.primitives import BACKGROUND, Line, Rect, Text
 
 
 def data(*series: tuple[str, tuple[float | None, ...]], categories: tuple[str, ...]) -> ChartData:
@@ -153,3 +161,199 @@ def test_layout_chart_selects_the_layout_by_kind() -> None:
 def test_label_constants_are_consistent() -> None:
     assert LABEL_GAP < LABEL_WIDTH <= RIGHT_BAND
     assert format_value(2.5) == "2.5"
+
+
+def test_bracket_arrow_golden_geometry() -> None:
+    # one lane right of the plot: plot 3000..8600, axis 0..20; slots of 2000, bars 1400 thick
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    primitives = layout_bar(chart, "clustered", 12000, 4000, (Annotation("difference", 0, 1),))
+    lane_x = 3000 + 5600 + RIGHT_BAND + BRACKET_INSET
+    assert primitives[-4:] == (
+        Line(5800 + LABEL_WIDTH + 100, 1000, lane_x, 1000, "annotation"),
+        Line(lane_x, 1000, lane_x, 3000, "annotation"),
+        Line(lane_x, 3000, 8600 + LABEL_WIDTH + 100, 3000, "annotation", arrow=True),
+        Text(
+            lane_x + BRACKET_LABEL_GAP,
+            (1000 + 3000 - LABEL_HEIGHT) / 2,
+            BRACKET_LANE_WIDTH - BRACKET_INSET - BRACKET_LABEL_GAP,
+            LABEL_HEIGHT,
+            "+100%",
+            "left",
+            "annotation",
+        ),
+    )
+
+
+def test_every_bracket_arrow_gets_its_own_lane_right_of_the_plot() -> None:
+    chart = data(("S", (10.0, 20.0, 15.0)), categories=("A", "B", "C"))
+    arrows = (Annotation("difference", 0, 1), Annotation("cagr", 0, 2))
+    primitives = layout_bar(chart, "stacked", 16000, 6000, arrows)
+    verticals = [
+        p.x1 for p in primitives if isinstance(p, Line) and p.x1 == p.x2 and p.role == "annotation"
+    ]
+    assert verticals == [
+        verticals[0],
+        verticals[0] + BRACKET_LANE_WIDTH,
+    ]
+    plot_right = max(p.x + p.width for p in primitives if isinstance(p, Rect))
+    assert plot_right <= 16000 - 2 * BRACKET_LANE_WIDTH - RIGHT_BAND + 1e-9
+
+
+def test_bracket_arrow_head_is_on_the_end_bar() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    primitives = layout_bar(chart, "stacked", 12000, 4000, (Annotation("difference", 1, 0),))
+    head = next(p for p in primitives if isinstance(p, Line) and p.arrow)
+    assert head.y2 == 1000  # bar A is the end
+    assert head.x1 > head.x2  # drawn right to left, back onto the bar
+
+
+def test_level_arrow_golden_geometry() -> None:
+    # one level lane below a 4000 high plot; axis 0..20 maps to x 3000..7000
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    arrow = Annotation("difference", 0, 1, style="level")
+    primitives = layout_bar(chart, "stacked", 8200, 4000 + LEVEL_LANE_HEIGHT, (arrow,))
+    assert primitives[0] == Line(3000, 0, 3000, 4000, "baseline")
+    arrow_y = 4000 + 200
+    assert primitives[-4:] == (
+        Line(5000, 1700, 5000, arrow_y, "helper"),
+        Line(7000, 3700, 7000, arrow_y, "helper"),
+        Line(5000, arrow_y, 7000, arrow_y, "annotation", arrow=True),
+        Text(5000, arrow_y + 100, 2000, LABEL_HEIGHT, "+100%", "center", "annotation"),
+    )
+
+
+def test_level_label_is_at_least_as_wide_as_the_minimum() -> None:
+    chart = data(("S", (10.0, 11.0)), categories=("A", "B"))
+    arrow = Annotation("difference", 0, 1, style="level")
+    primitives = layout_bar(chart, "stacked", 8200, 5000, (arrow,))
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.width == MIN_ARROW_LABEL_WIDTH
+
+
+def test_level_arrow_of_a_clustered_bar_starts_at_its_bottom_edge() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (5.0, 8.0)), categories=("X", "Y"))
+    arrow = Annotation("difference", 0, 1, series=0, style="level")
+    primitives = layout_bar(chart, "clustered", 8200, 6000, (arrow,))
+    helper = next(p for p in primitives if isinstance(p, Line) and p.role == "helper")
+    bar = next(p for p in primitives if isinstance(p, Rect))  # series A in category X
+    assert helper.x1 == pytest.approx(bar.x + bar.width)
+    assert helper.y1 == pytest.approx(bar.y + bar.height)
+
+
+def test_arrows_pointing_past_the_data_are_not_drawn() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    stale = (Annotation("difference", 0, 5), Annotation("difference", 0, 1, series=3))
+    assert layout_bar(chart, "stacked", 12000, 4000, stale) == layout_bar(
+        chart, "stacked", 12000, 4000
+    )
+
+
+@pytest.mark.parametrize("grouping", ["stacked", "clustered"])
+def test_structure_with_annotations_does_not_depend_on_size(grouping: Grouping) -> None:
+    chart = data(("A", (1.0, -2.0, None)), ("B", (300.0, 5.0, 0.0)), categories=("X", "Y", "Z"))
+    arrows = (
+        Annotation("difference", 0, 2),
+        Annotation("cagr", 2, 1, series=1),
+        Annotation("difference", 1, 0, style="level"),
+        Annotation("axis_break", 0, 0),
+    )
+
+    def shape(width: float, height: float) -> list[tuple[str, str]]:
+        return [
+            (type(p).__name__, getattr(p, "role", ""))
+            for p in layout_bar(chart, grouping, width, height, arrows)
+        ]
+
+    assert shape(16000, 7000) == shape(40000, 20000) == shape(20000, 9000)
+
+
+def test_lanes_leave_too_little_room_for_the_plot() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    with pytest.raises(ValueError, match="too small"):
+        layout_bar(chart, "stacked", 6000, 4000, (Annotation("difference", 0, 1),))
+    with pytest.raises(ValueError, match="too small"):
+        layout_bar(
+            chart,
+            "stacked",
+            8200,
+            LEVEL_LANE_HEIGHT,
+            (Annotation("difference", 0, 1, style="level"),),
+        )
+
+
+BREAK = (Annotation("axis_break", 0, 0),)
+TALL = data(("S", (10.0, 100.0, 20.0)), categories=("A", "B", "C"))
+
+
+def test_axis_break_marks_the_bar_beyond_it_with_a_vertical_gap() -> None:
+    primitives = layout_bar(TALL, "stacked", 10000, 6000, BREAK)  # break 22..96, 100 shows as 26
+    gaps = [p for p in primitives if isinstance(p, Rect) and p.series == BACKGROUND]
+    bars = [p for p in primitives if isinstance(p, Rect) and p.series != BACKGROUND]
+    assert len(gaps) == 1
+    assert gaps[0].width == BREAK_GAP
+    assert gaps[0].y < bars[1].y
+    assert gaps[0].y + gaps[0].height > bars[1].y + bars[1].height
+    assert bars[2].width < bars[1].width  # C (20) stays shorter than the cut bar
+    assert bars[1].x + bars[1].width > gaps[0].x + gaps[0].width
+
+
+def test_axis_break_marks_every_bar_beyond_it_in_a_clustered_chart() -> None:
+    chart = data(("A", (10.0, 100.0)), ("B", (12.0, 11.0)), categories=("X", "Y"))
+    primitives = layout_bar(chart, "clustered", 10000, 6000, BREAK)
+    gaps = [p for p in primitives if isinstance(p, Rect) and p.series == BACKGROUND]
+    bars = [p for p in primitives if isinstance(p, Rect) and p.series != BACKGROUND]
+    assert len(gaps) == 1
+    assert gaps[0].y == bars[2].y  # on the cut bar (A in Y), not reaching beyond it
+    assert gaps[0].height == bars[2].height
+
+
+def test_arrows_meet_the_cut_bar_where_it_ends() -> None:
+    arrows = (*BREAK, Annotation("difference", 0, 1), Annotation("difference", 0, 1, style="level"))
+    primitives = layout_bar(TALL, "stacked", 16000, 8000, arrows)
+    bar_b = [p for p in primitives if isinstance(p, Rect) and p.series != BACKGROUND][1]
+    head = next(
+        p for p in primitives if isinstance(p, Line) and p.arrow and p.y1 == p.y2 and p.x2 < p.x1
+    )
+    assert head.x2 == pytest.approx(bar_b.x + bar_b.width + LABEL_WIDTH + 100)
+    helper = [p for p in primitives if isinstance(p, Line) and p.role == "helper"][1]
+    assert helper.x1 == pytest.approx(bar_b.x + bar_b.width)
+    assert "+900%" in [p.text for p in primitives if isinstance(p, Text)]
+
+
+def test_layout_chart_passes_the_annotations_to_the_bar_layout() -> None:
+    state = replace(sample_state(), kind="bar", annotations=(Annotation("difference", 0, 1),))
+    assert layout_chart(state, 20000, 9000) == layout_bar(
+        parse(state), state.grouping, 20000, 9000, state.annotations
+    )
+
+
+def test_bar_at_finds_the_category_and_the_series() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (5.0, 8.0)), categories=("X", "Y"))
+    # plot 3000..9000, slots of 2000, bars 1400 thick from 300, 700 each
+    assert bar_at(chart, "clustered", 12000, 4000, (), 4000, 400) == (0, 0)
+    assert bar_at(chart, "clustered", 12000, 4000, (), 4000, 1000) == (0, 1)
+    assert bar_at(chart, "clustered", 12000, 4000, (), 4000, 2400) == (1, 0)
+    assert bar_at(chart, "clustered", 12000, 4000, (), 4000, 150) == (0, None)  # between bars
+    assert bar_at(chart, "stacked", 12000, 4000, (), 4000, 150) == (0, None)
+    assert bar_at(chart, "stacked", 12000, 4000, (), 100, 3900) == (1, None)  # on the name
+
+
+def test_bar_at_misses_the_lanes_and_the_outside_of_the_box() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    bracket, level = Annotation("difference", 0, 1), Annotation("difference", 0, 1, style="level")
+    assert bar_at(chart, "stacked", 12000, 4000, (), -1, 1000) is None
+    assert bar_at(chart, "stacked", 12000, 4000, (), 4000, -1) is None
+    assert bar_at(chart, "stacked", 12000, 4000, (), 4000, 4000) is None
+    # the bracket lane starts after the plot and the label band: 3000 + 5600 + 1200
+    assert bar_at(chart, "stacked", 12000, 4000, (bracket,), 9799, 1000) == (0, None)
+    assert bar_at(chart, "stacked", 12000, 4000, (bracket,), 9800, 1000) is None
+    below = 4000 - LEVEL_LANE_HEIGHT
+    assert bar_at(chart, "stacked", 8200, 4000, (level,), 4000, below - 1) == (1, None)
+    assert bar_at(chart, "stacked", 8200, 4000, (level,), 4000, below) is None
+
+
+def test_bar_at_nothing_to_hit_without_data_or_room() -> None:
+    empty = ChartData((), ())
+    assert bar_at(empty, "stacked", 12000, 4000, (), 4000, 1000) is None
+    chart = data(("S", (10.0,)), categories=("A",))
+    assert bar_at(chart, "stacked", 3000, 4000, (), 100, 1000) is None

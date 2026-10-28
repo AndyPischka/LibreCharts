@@ -24,5 +24,5 @@ def layout_chart(state: ChartState, width: float, height: float) -> tuple[Primit
         return layout_mekko(parse_mekko(state), width, height)
     data = parse(state)
     if state.kind == "bar":
-        return layout_bar(data, state.grouping, width, height)
+        return layout_bar(data, state.grouping, width, height, state.annotations)
     return layout_column(data, state.grouping, width, height, state.annotations)

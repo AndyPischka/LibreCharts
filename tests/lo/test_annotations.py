@@ -48,8 +48,14 @@ def _arrowheads(group):
     count = 0
     for i in range(group.getCount()):
         child = group.getByIndex(i)  # read in one pass, see AGENTS.md
-        if child.ShapeType == "com.sun.star.drawing.LineShape" and child.LineEndName:
+        if child.ShapeType != "com.sun.star.drawing.LineShape":
+            continue
+        # a line drawn right to left (or bottom to top) gets its head at the start
+        if child.LineEndName:
             assert len(child.LineEnd.Coordinates) > 0, "arrowhead has no shape"
+            count += 1
+        elif child.LineStartName:
+            assert len(child.LineStart.Coordinates) > 0, "arrowhead has no shape"
             count += 1
     return count
 
@@ -255,5 +261,24 @@ def test_changing_the_range_of_an_axis_break(ctx):
         assert _annotations(doc, chart_id) == (Annotation("axis_break", 0, 0, lower=30, upper=60),)
         dispatch(ctx, doc, "org.librecharts:ChangeAnnotation?index=0&lower=&upper=")
         assert _annotations(doc, chart_id) == (Annotation("axis_break", 0, 0),)
+    finally:
+        doc.close(True)
+
+
+def test_bar_chart_arrows_and_axis_break_are_stored_and_drawn(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, "org.librecharts:InsertBarChart")
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        dispatch(ctx, doc, DIFFERENCE)
+        dispatch(ctx, doc, ADD + "kind=difference&start=0&end=1&style=level")
+        dispatch(ctx, doc, ADD + "kind=axis_break")
+        assert [a.kind for a in _annotations(doc, chart_id)] == [
+            "difference",
+            "difference",
+            "axis_break",
+        ]
+        assert "+28.6%" in _labels(group)
+        assert _arrowheads(group) == 2
     finally:
         doc.close(True)
