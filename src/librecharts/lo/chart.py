@@ -5,10 +5,11 @@ Every operation is exactly one entry in the document's undo list (see lo/undo.py
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
-from librecharts.core.datasheet import parse, sample_state
-from librecharts.core.layout.column import layout_column
+from librecharts.core.datasheet import sample_state
+from librecharts.core.layout.chart import layout_chart
 from librecharts.core.model import ChartState
 from librecharts.lo import render, store, undo
 
@@ -17,11 +18,19 @@ NEW_CHART_SHARE = 0.6  # a new chart covers this share of the slide's width and 
 
 def insert_column_chart(doc: Any, page: Any, state: ChartState | None = None) -> Any:
     """Insert a chart (sample data by default) centred on ``page``; returns its group shape."""
-    state = state or sample_state()
+    return _insert(doc, page, state or sample_state())
+
+
+def insert_bar_chart(doc: Any, page: Any) -> Any:
+    """Insert a horizontal bar chart with sample data centred on ``page``."""
+    return _insert(doc, page, replace(sample_state(), kind="bar"))
+
+
+def _insert(doc: Any, page: Any, state: ChartState) -> Any:
     width = round(page.Width * NEW_CHART_SHARE)
     height = round(page.Height * NEW_CHART_SHARE)
     x, y = (page.Width - width) // 2, (page.Height - height) // 2
-    primitives = layout_column(parse(state), state.grouping, width, height)
+    primitives = layout_chart(state, width, height)
 
     with undo.recording_locked(doc):
         group = render.render_group(doc, page, primitives, x, y, width, height)
@@ -57,7 +66,7 @@ def redraw(doc: Any, group: Any, state: ChartState) -> None:
 
 def _apply(doc: Any, group: Any, chart_id: str, state: ChartState) -> None:
     size = group.Size
-    primitives = layout_column(parse(state), state.grouping, size.Width, size.Height)
+    primitives = layout_chart(state, size.Width, size.Height)
     with undo.recording_locked(doc):
         render.rerender(doc, group, primitives)
     store.write_state(doc, chart_id, state)
@@ -78,7 +87,7 @@ def fit_to_size(doc: Any, group: Any) -> bool:
         if state is None:
             return False
         size = group.Size
-        primitives = layout_column(parse(state), state.grouping, size.Width, size.Height)
+        primitives = layout_chart(state, size.Width, size.Height)
     except ValueError:  # StateError, or the group is too small to lay out
         return False
     # No undo lock needed: LibreOffice does not record geometry changes made through the API.

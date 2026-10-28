@@ -11,9 +11,17 @@ from librecharts.lo.datasheet import OrphanedChartError, open_datasheet
 
 
 def insert_column_chart(frame: Any) -> None:
+    _insert(frame, chart.insert_column_chart)
+
+
+def insert_bar_chart(frame: Any) -> None:
+    _insert(frame, chart.insert_bar_chart)
+
+
+def _insert(frame: Any, insert: Any) -> None:
     controller = frame.getController()
     doc = controller.getModel()
-    group = chart.insert_column_chart(doc, controller.getCurrentPage())
+    group = insert(doc, controller.getCurrentPage())
     resize.watch(
         doc
     )  # normally done by the document-open job; covers a freshly installed extension

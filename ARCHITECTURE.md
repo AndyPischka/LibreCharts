@@ -31,7 +31,9 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series); sample data |
 | `scale.py` | "Nice" value axis ranges |
 | `primitives.py` | `Rect`, `Line`, `Text`: layout output in 1/100 mm, styling left to the renderer |
-| `layout/column.py` | `ChartData` + size -> primitives for stacked and clustered columns |
+| `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked and clustered columns / horizontal bars |
+| `layout/common.py` | Value axis and number format shared by both layouts |
+| `layout/chart.py` | `layout_chart(state, w, h)`: picks the layout by chart kind |
 
 Data flow: Calc cells -> `ChartState` (stored in the document) -> `datasheet.parse` -> `ChartData`
 -> `layout_column` -> primitives -> `lo/` draws shapes. Stored state is part of the user's files,

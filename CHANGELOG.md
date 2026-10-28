@@ -11,6 +11,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   shapes with segment and total labels. Insert is a single undo step.
 - A "LibreCharts" toolbar with icons for both commands. In the Notebookbar (ribbon) interface it
   appears in the "Extension" group.
+- *LibreCharts → Insert bar chart* (and a toolbar button) inserts a horizontal bar chart with the
+  same data sheet, resizing, undo and ODP/PPTX support as column charts.
 - Resizing a chart lays it out again for the new size instead of stretching it; undo and redo
   of the resize work as usual.
 - Copied or duplicated charts can be edited independently of the original.

@@ -111,3 +111,56 @@ def test_toolbar_is_registered_for_presentations(ctx):
         assert toolbar.ResourceURL == "private:resource/toolbar/addon_org.librecharts.toolbar"
     finally:
         doc.close(True)
+
+
+BAR_INSERT = "org.librecharts:InsertBarChart"
+
+
+def test_bar_chart_is_inserted_and_survives_odp_and_pptx(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, BAR_INSERT)
+        ((group, chart_id),) = store.find_charts(first_page(doc))
+        assert group.getCount() > 10
+        expected = replace(sample_state(), kind="bar")
+        assert store.read_state(doc, chart_id) == expected
+        for fmt in ("odp", "pptx"):
+            reloaded = save_and_reload(ctx, doc, fmt)
+            try:
+                ((_, reloaded_id),) = store.find_charts(first_page(reloaded))
+                assert store.read_state(reloaded, reloaded_id) == expected, fmt
+            finally:
+                reloaded.close(True)
+    finally:
+        doc.close(True)
+
+
+def test_bar_chart_is_redrawn_as_bars_after_a_data_change(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, BAR_INSERT)
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        state = store.read_state(doc, chart_id)
+        assert state is not None
+        chart.redraw(doc, group, replace(state, grouping="clustered"))
+        # Read the geometry in one pass: shape proxies held across further calls intermittently
+        # reported default geometry (0, 0, 100, 100) in LibreOffice 26.8.
+        rects = []
+        for i in range(group.getCount()):
+            child = group.getByIndex(i)
+            if child.ShapeType == "com.sun.star.drawing.RectangleShape":
+                rects.append(
+                    (child.Position.X, child.Position.Y, child.Size.Width, child.Size.Height)
+                )
+        bars = rects[1:]  # the first rectangle is the invisible frame
+        assert len(bars) == 9
+        # first category: its three bars sit below each other and start at the same x (the baseline)
+        first = bars[:3]
+        assert len({x for x, _, _, _ in first}) == 1
+        assert len({y for _, y, _, _ in first}) == 3
+        assert [y for _, y, _, _ in first] == sorted(y for _, y, _, _ in first)
+        # whereas column bars would sit side by side on the same bottom edge
+        assert len({y + h for _, y, _, h in first}) == 3
+        assert store.read_state(doc, chart_id) == replace(state, grouping="clustered")
+    finally:
+        doc.close(True)

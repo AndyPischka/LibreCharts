@@ -80,6 +80,9 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
   `XUndoManager.undo()` (aborted LibreOffice; enforced by `tests/test_lo_conventions.py`).
 - Document-open jobs run for visible documents only; reload with `hidden=False` to test them.
 - Layout output must have the same primitive structure for every size (resize re-layout, ADR 0007).
+- In `tests/lo`, read a shape's geometry in one pass (`child = group.getByIndex(i)`, read, move
+  on). Proxies collected in a list and read later intermittently returned default geometry
+  (0, 0, 100, 100) in LibreOffice 26.8.
 - `tests/lo/` holds plain `test_*(ctx)` functions run by `tests/lo/runner.py`, not pytest; pytest
   ignores that directory. Shared helpers live in `tests/lo/helpers.py`.
 - Do not use `LibreOffice-minimal-version` in `extension/description.xml`: LibreOffice 26.8 rejected

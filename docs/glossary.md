@@ -11,6 +11,7 @@ Use these terms consistently in code, UI strings and docs.
 | **Orphaned chart** | A chart whose group has an anchor but whose state is missing from the document, e.g. after copying it into another presentation. It still looks right but cannot be edited. |
 | **Primitive** | A rectangle, line or text box produced by layout; plain geometry in 1/100 mm that the adapter turns into a shape. |
 | **Data sheet** | The Calc document in which the user edits a chart's values (ADR 0003). |
+| **Bar chart** | Column chart turned by 90 degrees: categories run top to bottom, values left to right ("Balkendiagramm"). Vertical ones are *column charts* ("Säulendiagramm"). |
 | **Category** | One position on the category axis (x-axis of a column chart). |
 | **Series** | One set of values across categories; one colour, one legend entry. |
 | **Segment** | One rectangle: the value of one series in one category. |

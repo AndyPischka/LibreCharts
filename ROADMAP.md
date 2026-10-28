@@ -8,7 +8,7 @@ Single tasks live in the issue tracker, not here.
 | | Milestone | Content | Status |
 |---|---|---|---|
 | M0 | Foundation | Repo scaffold, `check` + CI, `.oxt` build, menu entry with placeholder shape | done |
-| M1 | Column and bar charts | Stacked and clustered column charts; Calc data sheet with live sync; chart persistence (ODP and PPTX); copies; toolbar. re-layout on resize. Open: `test-lo` in CI, bar (horizontal) charts, double-click to edit | in progress |
+| M1 | Column and bar charts | Stacked and clustered column charts; Calc data sheet with live sync; chart persistence (ODP and PPTX); copies; toolbar. bar charts; re-layout on resize. Open: `test-lo` in CI, double-click to edit | in progress |
 | M2 | Waterfall | Bridge chart with subtotals | open |
 | M3 | Marimekko | Variable column widths, percent and absolute | open |
 | M4 | Annotations | Difference arrows, CAGR arrows, total labels, axis break | open |
