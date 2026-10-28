@@ -23,6 +23,9 @@ def edit_data(ctx: Any, frame: Any) -> None:
     if group is None:
         ui.show_info(ctx, frame, text("select_chart", locale))
         return
+    if store.claim(controller.getModel(), group) is None:
+        ui.show_info(ctx, frame, text("orphaned_chart", locale))
+        return
     desktop = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
     # The data sheet follows the presentation's visibility: a document opened hidden (macros,
     # tests) must not pop up a Calc window.
