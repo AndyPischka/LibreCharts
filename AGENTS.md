@@ -16,11 +16,12 @@ Run everything through `uv run poe <task>` (uv installs Python 3.11 and the dev 
 | `uv run poe lint` / `format` | ruff check / ruff format (in place) |
 | `uv run poe typecheck` | pyright (strict for `core/`, basic elsewhere) |
 | `uv run poe build` | build `dist/LibreCharts-<version>.oxt` |
-| `uv run poe test-lo` | UNO integration tests against a real LibreOffice (not in `check`/CI) |
+| `uv run poe test-lo` | UNO integration tests against a real LibreOffice (not in `check`; CI job `integration`) |
 
 `test-lo` needs LibreOffice installed (override discovery with `LIBREOFFICE_PROGRAM`). It uses a
-throwaway profile and LibreOffice's own Python, see [CONTRIBUTING.md](CONTRIBUTING.md#testing).
-Verified on Windows only; the Linux/macOS paths in `scripts/test_lo.py` are untested.
+throwaway profile and LibreOffice's own Python, one LibreOffice per `tests/lo` module, see
+[CONTRIBUTING.md](CONTRIBUTING.md#testing). Runs on Windows and in CI on Linux against the minimum
+version 25.8.7; macOS is untested.
 
 ## Project map
 
