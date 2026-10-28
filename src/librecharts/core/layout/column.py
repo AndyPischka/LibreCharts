@@ -1,5 +1,7 @@
 """Layout of stacked and clustered column charts.
 
+The kinds and order of the returned primitives depend only on the data, never on the size.
+
 No value axis is drawn (like think-cell): values are labelled directly. The axis range only
 fixes the scale and always includes zero. Above the plot there is a band for total and value
 labels, below it a band for category labels.
@@ -100,8 +102,10 @@ def _stacked_column(data: ChartData, c: int, x: float, width: float, y: _YScale)
             top, bottom = y(negative), y(negative + value)
             negative += value
         out.append(Rect(x, top, width, bottom - top, i))
-        if bottom - top >= MIN_SEGMENT_FOR_LABEL:
-            out.append(Text(x, top, width, bottom - top, format_value(value), "center", "value"))
+        # Always emit the label (empty if the segment is too flat): the primitive structure must
+        # not depend on the size, so a resized chart can be re-laid out in place (lo/render.py).
+        label = format_value(value) if bottom - top >= MIN_SEGMENT_FOR_LABEL else ""
+        out.append(Text(x, top, width, bottom - top, label, "center", "value"))
     if segments >= 2:  # a single segment's total would just repeat its own label
         out.append(
             Text(

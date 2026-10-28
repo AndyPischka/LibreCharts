@@ -8,6 +8,7 @@ from librecharts.core.layout.column import (
     format_value,
     layout_column,
 )
+from librecharts.core.model import Grouping
 from librecharts.core.primitives import Line, Rect, Text
 
 
@@ -70,14 +71,27 @@ def test_single_segment_has_no_total_label() -> None:
     assert {t.role for t in texts} == {"value", "category"}
 
 
-def test_flat_segments_get_no_inside_label() -> None:
+def test_flat_segments_get_an_empty_inside_label() -> None:
     chart = data(("A", (1.0,)), ("B", (1000.0,)), categories=("X",))
     values = [
         p.text
         for p in layout_column(chart, "stacked", 1000, 10000)
         if isinstance(p, Text) and p.role == "value"
     ]
-    assert values == ["1000"]
+    assert values == ["", "1000"]
+
+
+@pytest.mark.parametrize("grouping", ["stacked", "clustered"])
+def test_structure_does_not_depend_on_size(grouping: Grouping) -> None:
+    chart = data(("A", (1.0, -2.0, None)), ("B", (300.0, 5.0, 0.0)), categories=("X", "Y", "Z"))
+
+    def shape(width: float, height: float) -> list[tuple[str, str]]:
+        return [
+            (type(p).__name__, getattr(p, "role", ""))
+            for p in layout_column(chart, grouping, width, height)
+        ]
+
+    assert shape(3000, 4000) == shape(30000, 20000) == shape(9000, 2500)
 
 
 def test_gaps_and_zeros_draw_nothing() -> None:
