@@ -59,6 +59,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.insert_mekko_chart(self.frame)
             elif url.Path == "EditData":
                 commands.edit_data(self.ctx, self.frame)
+            elif url.Path.startswith("AddAnnotation"):
+                commands.add_annotation(self.ctx, self.frame, _query(url))
         except Exception:
             # An exception escaping a Python dispatch can take LibreOffice down with it.
             traceback.print_exc()
@@ -78,6 +80,11 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
 
     def getSupportedServiceNames(self):
         return (SERVICE_NAME,)
+
+
+def _query(url):
+    """The ``a=1&b=2`` part of ``org.librecharts:Command?a=1&b=2``."""
+    return url.Complete.partition("?")[2]
 
 
 class DocumentJob(unohelper.Base, XJob, XServiceInfo):

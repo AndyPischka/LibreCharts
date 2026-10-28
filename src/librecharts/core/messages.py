@@ -24,6 +24,10 @@ MESSAGES: dict[str, dict[str, str]] = {
             "nicht bearbeitet werden."
         ),
     },
+    "annotation_unsupported": {
+        "en": "This annotation is not available for this chart type yet.",
+        "de": "Diese Annotation gibt es für diesen Diagrammtyp noch nicht.",
+    },
     "corrupt_chart": {
         "en": "The data of this chart cannot be read: {detail}",
         "de": "Die Daten dieses Diagramms können nicht gelesen werden: {detail}",

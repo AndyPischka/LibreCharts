@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextlib
 import traceback
+from dataclasses import replace
 from typing import Any
 
 import unohelper
@@ -75,10 +76,14 @@ class _Session:
             return
         self._syncing = True
         try:
-            state = self._read()
-            if state != self.state:
+            chart_id = store.chart_id_of(self.group)
+            stored = (store.read_state(self.doc, chart_id) if chart_id else None) or self.state
+            read = self._read()
+            # The data sheet owns cells and values only; annotations added meanwhile stay.
+            state = replace(stored, cells=read.cells, values=read.values)
+            if state != stored:
                 chart.redraw(self.doc, self.group, state)
-                self.state = state
+            self.state = state
             self.calc.setModified(False)
         except Exception:
             # Never let an exception escape into LibreOffice's notification loop.

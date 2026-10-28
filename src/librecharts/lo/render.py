@@ -21,6 +21,8 @@ TEXT_COLOR = 0x000000
 LINE_COLOR = 0x404040
 LINE_WIDTH = 25  # 1/100 mm
 FONT_HEIGHT_PT = 10.0
+ARROW_NAME = "Arrow"  # a line end from LibreOffice's standard arrow list
+ARROW_WIDTH = 250  # 1/100 mm
 
 _FILL_NONE = uno.Enum("com.sun.star.drawing.FillStyle", "NONE")
 _FILL_SOLID = uno.Enum("com.sun.star.drawing.FillStyle", "SOLID")
@@ -139,6 +141,8 @@ def _create(doc: Any, group: Any, spec: _Spec) -> None:
         shape.LineStyle = _LINE_NONE
     elif isinstance(p, Line):
         shape.LineStyle, shape.LineColor, shape.LineWidth = _LINE_SOLID, LINE_COLOR, LINE_WIDTH
+        if p.arrow:  # the line runs top-left to bottom-right, so its end is (x2, y2)
+            shape.LineEndName, shape.LineEndWidth = ARROW_NAME, ARROW_WIDTH
     else:
         shape.TextAutoGrowHeight = False
         shape.TextAutoGrowWidth = False
