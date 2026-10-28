@@ -1,8 +1,9 @@
 """Run the UNO integration tests in tests/lo against a real LibreOffice.
 
 Builds the .oxt, installs it into a throwaway profile (the user's own profile is never touched),
-starts a headless soffice on a private pipe and runs tests/lo/smoke_insert_chart.py under
-LibreOffice's own Python. Set LIBREOFFICE_PROGRAM to the `program` directory to override discovery.
+starts a headless soffice on a private pipe and runs tests/lo/runner.py under LibreOffice's own
+Python, which executes every tests/lo/test_*.py. Set LIBREOFFICE_PROGRAM to the `program`
+directory to override discovery.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from pathlib import Path
 
 from build_oxt import ROOT, build
 
-SMOKE = ROOT / "tests" / "lo" / "smoke_insert_chart.py"
+RUNNER = ROOT / "tests" / "lo" / "runner.py"
 SHUTDOWN_TIMEOUT_S = 30
 
 
@@ -69,9 +70,9 @@ def main() -> int:
             ]
         )
         try:
-            result = subprocess.run([str(python), str(SMOKE), pipe], check=False)
+            result = subprocess.run([str(python), str(RUNNER), pipe], check=False)
         finally:
-            # The smoke script asks LibreOffice to terminate; only our own child is ever killed.
+            # The runner asks LibreOffice to terminate; only our own child is ever killed.
             try:
                 soffice.wait(timeout=SHUTDOWN_TIMEOUT_S)
             except subprocess.TimeoutExpired:

@@ -39,7 +39,7 @@ check = { sequence = ["lint", "format-check", "typecheck", "test"], help = "Ever
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src", "scripts"]
-addopts = "--cov=librecharts.core --cov-report=term-missing --cov-fail-under=90"
+addopts = "--ignore=tests/lo --cov=librecharts.core --cov-report=term-missing --cov-fail-under=90"
 
 [tool.coverage.run]
 branch = true
