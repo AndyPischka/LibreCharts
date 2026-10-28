@@ -16,10 +16,11 @@ Run everything through `uv run poe <task>` (uv installs Python 3.11 and the dev 
 | `uv run poe lint` / `format` | ruff check / ruff format (in place) |
 | `uv run poe typecheck` | pyright (strict for `core/`, basic elsewhere) |
 | `uv run poe build` | build `dist/LibreCharts-<version>.oxt` |
+| `uv run poe test-lo` | UNO integration tests against a real LibreOffice (not in `check`/CI) |
 
-TODO: no `test-lo` task yet. Integration tests against a real LibreOffice must run under
-LibreOffice's own Python (`<LO>/program/python.exe`), not the uv venv. Planned for M1; see
-[CONTRIBUTING.md](CONTRIBUTING.md#testing).
+`test-lo` needs LibreOffice installed (override discovery with `LIBREOFFICE_PROGRAM`). It uses a
+throwaway profile and LibreOffice's own Python, see [CONTRIBUTING.md](CONTRIBUTING.md#testing).
+Verified on Windows only; the Linux/macOS paths in `scripts/test_lo.py` are untested.
 
 ## Project map
 
@@ -29,6 +30,7 @@ src/librecharts/lo/     UNO adapters: turn core models into shapes, Calc sync. O
 extension/              Static .oxt files (manifest, menus, entry.py). entry.py stays thin.
 scripts/build_oxt.py    Packs extension/ + src/librecharts + LICENSE into the .oxt
 tests/                  Mirrors src/; no LibreOffice required
+tests/lo/               UNO integration scripts, run by scripts/test_lo.py under LibreOffice's Python
 docs/adr/               Architecture decision records     docs/plans/   Plans for large features
 ```
 
@@ -75,7 +77,7 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 1. `uv run poe check` passes locally.
 2. New behaviour has tests; `core/` coverage stays >= 90 %.
 3. Docs updated per the table below.
-4. Changes touching `extension/` or `lo/`: build the `.oxt` and try it in a throwaway profile.
+4. Changes touching `extension/` or `lo/`: `uv run poe test-lo` passes (add a test in `tests/lo/`).
 
 ## Keep the docs in sync
 

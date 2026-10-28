@@ -23,13 +23,15 @@ This installs Python 3.11 and the dev tools into `.venv` and activates the git h
 |---|---|---|---|
 | Unit tests for `core/` (layout, scaling, models) | `tests/core/` | no | yes |
 | Packaging tests (`.oxt` contents) | `tests/test_build_oxt.py` | no | yes |
-| UNO integration (menu, shape creation, Calc sync) | not yet there | yes | no |
+| UNO integration (menu, shape creation, Calc sync) | `tests/lo/` | yes | no (`uv run poe test-lo`) |
 
 - Do not mock code from this repo. Fake UNO objects only at the `lo/` boundary.
 - `core/` has a 90 % coverage gate.
-- **TODO (M1):** a `test-lo` task. It must run under LibreOffice's Python, install the `.oxt` into a
-  throwaway profile (`-env:UserInstallation=...`), start `soffice --headless` on a socket, and drive it over UNO.
-  A manual version of this worked in M0: install, dispatch `org.librecharts:InsertChart`, check the shape count.
+- `test-lo` ([scripts/test_lo.py](scripts/test_lo.py)) builds the `.oxt`, installs it into a throwaway
+  profile, starts `soffice --headless` on a private pipe and runs the scripts in `tests/lo/` under
+  LibreOffice's own Python (plain scripts with asserts, no pytest there). Set `LIBREOFFICE_PROGRAM`
+  if LibreOffice is not found. It is not part of CI yet, because the runners have no LibreOffice 25.8+.
+  Verified on Windows only.
 
 ## Releases
 

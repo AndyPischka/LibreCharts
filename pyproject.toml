@@ -33,6 +33,7 @@ format = { cmd = "ruff format .", help = "Format code in place" }
 format-check = { cmd = "ruff format --check .", help = "Verify formatting" }
 typecheck = { cmd = "pyright", help = "Type-check" }
 build = { cmd = "python scripts/build_oxt.py", help = "Build dist/LibreCharts-<version>.oxt" }
+test-lo = { cmd = "python scripts/test_lo.py", help = "UNO integration tests against a real LibreOffice (not part of check)" }
 check = { sequence = ["lint", "format-check", "typecheck", "test"], help = "Everything CI runs" }
 
 [tool.pytest.ini_options]
@@ -55,6 +56,9 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4", "RUF", "PT", "TID", "S"]
 # Only the UNO adapter layers may touch the LibreOffice API (see ARCHITECTURE.md).
 "src/librecharts/lo/**" = ["TID251"]
 "extension/**" = ["TID251"]
+"tests/lo/**" = ["TID251", "S101"]
+# Runs only our own paths (LibreOffice, the built .oxt), never user input.
+"scripts/test_lo.py" = ["S603"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "uno".msg = "Only src/librecharts/lo and extension/ may import uno (ARCHITECTURE.md)."

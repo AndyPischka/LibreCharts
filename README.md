@@ -27,6 +27,7 @@ Requires [uv](https://docs.astral.sh/uv/).
 uv run poe setup    # dependencies + git hooks
 uv run poe check    # lint, format, types, tests (what CI runs)
 uv run poe build    # dist/LibreCharts-<version>.oxt
+uv run poe test-lo  # integration tests against an installed LibreOffice
 ```
 
 More: [CONTRIBUTING.md](CONTRIBUTING.md), [ARCHITECTURE.md](ARCHITECTURE.md), [AGENTS.md](AGENTS.md) (for AI agents).
