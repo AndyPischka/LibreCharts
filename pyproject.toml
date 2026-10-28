@@ -22,6 +22,11 @@ dev = [
 [tool.uv]
 package = false
 
+[tool.poe]
+# Run tasks in the already active environment. poe's default under `uv run` re-invokes uv, which
+# ignores `--python` and rebuilds the venv for .python-version; on Windows that fails mid-run.
+executor = { type = "simple" }
+
 [tool.poe.tasks]
 setup = { sequence = [
     { cmd = "uv sync" },
