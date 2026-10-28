@@ -12,6 +12,7 @@ from urllib.parse import parse_qs
 
 from librecharts.core.datasheet import ChartData, parse
 from librecharts.core.model import Annotation, ChartKind, ChartState
+from librecharts.core.waterfall import levels, parse_waterfall
 
 NOT_AVAILABLE = "\u2013"  # en dash
 
@@ -19,11 +20,17 @@ NOT_AVAILABLE = "\u2013"  # en dash
 SUPPORTED: dict[ChartKind, frozenset[str]] = {
     "column": frozenset({"difference", "cagr", "axis_break"}),
     "bar": frozenset({"difference", "cagr", "axis_break"}),
+    "waterfall": frozenset({"difference", "cagr", "axis_break"}),
 }
 
 
 def measured(state: ChartState) -> ChartData:
-    """The data an annotation of ``state`` measures: categories and the series values."""
+    """The data an annotation of ``state`` measures: categories and the series values.
+
+    For a waterfall chart one value per step: the level its column ends at.
+    """
+    if state.kind == "waterfall":
+        return levels(parse_waterfall(state))
     return parse(state)
 
 

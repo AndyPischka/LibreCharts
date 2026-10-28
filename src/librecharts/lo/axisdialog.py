@@ -76,6 +76,7 @@ def ask(ctx: Any, frame: Any, state: ChartState, current: Annotation | None) -> 
     """Show the dialog (modal); the choice, or ``None`` if cancelled."""
     locale = ui.ui_locale(ctx)
     tallest = limit(state)
+    waterfall = state.kind == "waterfall"
     shown = current if current and current.lower is not None else None
     if shown is None and (proposal := suggestion(state)) is not None:
         lower, upper = proposal.lower, proposal.upper
@@ -91,9 +92,11 @@ def ask(ctx: Any, frame: Any, state: ChartState, current: Annotation | None) -> 
         lower="" if lower is None else format_value(lower),
         upper="" if upper is None else format_value(upper),
         tallest=format_value(tallest),
+        hint="break_hint_waterfall" if waterfall else "break_hint",
     )
     outcome: list[Choice] = []
-    ok = _OkListener(dialog, locale, tallest, outcome)
+    too_high = "break_too_high_waterfall" if waterfall else "break_too_high"
+    ok = _OkListener(dialog, locale, tallest, outcome, too_high)
     dialog.getControl("ok").addActionListener(ok)
     dialog.getControl("manual").addItemListener(_RadioListener(dialog))
     dialog.getControl("auto").addItemListener(_RadioListener(dialog))
@@ -121,8 +124,11 @@ class _RadioListener(unohelper.Base, XItemListener):
 
 
 class _OkListener(unohelper.Base, XActionListener):
-    def __init__(self, dialog: Any, locale: str, tallest: float, outcome: list[Choice]) -> None:
+    def __init__(
+        self, dialog: Any, locale: str, tallest: float, outcome: list[Choice], too_high: str
+    ) -> None:
         self.dialog, self.locale, self.tallest, self.outcome = dialog, locale, tallest, outcome
+        self.too_high = too_high
 
     def actionPerformed(self, event: Any) -> None:
         try:
@@ -134,6 +140,7 @@ class _OkListener(unohelper.Base, XActionListener):
                 self.dialog.getControl("lower").getText(),
                 self.dialog.getControl("upper").getText(),
                 self.tallest,
+                self.too_high,
             )
             if isinstance(checked, str):  # keep the dialog open and say what is wrong
                 self.dialog.getModel().getByName("error").Label = text(checked, self.locale)
@@ -154,7 +161,15 @@ def _sync_fields(dialog: Any) -> None:
 
 
 def _build(
-    ctx: Any, frame: Any, locale: str, *, manual: bool, lower: str, upper: str, tallest: str
+    ctx: Any,
+    frame: Any,
+    locale: str,
+    *,
+    manual: bool,
+    lower: str,
+    upper: str,
+    tallest: str,
+    hint: str,
 ) -> Any:
     """The dialog control, not yet shown. Sizes are in "Map AppFont" units."""
     smgr = ctx.ServiceManager
@@ -203,7 +218,7 @@ def _build(
         76,
         170,
         10,
-        Label=text("break_hint", locale, tallest=tallest),
+        Label=text(hint, locale, tallest=tallest),
         TabIndex=6,
     )
     add("FixedText", "error", 10, 88, 170, 18, Label="", TextColor=_RED, MultiLine=True, TabIndex=7)

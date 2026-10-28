@@ -39,11 +39,8 @@ def chart_menu(state: ChartState, locale: str) -> MenuItem:
             _command("menu_add_difference", "PickAnnotation?kind=difference", locale),
             _command("menu_add_level", "PickAnnotation?kind=difference&style=level", locale),
             _command("menu_add_cagr", "PickAnnotation?kind=cagr", locale),
+            _command("menu_add_break", "AxisBreak", locale),
         ]
-    if supports(state, "axis_break"):
-        if not supports(state, "difference"):
-            items.append(SEPARATOR)
-        items.append(_command("menu_add_break", "AxisBreak", locale))
     data = notes.measured(state)
     shown = [
         (index, annotation)

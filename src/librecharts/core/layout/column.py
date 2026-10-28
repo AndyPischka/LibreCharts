@@ -114,7 +114,7 @@ def layout_column(
     for lane, arrow in enumerate(brackets):
         line_y = lanes - lane * LANE_HEIGHT - LANE_LINE_GAP
         out.extend(
-            _bracket(
+            bracket(
                 anchor(arrow.start, arrow.series),
                 anchor(arrow.end, arrow.series),
                 line_y,
@@ -124,7 +124,7 @@ def layout_column(
     for lane, arrow in enumerate(levels):
         arrow_x = plot_width + lane * LEVEL_LANE_WIDTH + LEVEL_ARROW_INSET
         out.extend(
-            _level(
+            level_arrow(
                 level(arrow.start, arrow.series),
                 level(arrow.end, arrow.series),
                 arrow_x,
@@ -138,7 +138,7 @@ def _same(value: float) -> float:
     return value
 
 
-def _break_mark(x: float, width: float, y_break: float, overhang: float) -> list[Primitive]:
+def break_mark(x: float, width: float, y_break: float, overhang: float) -> list[Primitive]:
     """A white gap across a column or bar with two parallel slanted lines."""
     left, right, top = x - overhang, x + width + overhang, y_break - BREAK_GAP / 2
     return [
@@ -176,7 +176,7 @@ def column_at(
     return category, int(offset // (column_width / len(data.series)))
 
 
-def _bracket(
+def bracket(
     start: tuple[float, float], end: tuple[float, float], line_y: float, label: str
 ) -> list[Primitive]:
     """Up from ``start``, across at ``line_y``, down onto ``end`` with an arrowhead."""
@@ -199,7 +199,7 @@ def _bracket(
     ]
 
 
-def _level(
+def level_arrow(
     start: tuple[float, float], end: tuple[float, float], arrow_x: float, label: str
 ) -> list[Primitive]:
     """Dashed lines from both levels to ``arrow_x``, an arrow from one level to the other."""
@@ -257,7 +257,7 @@ def _stacked_column(
             )
         )
     if cut and cut.cuts(column_top):
-        out.extend(_break_mark(x, width, y(cut.lower), BREAK_OVERHANG))
+        out.extend(break_mark(x, width, y(cut.lower), BREAK_OVERHANG))
     return out
 
 
@@ -279,5 +279,5 @@ def _clustered_column(
             Text(bar_x, label_y, bar_width, LABEL_HEIGHT, format_value(value), "center", "value")
         )
         if cut and cut.cuts(value):  # bars sit side by side: the mark stays on its bar
-            out.extend(_break_mark(bar_x, bar_width, y(cut.lower), 0.0))
+            out.extend(break_mark(bar_x, bar_width, y(cut.lower), 0.0))
     return out

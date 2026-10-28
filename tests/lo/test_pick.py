@@ -161,3 +161,21 @@ def test_picking_two_bars_adds_a_difference_arrow_to_a_bar_chart(ctx):
         assert "+28.6%" in [group.getByIndex(i).String for i in range(group.getCount())]
     finally:
         doc.close(True)
+
+
+def test_picking_two_columns_adds_a_difference_arrow_to_a_waterfall_chart(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, "org.librecharts:InsertWaterfallChart")
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        controller = doc.getCurrentController()
+        dispatch(ctx, doc, PICK + "difference")
+        assert not _chart_selected(doc), "pick mode should have entered the chart group"
+
+        controller.select(_child_with_text(group, "Start"))
+        controller.select(_child_with_text(group, "End"))
+        _wait_for(lambda: _annotations(doc, chart_id) == (Annotation("difference", 0, 5),))
+        _wait_for(lambda: _chart_selected(doc))
+        assert "+10%" in [group.getByIndex(i).String for i in range(group.getCount())]
+    finally:
+        doc.close(True)

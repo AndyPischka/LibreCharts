@@ -19,7 +19,7 @@ def layout_chart(state: ChartState, width: float, height: float) -> tuple[Primit
     Raises ``ValueError`` if the box is too small for the chart.
     """
     if state.kind == "waterfall":
-        return layout_waterfall(parse_waterfall(state), width, height)
+        return layout_waterfall(parse_waterfall(state), width, height, state.annotations)
     if state.kind == "mekko":
         return layout_mekko(parse_mekko(state), width, height)
     data = parse(state)

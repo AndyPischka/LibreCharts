@@ -15,7 +15,9 @@ from librecharts.core import annotations as notes
 from librecharts.core.datasheet import parse
 from librecharts.core.layout.bar import bar_at
 from librecharts.core.layout.column import column_at
+from librecharts.core.layout.waterfall import step_at
 from librecharts.core.model import Annotation, AnnotationKind, ArrowStyle, ChartState
+from librecharts.core.waterfall import parse_waterfall
 
 Target = tuple[int, int | None]  # category, series (None: the column as a whole)
 
@@ -26,6 +28,8 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
         return column_at(parse(state), state.grouping, width, state.annotations, x, y)
     if state.kind == "bar":
         return bar_at(parse(state), state.grouping, width, height, state.annotations, x, y)
+    if state.kind == "waterfall":
+        return step_at(parse_waterfall(state), width, state.annotations, x, y)
     return None
 
 

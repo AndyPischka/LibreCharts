@@ -7,16 +7,19 @@ from librecharts.core.axis_break import (
     SHOW,
     Break,
     automatic,
+    automatic_waterfall,
     axis,
     check,
     column_tops,
     describe,
     limit,
     resolve,
+    resolve_waterfall,
     suggestion,
 )
-from librecharts.core.datasheet import ChartData, Series, sample_state
+from librecharts.core.datasheet import ChartData, Series, sample_state, sample_waterfall_state
 from librecharts.core.model import Annotation
+from librecharts.core.waterfall import Step, WaterfallData
 
 DATA = ChartData(
     ("A", "B", "C"), (Series("S", (10.0, 100.0, 20.0)), Series("T", (5.0, -3.0, None)))
@@ -127,3 +130,71 @@ def test_shortened_axis_ends_at_the_folded_tallest_column() -> None:
     data = ChartData(("A", "B"), (Series("S", (10.0, 100.0)),))
     assert axis(data, "stacked", cut).maximum >= cut.fold(100.0)
     assert axis(data, "stacked", cut).minimum == 0.0
+
+
+HIGH_STEPS = WaterfallData(
+    (
+        Step("Start", 0, 1000, True, True),
+        Step("Up", 1000, 1100, False, True),
+        Step("Down", 1100, 1050, False, True),
+        Step("End", 0, 1050, True, True),
+    )
+)
+
+
+def test_automatic_waterfall_break_cuts_the_totals_below_the_steps() -> None:
+    cut = automatic_waterfall(HIGH_STEPS)
+    assert cut is not None
+    assert cut.lower == pytest.approx(0.2 * 1000)
+    assert cut.upper == pytest.approx(0.9 * 1000)  # the lowest step touches 1000
+    assert cut.fold(1000.0) == pytest.approx(300.0)  # the steps keep 100 below the lowest
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [
+        (),
+        (Step("Only", 0, 500, True, True),),  # no steps
+        (Step("S", 0, 10, True, True), Step("Up", 10, 500, False, True)),  # the steps are tall
+        (Step("S", 0, 100, True, True), Step("Down", 100, -20, False, True)),  # below zero
+    ],
+)
+def test_no_automatic_waterfall_break_unless_the_steps_float_high(
+    steps: tuple[Step, ...],
+) -> None:
+    assert automatic_waterfall(WaterfallData(steps)) is None
+
+
+def test_resolve_waterfall_uses_the_last_axis_break() -> None:
+    first = Annotation("axis_break", 0, 0, lower=10.0, upper=20.0)
+    last = Annotation("axis_break", 0, 0, lower=100.0, upper=800.0)
+    assert resolve_waterfall((first, Annotation("difference", 0, 1), last), HIGH_STEPS) == Break(
+        100, 800
+    )
+
+
+def test_resolve_waterfall_automatic_follows_the_data() -> None:
+    chosen = (Annotation("axis_break", 0, 0),)
+    assert resolve_waterfall(chosen, HIGH_STEPS) == automatic_waterfall(HIGH_STEPS)
+
+
+def test_a_manual_waterfall_break_must_lie_below_all_steps() -> None:
+    reaching_a_step = Annotation("axis_break", 0, 0, lower=100.0, upper=1001.0)
+    assert resolve_waterfall((reaching_a_step,), HIGH_STEPS) is None
+
+
+def test_resolve_waterfall_without_break_or_steps_is_none() -> None:
+    assert resolve_waterfall((Annotation("difference", 0, 1),), HIGH_STEPS) is None
+    assert resolve_waterfall((Annotation("axis_break", 0, 0),), WaterfallData(())) is None
+
+
+def test_limit_and_suggestion_of_a_waterfall_chart() -> None:
+    state = sample_waterfall_state()
+    assert limit(state) == 100.0  # the lowest level of a step
+    assert suggestion(state) == Break(20.0, 90.0)
+
+
+def test_check_reports_the_given_message_for_a_range_that_is_too_high() -> None:
+    assert check("10", "500", tallest=100.0, too_high="break_too_high_waterfall") == (
+        "break_too_high_waterfall"
+    )

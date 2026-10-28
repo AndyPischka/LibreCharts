@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import pytest
 
-from librecharts.core.datasheet import sample_mekko_state, sample_state
+from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
 from librecharts.core.layout.column import LANE_HEIGHT
 from librecharts.core.messages import MESSAGES
 from librecharts.core.model import Annotation
@@ -37,6 +37,13 @@ def test_points_outside_the_box_or_in_arrow_lanes_hit_nothing() -> None:
     with_arrow = replace(STACKED, annotations=(Annotation("difference", 0, 1),))
     assert target_at(with_arrow, WIDTH, HEIGHT, 500, LANE_HEIGHT - 1) is None
     assert target_at(with_arrow, WIDTH, HEIGHT, 500, LANE_HEIGHT) == (0, None)
+
+
+def test_waterfall_charts_have_targets_by_column() -> None:
+    waterfall = sample_waterfall_state()
+    assert target_at(waterfall, 3000, 8000, 100, 4000) == (0, None)
+    assert target_at(waterfall, 3000, 8000, 2999, 4000) is not None
+    assert target_at(waterfall, 3000, 8000, 3000, 4000) is None
 
 
 def test_bar_charts_have_targets_and_other_charts_do_not() -> None:

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from librecharts.core.datasheet import ChartData, Series
 from librecharts.core.model import ChartState
 
 _NOT_A_MARK = frozenset({"", "0", "false", "no", "nein", "n"})
@@ -38,6 +39,28 @@ class Step:
 @dataclass(frozen=True, slots=True)
 class WaterfallData:
     steps: tuple[Step, ...]
+
+
+def levels(data: WaterfallData) -> ChartData:
+    """The levels the columns end at, as data for annotations: one value per step.
+
+    A difference or CAGR arrow on a waterfall chart measures these (the running total after a
+    step, or the value of a total).
+    """
+    names = tuple(step.name for step in data.steps)
+    return ChartData(names, (Series("Level", tuple(step.end for step in data.steps)),))
+
+
+def floor(data: WaterfallData) -> float:
+    """The lowest level any step (not a total) touches; 0 if there are none.
+
+    Totals stand on the baseline, so only the range below this level can be cut out of the
+    scale without touching a step.
+    """
+    touched = [
+        level for step in data.steps if not step.is_total for level in (step.start, step.end)
+    ]
+    return min(touched, default=0.0)
 
 
 def parse_waterfall(state: ChartState) -> WaterfallData:

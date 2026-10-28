@@ -108,6 +108,14 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "The lower value must be at least 0 and below the upper value.",
         "de": "Der untere Wert muss mindestens 0 und kleiner als der obere sein.",
     },
+    "break_hint_waterfall": {
+        "en": "The break must lie below all steps, up to {tallest}.",
+        "de": "Der Bruch muss unterhalb aller Schritte liegen, bis {tallest}.",
+    },
+    "break_too_high_waterfall": {
+        "en": "The upper value must not exceed the lowest step.",
+        "de": "Der obere Wert darf den niedrigsten Schritt nicht übersteigen.",
+    },
     "break_too_high": {
         "en": "The upper value must not exceed the tallest column.",
         "de": "Der obere Wert darf die höchste Säule nicht übersteigen.",

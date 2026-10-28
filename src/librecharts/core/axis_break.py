@@ -1,8 +1,11 @@
-"""The axis break of a column chart: which value range it removes, and the dialog's input rules.
+"""The axis break: which value range it removes, and the dialog's input rules.
 
 A break removes the values between ``lower`` and ``upper`` from the scale of the whole axis:
 everything up to ``lower`` is drawn as is, what lies above ``upper`` continues right after
 ``lower``. Automatic breaks (no range stored) cut where one column dwarfs the others.
+
+On a waterfall chart only the range below all steps can be removed: it shortens the totals (start
+and end columns) and shifts the floating steps down as a whole.
 """
 
 from __future__ import annotations
@@ -14,9 +17,12 @@ from librecharts.core.datasheet import ChartData, parse
 from librecharts.core.layout.common import format_value
 from librecharts.core.model import Annotation, ChartState, Grouping
 from librecharts.core.scale import Axis, nice_axis
+from librecharts.core.waterfall import WaterfallData, floor, parse_waterfall
 
 KEEP = 1.1  # automatic: the break starts this far above the second tallest column
 SHOW = 1.3  # automatic: the tallest column continues up to this share of the second tallest
+STUB = 0.2  # waterfall, automatic: the totals keep this share of the lowest step below it ...
+CLEARANCE = 0.9  # ... and the break ends at this share, leaving the rest as space below the steps
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,13 +76,41 @@ def automatic(tops: list[float]) -> Break | None:
 
 
 def limit(state: ChartState) -> float:
-    """The highest value a manual break may reach: the tallest column or bar."""
+    """The highest value a manual break may reach: the tallest column or bar, on a waterfall
+    chart the lowest level of a step."""
+    if state.kind == "waterfall":
+        return floor(parse_waterfall(state))
     return max(column_tops(parse(state), state.grouping), default=0.0)
 
 
 def suggestion(state: ChartState) -> Break | None:
     """The automatic break of ``state``, shown as the dialog's starting values."""
+    if state.kind == "waterfall":
+        return automatic_waterfall(parse_waterfall(state))
     return automatic(column_tops(parse(state), state.grouping))
+
+
+def automatic_waterfall(data: WaterfallData) -> Break | None:
+    """The break for a waterfall whose steps float high above the baseline; else ``None``.
+
+    Worth it when the steps use less than half of the height: the totals are cut below them.
+    """
+    low = floor(data)
+    high = max((level for s in data.steps for level in (s.start, s.end)), default=0.0)
+    if low <= 0 or low <= high - low:
+        return None
+    return Break(STUB * low, CLEARANCE * low)
+
+
+def resolve_waterfall(annotations: tuple[Annotation, ...], data: WaterfallData) -> Break | None:
+    """The break to draw on a waterfall: the (last) axis break annotation, if it fits below all
+    steps. Then it cuts the first total, which is at least as high as the lowest step."""
+    chosen = next((a for a in reversed(annotations) if a.kind == "axis_break"), None)
+    if chosen is None or not data.steps:
+        return None
+    if chosen.lower is None or chosen.upper is None:
+        return automatic_waterfall(data)
+    return Break(chosen.lower, chosen.upper) if chosen.upper <= floor(data) else None
 
 
 def resolve(
@@ -99,11 +133,14 @@ def describe(annotation: Annotation) -> str:
     return f"{format_value(annotation.lower)}-{format_value(annotation.upper)}"
 
 
-def check(lower_text: str, upper_text: str, tallest: float) -> tuple[float, float] | str:
+def check(
+    lower_text: str, upper_text: str, tallest: float, too_high: str = "break_too_high"
+) -> tuple[float, float] | str:
     """Validate the dialog's two fields; the range, or the key of the message to show.
 
     Numbers may use a comma or a dot. The range must lie in ``[0, tallest]``: below zero nothing is
-    cut, and a break above the tallest column would remove nothing.
+    cut, and a break above the tallest column would remove nothing. ``too_high`` is the message
+    key for a range beyond ``tallest``.
     """
     try:
         lower, upper = _number(lower_text), _number(upper_text)
@@ -112,7 +149,7 @@ def check(lower_text: str, upper_text: str, tallest: float) -> tuple[float, floa
     if lower < 0 or lower >= upper:
         return "break_order"
     if upper > tallest:
-        return "break_too_high"
+        return too_high
     return lower, upper
 
 

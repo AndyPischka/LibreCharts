@@ -1,6 +1,6 @@
 from dataclasses import replace
 
-from librecharts.core.datasheet import sample_mekko_state, sample_state
+from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
 from librecharts.core.menu import PROTOCOL
 from librecharts.core.model import Annotation
 from librecharts.core.panel import content
@@ -35,6 +35,12 @@ def test_column_chart_enables_edit_and_annotations() -> None:
     assert all(b.enabled for b in (*panel.edit, *panel.add))
     assert not panel.remove_all.enabled
     assert panel.rows == ()
+
+
+def test_bar_and_waterfall_charts_can_be_annotated() -> None:
+    for state in (replace(sample_state(), kind="bar"), sample_waterfall_state()):
+        panel = content(state, True, "en-US")
+        assert all(b.enabled for b in (*panel.edit, *panel.add))
 
 
 def test_other_charts_can_only_be_edited() -> None:

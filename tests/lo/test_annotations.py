@@ -282,3 +282,29 @@ def test_bar_chart_arrows_and_axis_break_are_stored_and_drawn(ctx):
         assert _arrowheads(group) == 2
     finally:
         doc.close(True)
+
+
+def test_waterfall_arrows_and_a_break_below_the_steps_are_drawn(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, "org.librecharts:InsertWaterfallChart")
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        dispatch(ctx, doc, ADD + "kind=difference&start=0&end=5")
+        dispatch(ctx, doc, ADD + "kind=cagr&start=0&end=5")
+        dispatch(ctx, doc, ADD + "kind=difference&start=0&end=5&style=level")
+        dispatch(ctx, doc, ADD + "kind=axis_break")  # the sample's steps float above 100
+        assert [a.kind for a in _annotations(doc, chart_id)] == [
+            "difference",
+            "cagr",
+            "difference",
+            "axis_break",
+        ]
+        labels = _labels(group)
+        assert "+10%" in labels
+        assert "CAGR +1.9%" in labels
+        assert _arrowheads(group) == 3
+        # the totals' break marks are white gaps; the steps keep their real labels
+        assert "100" in labels
+        assert "+30" in labels
+    finally:
+        doc.close(True)

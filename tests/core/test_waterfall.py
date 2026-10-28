@@ -2,7 +2,7 @@ import pytest
 
 from librecharts.core.datasheet import sample_waterfall_state, state_from_table
 from librecharts.core.model import ChartState
-from librecharts.core.waterfall import Step, WaterfallData, parse_waterfall
+from librecharts.core.waterfall import Step, WaterfallData, floor, levels, parse_waterfall
 
 
 def sheet(*rows: list[str | float | None]) -> ChartState:
@@ -87,3 +87,34 @@ def test_sample_waterfall_ends_with_the_computed_total() -> None:
     assert steps[0].name == "Start"
     assert steps[-1].is_total
     assert steps[-1].end == 110
+
+
+def test_levels_are_what_the_columns_end_at() -> None:
+    data = WaterfallData(
+        (
+            Step("Start", 0, 100, True, True),
+            Step("Down", 100, 70, False, True),
+            Step("Gap", 70, 70, False, False),
+            Step("End", 0, 70, True, True),
+        )
+    )
+    measured = levels(data)
+    assert measured.categories == ("Start", "Down", "Gap", "End")
+    assert [s.values for s in measured.series] == [(100, 70, 70, 70)]
+
+
+def test_floor_is_the_lowest_level_a_step_touches() -> None:
+    data = WaterfallData(
+        (
+            Step("Start", 0, 100, True, True),
+            Step("Down", 100, 70, False, True),
+            Step("Up", 70, 90, False, True),
+            Step("End", 0, 90, True, True),
+        )
+    )
+    assert floor(data) == 70
+
+
+def test_floor_is_zero_without_steps() -> None:
+    assert floor(WaterfallData((Step("Only", 0, 50, True, True),))) == 0
+    assert floor(WaterfallData(())) == 0

@@ -1,6 +1,6 @@
 from dataclasses import replace
 
-from librecharts.core.datasheet import sample_mekko_state, sample_state
+from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
 from librecharts.core.menu import PROTOCOL, SEPARATOR, MenuItem, chart_menu
 from librecharts.core.model import Annotation
 
@@ -20,6 +20,17 @@ def commands(item: MenuItem) -> list[str]:
 
 def test_column_chart_without_annotations_offers_data_and_arrows() -> None:
     assert chart_menu(sample_state(), "en-US") == MenuItem("LibreCharts", children=(EDIT, *ADD))
+
+
+def test_bar_and_waterfall_charts_offer_the_same_annotations() -> None:
+    assert chart_menu(replace(sample_state(), kind="bar"), "en-US").children == (EDIT, *ADD)
+    assert chart_menu(sample_waterfall_state(), "en-US").children == (EDIT, *ADD)
+
+
+def test_waterfall_annotations_are_titled_with_the_step_names() -> None:
+    state = replace(sample_waterfall_state(), annotations=(Annotation("difference", 0, 5),))
+    titles = [child.title for child in chart_menu(state, "en-US").children]
+    assert "Difference Start → End" in titles
 
 
 def test_other_charts_offer_the_data_only() -> None:
