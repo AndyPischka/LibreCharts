@@ -15,14 +15,17 @@ import unohelper
 from com.sun.star.frame import XDispatch, XDispatchProvider
 from com.sun.star.lang import XInitialization, XServiceInfo
 from com.sun.star.task import XJob
+from com.sun.star.ui import XUIElementFactory
 
-from librecharts.lo import commands, contextmenu, doubleclick, resize
+from librecharts.lo import commands, contextmenu, doubleclick, resize, sidebar
 
 IMPLEMENTATION_NAME = "org.librecharts.ProtocolHandler"
 SERVICE_NAME = "com.sun.star.frame.ProtocolHandler"
 PROTOCOL = "org.librecharts:"
 JOB_IMPLEMENTATION_NAME = "org.librecharts.DocumentJob"
 JOB_SERVICE_NAME = "com.sun.star.task.Job"
+PANEL_IMPLEMENTATION_NAME = "org.librecharts.PanelFactory"
+PANEL_SERVICE_NAME = "org.librecharts.PanelFactory"
 PRESENTATION_SERVICE = "com.sun.star.presentation.PresentationDocument"
 
 
@@ -131,6 +134,32 @@ class DocumentJob(unohelper.Base, XJob, XServiceInfo):
         return (JOB_SERVICE_NAME,)
 
 
+class PanelFactory(unohelper.Base, XUIElementFactory, XServiceInfo):
+    """Creates the LibreCharts sidebar panel (registered in Factories.xcu and Sidebar.xcu)."""
+
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    def createUIElement(self, resource_url, args):
+        try:
+            return sidebar.create(self.ctx, resource_url, args)
+        except Exception:
+            traceback.print_exc()
+            raise
+
+    def getImplementationName(self):
+        return PANEL_IMPLEMENTATION_NAME
+
+    def supportsService(self, name):
+        return name == PANEL_SERVICE_NAME
+
+    def getSupportedServiceNames(self):
+        return (PANEL_SERVICE_NAME,)
+
+
 g_ImplementationHelper = unohelper.ImplementationHelper()
 g_ImplementationHelper.addImplementation(ProtocolHandler, IMPLEMENTATION_NAME, (SERVICE_NAME,))
 g_ImplementationHelper.addImplementation(DocumentJob, JOB_IMPLEMENTATION_NAME, (JOB_SERVICE_NAME,))
+g_ImplementationHelper.addImplementation(
+    PanelFactory, PANEL_IMPLEMENTATION_NAME, (PANEL_SERVICE_NAME,)
+)
