@@ -35,4 +35,5 @@ to sync, and what happens to formulas and to the window's lifetime.
 - Pitfalls found on the way: `addEventListener` is ambiguous on documents in PyUNO; an exception escaping
   a dispatch or listener can abort LibreOffice; LibreOffice 26.8 intermittently aborts in headless mode
   when a visible Calc window is closed (hence hidden test documents).
-- No double-click to open the data sheet yet: Impress uses it to enter the group.
+- Double-click opens the data sheet too (added later, `lo/doubleclick.py`): a mouse click handler
+  swallows the second press on a selected chart, which Impress would use to enter the group.

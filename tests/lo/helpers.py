@@ -21,15 +21,15 @@ def desktop(ctx):
     return ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
 
 
-def new_impress(ctx):
-    """A hidden, empty presentation; the caller closes it.
+def new_impress(ctx, hidden=True):
+    """An empty presentation; the caller closes it.
 
-    Keep test documents hidden: in headless mode LibreOffice 26.8 intermittently aborts when a
-    *visible* Calc window is closed. Data sheets of hidden presentations open hidden as well.
+    Keep test documents hidden where possible: in headless mode LibreOffice 26.8 intermittently
+    aborts when a *visible* Calc window is closed, and visible documents abort LibreOffice in
+    headless Linux. Only tests that need real mouse input use ``hidden=False``.
     """
-    doc = desktop(ctx).loadComponentFromURL(
-        "private:factory/simpress", "_blank", 0, (prop("Hidden", True),)
-    )
+    args = (prop("Hidden", True),) if hidden else ()
+    doc = desktop(ctx).loadComponentFromURL("private:factory/simpress", "_blank", 0, args)
     page = doc.getCurrentController().getCurrentPage()
     while page.getCount():
         page.remove(page.getByIndex(0))
@@ -103,3 +103,24 @@ class Skip(Exception):
 def skip_on_headless_linux(reason):
     if sys.platform.startswith("linux"):
         raise Skip(reason)
+
+
+def click(ctx, doc, x, y, clicks=1):
+    """Click the left mouse button ``clicks`` times at document position (``x``, ``y``).
+
+    Coordinates are in 1/100 mm on the slide and are mapped to pixels through the view's visible
+    area, so the click lands where intended whatever the window size or zoom. Needs a *visible*
+    ``doc``. LibreOffice counts double-clicks itself from the timing of the presses (the event's
+    own ClickCount is ignored), so a double-click is two quick clicks.
+    """
+    controller = doc.getCurrentController()
+    window = controller.getFrame().getComponentWindow()
+    size, area = window.getPosSize(), controller.VisibleArea
+    event = uno.createUnoStruct("com.sun.star.awt.MouseEvent")
+    event.Source, event.Buttons, event.ClickCount = window, 1, 1
+    event.X = round((x - area.X) / area.Width * size.Width)
+    event.Y = round((y - area.Y) / area.Height * size.Height)
+    robot = ctx.ServiceManager.createInstanceWithContext("com.sun.star.awt.Toolkit", ctx)
+    for _ in range(clicks):
+        robot.mousePress(event)
+        robot.mouseRelease(event)

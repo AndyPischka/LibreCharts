@@ -16,7 +16,7 @@ from com.sun.star.frame import XDispatch, XDispatchProvider
 from com.sun.star.lang import XInitialization, XServiceInfo
 from com.sun.star.task import XJob
 
-from librecharts.lo import commands, resize
+from librecharts.lo import commands, doubleclick, resize
 
 IMPLEMENTATION_NAME = "org.librecharts.ProtocolHandler"
 SERVICE_NAME = "com.sun.star.frame.ProtocolHandler"
@@ -48,6 +48,7 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
         if self.frame is None:
             return
         try:
+            doubleclick.attach(self.ctx, self.frame)  # also covers documents opened hidden
             if url.Path == "InsertColumnChart":
                 commands.insert_column_chart(self.frame)
             elif url.Path == "InsertBarChart":
@@ -80,7 +81,7 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
 
 
 class DocumentJob(unohelper.Base, XJob, XServiceInfo):
-    """Runs for every opened document (Jobs.xcu): watches presentations for resized charts.
+    """Runs for every opened document (Jobs.xcu): resize watcher and double-click handler.
 
     LibreOffice runs document-event jobs for visible documents only; hidden ones are not watched.
     """
@@ -94,6 +95,7 @@ class DocumentJob(unohelper.Base, XJob, XServiceInfo):
             model = next((a.Value for a in environment if a.Name == "Model"), None)
             if model is not None and model.supportsService(PRESENTATION_SERVICE):
                 resize.watch(model)
+                doubleclick.attach(self.ctx, model.getCurrentController().getFrame())
         except Exception:
             traceback.print_exc()
         return None

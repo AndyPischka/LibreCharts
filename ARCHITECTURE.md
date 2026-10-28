@@ -67,6 +67,7 @@ so every released schema version must stay readable (`state_io.py`).
 | `datasheet.py` | Calc window as a transient view: write stored cells, sync every committed edit back |
 | `commands.py` | Menu commands (selection handling, messages); called by `extension/entry.py` |
 | `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place (ADR 0007) |
+| `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
 | `ui.py` | UI locale and message boxes; texts come from `core/messages.py` |
 
 Further invariants of the adapter:
