@@ -25,4 +25,4 @@ def layout_chart(state: ChartState, width: float, height: float) -> tuple[Primit
     data = parse(state)
     if state.kind == "bar":
         return layout_bar(data, state.grouping, width, height)
-    return layout_column(data, state.grouping, width, height)
+    return layout_column(data, state.grouping, width, height, state.annotations)

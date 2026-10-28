@@ -9,8 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-TextRole = Literal["value", "total", "category", "series"]
-LineRole = Literal["baseline", "connector"]
+TextRole = Literal["value", "total", "category", "series", "annotation"]
+LineRole = Literal["baseline", "connector", "annotation"]
 Align = Literal["left", "center", "right"]
 
 
@@ -30,6 +30,7 @@ class Line:
     x2: float
     y2: float
     role: LineRole
+    arrow: bool = False  # arrowhead at (x2, y2)
 
 
 @dataclass(frozen=True, slots=True)
