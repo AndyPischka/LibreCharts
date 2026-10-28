@@ -2,10 +2,12 @@ import pytest
 
 from librecharts.core.annotations import (
     NOT_AVAILABLE,
+    changed,
     drawable,
     from_query,
     label,
     measured_value,
+    removed,
 )
 from librecharts.core.datasheet import ChartData, Series
 from librecharts.core.model import Annotation
@@ -110,3 +112,27 @@ def test_from_query_axis_break_needs_no_end() -> None:
 def test_from_query_rejects_bad_arguments(query: str) -> None:
     with pytest.raises(ValueError, match=r"."):
         from_query(query)
+
+
+ARROWS = (Annotation("difference", 0, 1), Annotation("cagr", 0, 2))
+
+
+def test_changed_sets_label_or_style_of_one_annotation() -> None:
+    assert changed(ARROWS, "index=0&label=absolute") == (
+        Annotation("difference", 0, 1, label="absolute"),
+        ARROWS[1],
+    )
+    assert changed(ARROWS, "index=0&style=level")[0].style == "level"
+
+
+def test_removed_drops_one_annotation() -> None:
+    assert removed(ARROWS, "index=1") == ARROWS[:1]
+    assert removed(ARROWS, "index=0") == ARROWS[1:]
+
+
+@pytest.mark.parametrize(
+    "query", ["", "index=2", "index=-1", "index=x", "index=0&label=roman", "index=0&style=curly"]
+)
+def test_changed_rejects_bad_arguments(query: str) -> None:
+    with pytest.raises(ValueError, match=r"."):
+        changed(ARROWS, query)

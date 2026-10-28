@@ -7,6 +7,7 @@ computed.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from urllib.parse import parse_qs
 
 from librecharts.core.datasheet import ChartData
@@ -79,6 +80,38 @@ def _cagr(start: float, end: float, periods: int) -> str:
 def _signed(value: float, decimals: int) -> str:
     text = f"{value:+.{decimals}f}".rstrip("0").rstrip(".")
     return "0" if text in ("+0", "-0") else text
+
+
+def changed(annotations: tuple[Annotation, ...], query: str) -> tuple[Annotation, ...]:
+    """Apply ``index=1&label=absolute`` (or ``style=...``) to the annotation at that index.
+
+    Raises ``ValueError`` for a missing or invalid index or value.
+    """
+    args = _args(query)
+    index = _index(args, annotations)
+    annotation = replace(
+        annotations[index],
+        label=args.get("label", annotations[index].label),  # pyright: ignore[reportArgumentType]
+        style=args.get("style", annotations[index].style),  # pyright: ignore[reportArgumentType]
+    )
+    return (*annotations[:index], annotation, *annotations[index + 1 :])
+
+
+def removed(annotations: tuple[Annotation, ...], query: str) -> tuple[Annotation, ...]:
+    """``annotations`` without the one at ``index=...``; ``ValueError`` for a bad index."""
+    index = _index(_args(query), annotations)
+    return (*annotations[:index], *annotations[index + 1 :])
+
+
+def _args(query: str) -> dict[str, str]:
+    return {key: values[-1] for key, values in parse_qs(query).items()}
+
+
+def _index(args: dict[str, str], annotations: tuple[Annotation, ...]) -> int:
+    index = int(args.get("index", "-1"))
+    if not 0 <= index < len(annotations):
+        raise ValueError(f"no annotation {index}")
+    return index
 
 
 def from_query(query: str) -> Annotation:

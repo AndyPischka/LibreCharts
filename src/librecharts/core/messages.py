@@ -40,6 +40,58 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Click the column to shorten with an axis break. Esc cancels.",
         "de": "Säule anklicken, die mit einem Achsenbruch gekürzt wird. Esc bricht ab.",
     },
+    "menu_edit_data": {
+        "en": "Edit chart data",
+        "de": "Diagrammdaten bearbeiten",
+    },
+    "menu_add_difference": {
+        "en": "Add difference arrow",
+        "de": "Differenzpfeil hinzufügen",
+    },
+    "menu_add_level": {
+        "en": "Add level difference",
+        "de": "Niveaudifferenz hinzufügen",
+    },
+    "menu_add_cagr": {
+        "en": "Add CAGR arrow",
+        "de": "CAGR-Pfeil hinzufügen",
+    },
+    "menu_bracket": {
+        "en": "Difference {start} → {end}",
+        "de": "Differenz {start} → {end}",
+    },
+    "menu_level": {
+        "en": "Level difference {start} → {end}",
+        "de": "Niveaudifferenz {start} → {end}",
+    },
+    "menu_cagr": {
+        "en": "CAGR {start} → {end}",
+        "de": "CAGR {start} → {end}",
+    },
+    "menu_show_absolute": {
+        "en": "Show absolute difference",
+        "de": "Absolute Differenz zeigen",
+    },
+    "menu_show_percent": {
+        "en": "Show percentage",
+        "de": "Prozent zeigen",
+    },
+    "menu_as_level": {
+        "en": "Show as level difference",
+        "de": "Als Niveaudifferenz zeigen",
+    },
+    "menu_as_bracket": {
+        "en": "Show as arrow above the columns",
+        "de": "Als Pfeil über den Säulen zeigen",
+    },
+    "menu_remove": {
+        "en": "Remove",
+        "de": "Entfernen",
+    },
+    "menu_remove_all": {
+        "en": "Remove all annotations",
+        "de": "Alle Annotationen entfernen",
+    },
     "corrupt_chart": {
         "en": "The data of this chart cannot be read: {detail}",
         "de": "Die Daten dieses Diagramms können nicht gelesen werden: {detail}",
