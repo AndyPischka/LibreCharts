@@ -3,17 +3,19 @@
 
 import time
 
-from helpers import close_datasheets, datasheets, dispatch, first_page, new_impress
+from helpers import (
+    close_datasheets,
+    datasheets,
+    dispatch,
+    first_page,
+    new_impress,
+    uno_command,
+)
 
 from librecharts.lo import store
 
 INSERT = "org.librecharts:InsertColumnChart"
 EDIT = "org.librecharts:EditData"
-
-
-def _uno(ctx, doc, command):
-    helper = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.DispatchHelper", ctx)
-    helper.executeDispatch(doc.getCurrentController().getFrame(), command, "", 0, ())
 
 
 def _inserted_and_pasted(ctx):
@@ -22,8 +24,8 @@ def _inserted_and_pasted(ctx):
     page = first_page(doc)
     original, original_id = store.find_charts(page)[0]
     doc.getCurrentController().select(original)
-    _uno(ctx, doc, ".uno:Copy")
-    _uno(ctx, doc, ".uno:Paste")
+    uno_command(ctx, doc, ".uno:Copy")
+    uno_command(ctx, doc, ".uno:Paste")
     assert page.getCount() == 2
     copy = next(page.getByIndex(i) for i in range(2) if page.getByIndex(i) != original)
     return doc, page, copy, original_id
@@ -88,7 +90,7 @@ def test_duplicated_slide_yields_independent_charts(ctx):
     doc = new_impress(ctx)
     try:
         dispatch(ctx, doc, INSERT)
-        _uno(ctx, doc, ".uno:DuplicatePage")
+        uno_command(ctx, doc, ".uno:DuplicatePage")
         assert doc.getDrawPages().getCount() == 2
         second = doc.getDrawPages().getByIndex(1)
         copy, _ = store.find_charts(second)[0]

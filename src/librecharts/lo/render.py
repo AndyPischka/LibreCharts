@@ -8,7 +8,8 @@ stable even when labels or bars do not reach the edges.
 
 from __future__ import annotations
 
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Literal
 
 import uno
 from com.sun.star.awt import Point, Size
@@ -40,7 +41,8 @@ def render_group(
     """Create a new group at (``x``, ``y``) on ``page`` holding the frame and ``primitives``."""
     group = doc.createInstance("com.sun.star.drawing.GroupShape")
     page.add(group)
-    _add_children(doc, group, primitives, x, y, width, height)
+    for spec in _specs(primitives, x, y, width, height):
+        _create(doc, group, spec)
     return group
 
 
@@ -52,52 +54,100 @@ def rerender(doc: Any, group: Any, primitives: tuple[Primitive, ...]) -> None:
     old = [group.getByIndex(i) for i in range(group.getCount())]
     position, size = group.Position, group.Size
     # Add first, then remove: an emptied group may be dissolved by LibreOffice.
-    _add_children(doc, group, primitives, position.X, position.Y, size.Width, size.Height)
+    for spec in _specs(primitives, position.X, position.Y, size.Width, size.Height):
+        _create(doc, group, spec)
     for shape in old:
         group.remove(shape)
 
 
-def _add_children(
-    doc: Any,
-    group: Any,
-    primitives: tuple[Primitive, ...],
-    x: int,
-    y: int,
-    width: int,
-    height: int,
-) -> None:
-    frame = _add(doc, group, "RectangleShape", x, y, width, height)
-    frame.FillStyle, frame.LineStyle = _FILL_NONE, _LINE_NONE
+SyncResult = Literal["unchanged", "updated", "mismatch"]
+
+
+def sync_geometry(group: Any, primitives: tuple[Primitive, ...]) -> SyncResult:
+    """Move and resize the existing children to ``primitives`` laid out at the group's box.
+
+    Keeps the shapes themselves, so LibreOffice's own undo of a resize can restore them.
+    Returns ``"mismatch"`` (and changes nothing) if the children do not correspond one to one.
+    """
+    position, size = group.Position, group.Size
+    specs = _specs(primitives, position.X, position.Y, size.Width, size.Height)
+    children = [group.getByIndex(i) for i in range(group.getCount())]
+    if len(children) != len(specs) or any(
+        child.ShapeType != f"com.sun.star.drawing.{spec.kind}"
+        for child, spec in zip(children, specs, strict=True)
+    ):
+        return "mismatch"
+    changed = False
+    for child, spec in zip(children, specs, strict=True):
+        pos, sz = child.Position, child.Size
+        if (
+            abs(pos.X - spec.x) > _TOLERANCE
+            or abs(pos.Y - spec.y) > _TOLERANCE
+            or abs(sz.Width - spec.width) > _TOLERANCE
+            or abs(sz.Height - spec.height) > _TOLERANCE
+        ):
+            child.Position = Point(spec.x, spec.y)
+            child.Size = Size(spec.width, spec.height)
+            changed = True
+        if isinstance(spec.primitive, Text) and child.String != spec.primitive.text:
+            child.String = spec.primitive.text
+            changed = True
+    return "updated" if changed else "unchanged"
+
+
+_TOLERANCE = 1  # 1/100 mm; LibreOffice rounds scaled geometry
+
+
+@dataclass(frozen=True, slots=True)
+class _Spec:
+    kind: str  # Draw shape type without the com.sun.star.drawing prefix
+    x: int
+    y: int
+    width: int
+    height: int
+    primitive: Primitive | None  # None for the frame
+
+
+def _spec(kind: str, p: Primitive | None, x: float, y: float, w: float, h: float) -> _Spec:
+    return _Spec(kind, round(x), round(y), max(round(w), 0), max(round(h), 0), p)
+
+
+def _specs(
+    primitives: tuple[Primitive, ...], x: int, y: int, width: int, height: int
+) -> list[_Spec]:
+    specs = [_spec("RectangleShape", None, x, y, width, height)]
     for p in primitives:
         if isinstance(p, Rect):
-            shape = _add(doc, group, "RectangleShape", x + p.x, y + p.y, p.width, p.height)
-            shape.FillStyle, shape.FillColor = _FILL_SOLID, PALETTE[p.series % len(PALETTE)]
-            shape.LineStyle = _LINE_NONE
+            specs.append(_spec("RectangleShape", p, x + p.x, y + p.y, p.width, p.height))
         elif isinstance(p, Line):
-            shape = _add(doc, group, "LineShape", x + p.x1, y + p.y1, p.x2 - p.x1, p.y2 - p.y1)
-            shape.LineStyle, shape.LineColor, shape.LineWidth = _LINE_SOLID, LINE_COLOR, LINE_WIDTH
+            specs.append(_spec("LineShape", p, x + p.x1, y + p.y1, p.x2 - p.x1, p.y2 - p.y1))
         else:
-            _add_text(doc, group, p, x, y)
+            specs.append(_spec("TextShape", p, x + p.x, y + p.y, p.width, p.height))
+    return specs
 
 
-def _add_text(doc: Any, group: Any, p: Text, x: int, y: int) -> None:
-    shape = _add(doc, group, "TextShape", x + p.x, y + p.y, p.width, p.height)
-    shape.TextAutoGrowHeight = False
-    shape.TextAutoGrowWidth = False
-    shape.TextVerticalAdjust = _V_CENTER
-    shape.TextHorizontalAdjust = _H_BLOCK
-    shape.TextLeftDistance = shape.TextRightDistance = 0
-    shape.TextUpperDistance = shape.TextLowerDistance = 0
-    # Text and character properties only stick once the shape is in a group or on a page.
-    shape.String = p.text
-    shape.CharHeight = FONT_HEIGHT_PT
-    shape.CharColor = TEXT_COLOR
-    shape.ParaAdjust = _PARA_ADJUST[p.align]
-
-
-def _add(doc: Any, group: Any, kind: str, x: float, y: float, width: float, height: float) -> Any:
-    shape = doc.createInstance(f"com.sun.star.drawing.{kind}")
+def _create(doc: Any, group: Any, spec: _Spec) -> None:
+    shape = doc.createInstance(f"com.sun.star.drawing.{spec.kind}")
     group.add(shape)
-    shape.Position = Point(round(x), round(y))
-    shape.Size = Size(max(round(width), 0), max(round(height), 0))
-    return shape
+    shape.Position = Point(spec.x, spec.y)
+    shape.Size = Size(spec.width, spec.height)
+    p = spec.primitive
+    if p is None:  # the invisible frame
+        shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_NONE
+    elif isinstance(p, Rect):
+        shape.FillStyle, shape.FillColor = _FILL_SOLID, PALETTE[p.series % len(PALETTE)]
+        shape.LineStyle = _LINE_NONE
+    elif isinstance(p, Line):
+        shape.LineStyle, shape.LineColor, shape.LineWidth = _LINE_SOLID, LINE_COLOR, LINE_WIDTH
+    else:
+        shape.TextAutoGrowHeight = False
+        shape.TextAutoGrowWidth = False
+        shape.TextVerticalAdjust = _V_CENTER
+        shape.TextHorizontalAdjust = _H_BLOCK
+        shape.TextLeftDistance = shape.TextRightDistance = 0
+        shape.TextUpperDistance = shape.TextLowerDistance = 0
+        # Text and character properties only stick once the shape is in a group or on a page.
+        shape.String = p.text
+        shape.CharHeight = FONT_HEIGHT_PT
+        shape.CharColor = TEXT_COLOR
+        shape.ParaAdjust = _PARA_ADJUST[p.align]

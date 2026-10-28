@@ -46,6 +46,7 @@ so every released schema version must stay readable (`state_io.py`).
 3. **A chart is a group of native Draw shapes** (ADR 0002); the slide still looks right if the
    extension is not installed.
 4. **Layout is a pure function** of chart data and available size: same input, same geometry.
+   The kinds and order of primitives depend on the data only, never on the size (ADR 0007).
 5. **The chart state in the document is the truth; the Calc data sheet is a view** (ADRs 0003, 0005).
    State lives in a document property anchored by the group name (ADR 0004, schema in ADR 0006).
 
@@ -59,6 +60,7 @@ so every released schema version must stay readable (`state_io.py`).
 | `chart.py` | `insert_column_chart`, `redraw`: chart operations on a presentation |
 | `datasheet.py` | Calc window as a transient view: write stored cells, sync every committed edit back |
 | `commands.py` | Menu commands (selection handling, messages); called by `extension/entry.py` |
+| `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place (ADR 0007) |
 | `ui.py` | UI locale and message boxes; texts come from `core/messages.py` |
 
 Further invariants of the adapter:

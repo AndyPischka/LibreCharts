@@ -8,11 +8,12 @@
       "Bash(uv run pyright:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
       "Bash(git log:*)"
     ],
     "ask": [
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
+
       "Bash(uv add:*)",
       "Bash(uv remove:*)"
     ],

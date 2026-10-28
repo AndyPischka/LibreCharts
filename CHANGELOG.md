@@ -11,6 +11,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   shapes with segment and total labels. Insert is a single undo step.
 - A "LibreCharts" toolbar with icons for both commands. In the Notebookbar (ribbon) interface it
   appears in the "Extension" group.
+- Resizing a chart lays it out again for the new size instead of stretching it; undo and redo
+  of the resize work as usual.
 - Copied or duplicated charts can be edited independently of the original.
 - Chart data is stored in the document and survives saving as ODP and PPTX.
 - *LibreCharts → Edit chart data* opens the chart's data in a Calc window. Every edit updates the

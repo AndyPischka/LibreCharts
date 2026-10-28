@@ -83,6 +83,13 @@ def all_charts(doc: Any) -> list[tuple[Any, str]]:
     return found
 
 
+def resolve(doc: Any, group: Any) -> str | None:
+    """The id of the stored state ``group`` displays (its own, or its origin's for an unclaimed
+    copy), without changing anything; ``None`` if orphaned or not a chart."""
+    name_id = chart_id_of(group)
+    return None if name_id is None else _origin_id(doc, name_id)
+
+
 def claim(doc: Any, group: Any) -> str | None:
     """Make ``group`` the sole owner of a stored state and return its chart id.
 

@@ -48,12 +48,17 @@ def dispatch(ctx, doc, command):
     handler.dispatch(url, ())
 
 
-def save_and_reload(ctx, doc, fmt):
-    """Store ``doc`` as ``fmt`` in a temp dir and load it again (hidden); the caller closes it."""
+def save_and_reload(ctx, doc, fmt, hidden=True):
+    """Store ``doc`` as ``fmt`` in a temp dir and load it again; the caller closes it.
+
+    ``hidden=False`` is needed where document-open jobs matter: LibreOffice runs them for visible
+    documents only.
+    """
     path = Path(tempfile.mkdtemp(prefix="librecharts_")) / f"roundtrip.{fmt}"
     url = uno.systemPathToFileUrl(str(path))
     doc.storeToURL(url, (prop("FilterName", FILTERS[fmt]),))
-    return desktop(ctx).loadComponentFromURL(url, "_blank", 0, (prop("Hidden", True),))
+    args = (prop("Hidden", True),) if hidden else ()
+    return desktop(ctx).loadComponentFromURL(url, "_blank", 0, args)
 
 
 def first_page(doc):
@@ -77,3 +82,14 @@ def datasheets(ctx):
 def close_datasheets(ctx):
     for calc in datasheets(ctx):
         calc.close(True)
+
+
+def uno_command(ctx, doc, command):
+    """Run a LibreOffice UI command such as ``.uno:Undo`` like the menu or keyboard does.
+
+    Use this instead of ``doc.getUndoManager().undo()/redo()``: called from this test process,
+    those run on a bridge thread inside LibreOffice and made it abort intermittently while the
+    extension's resize watcher was active. Users trigger undo through the UI command.
+    """
+    helper = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.DispatchHelper", ctx)
+    helper.executeDispatch(doc.getCurrentController().getFrame(), command, "", 0, ())

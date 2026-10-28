@@ -6,13 +6,17 @@ from typing import Any
 
 from librecharts.core.messages import text
 from librecharts.core.state_io import StateError
-from librecharts.lo import chart, store, ui
+from librecharts.lo import chart, resize, store, ui
 from librecharts.lo.datasheet import OrphanedChartError, open_datasheet
 
 
 def insert_column_chart(frame: Any) -> None:
     controller = frame.getController()
-    group = chart.insert_column_chart(controller.getModel(), controller.getCurrentPage())
+    doc = controller.getModel()
+    group = chart.insert_column_chart(doc, controller.getCurrentPage())
+    resize.watch(
+        doc
+    )  # normally done by the document-open job; covers a freshly installed extension
     controller.select(group)
 
 

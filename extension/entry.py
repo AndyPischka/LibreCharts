@@ -14,12 +14,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import unohelper
 from com.sun.star.frame import XDispatch, XDispatchProvider
 from com.sun.star.lang import XInitialization, XServiceInfo
+from com.sun.star.task import XJob
 
-from librecharts.lo import commands
+from librecharts.lo import commands, resize
 
 IMPLEMENTATION_NAME = "org.librecharts.ProtocolHandler"
 SERVICE_NAME = "com.sun.star.frame.ProtocolHandler"
 PROTOCOL = "org.librecharts:"
+JOB_IMPLEMENTATION_NAME = "org.librecharts.DocumentJob"
+JOB_SERVICE_NAME = "com.sun.star.task.Job"
+PRESENTATION_SERVICE = "com.sun.star.presentation.PresentationDocument"
 
 
 class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispatch, XServiceInfo):
@@ -69,5 +73,35 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
         return (SERVICE_NAME,)
 
 
+class DocumentJob(unohelper.Base, XJob, XServiceInfo):
+    """Runs for every opened document (Jobs.xcu): watches presentations for resized charts.
+
+    LibreOffice runs document-event jobs for visible documents only; hidden ones are not watched.
+    """
+
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    def execute(self, args):
+        try:
+            environment = next((a.Value for a in args if a.Name == "Environment"), ())
+            model = next((a.Value for a in environment if a.Name == "Model"), None)
+            if model is not None and model.supportsService(PRESENTATION_SERVICE):
+                resize.watch(model)
+        except Exception:
+            traceback.print_exc()
+        return None
+
+    def getImplementationName(self):
+        return JOB_IMPLEMENTATION_NAME
+
+    def supportsService(self, name):
+        return name == JOB_SERVICE_NAME
+
+    def getSupportedServiceNames(self):
+        return (JOB_SERVICE_NAME,)
+
+
 g_ImplementationHelper = unohelper.ImplementationHelper()
 g_ImplementationHelper.addImplementation(ProtocolHandler, IMPLEMENTATION_NAME, (SERVICE_NAME,))
+g_ImplementationHelper.addImplementation(DocumentJob, JOB_IMPLEMENTATION_NAME, (JOB_SERVICE_NAME,))

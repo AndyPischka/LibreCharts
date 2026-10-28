@@ -76,6 +76,10 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
   `addDocumentEventListener` for document lifetime events.
 - In headless mode LibreOffice 26.8 intermittently aborts when a *visible* Calc window is closed.
   Keep test documents hidden; data sheets of hidden presentations open hidden too.
+- In `tests/lo`, trigger undo/redo with `helpers.uno_command(ctx, doc, ".uno:Undo")`, never
+  `XUndoManager.undo()` (aborted LibreOffice; enforced by `tests/test_lo_conventions.py`).
+- Document-open jobs run for visible documents only; reload with `hidden=False` to test them.
+- Layout output must have the same primitive structure for every size (resize re-layout, ADR 0007).
 - `tests/lo/` holds plain `test_*(ctx)` functions run by `tests/lo/runner.py`, not pytest; pytest
   ignores that directory. Shared helpers live in `tests/lo/helpers.py`.
 - Do not use `LibreOffice-minimal-version` in `extension/description.xml`: LibreOffice 26.8 rejected

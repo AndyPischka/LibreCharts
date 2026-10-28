@@ -3,7 +3,7 @@
 
 from dataclasses import replace
 
-from helpers import dispatch, first_page, new_impress, save_and_reload
+from helpers import dispatch, first_page, new_impress, save_and_reload, uno_command
 
 from librecharts.core.datasheet import sample_state
 from librecharts.lo import chart, store
@@ -36,9 +36,9 @@ def test_insert_is_one_undo_step_and_redoable(ctx):
         assert len(manager.getAllUndoActionTitles()) == undo_depth + 1
         assert manager.getCurrentUndoActionTitle() == "Insert LibreCharts chart"
 
-        manager.undo()
+        uno_command(ctx, doc, ".uno:Undo")
         assert first_page(doc).getCount() == 0
-        manager.redo()
+        uno_command(ctx, doc, ".uno:Redo")
         charts = store.find_charts(first_page(doc))
         assert len(charts) == 1
         assert charts[0][0].getCount() > 10
@@ -93,7 +93,7 @@ def test_redraw_is_one_undo_step(ctx):
 
         manager = doc.getUndoManager()
         assert manager.getCurrentUndoActionTitle() == "Update LibreCharts chart"
-        manager.undo()
+        uno_command(ctx, doc, ".uno:Undo")
         assert group.getCount() == stacked_children
         assert store.read_state(doc, chart_id) == sample_state()
         assert manager.getCurrentUndoActionTitle() == "Insert LibreCharts chart"

@@ -61,3 +61,27 @@ def _apply(doc: Any, group: Any, chart_id: str, state: ChartState) -> None:
     with undo.recording_locked(doc):
         render.rerender(doc, group, primitives)
     store.write_state(doc, chart_id, state)
+
+
+def fit_to_size(doc: Any, group: Any) -> bool:
+    """Re-lay out the chart in ``group`` for the group's current size; ``True`` if anything moved.
+
+    Used after the user resized the group. Shapes are moved in place and no undo action is added:
+    LibreOffice's own undo of the resize restores them. Charts without readable state are left
+    as they are, and so are groups shrunk below the minimum layout size.
+    """
+    chart_id = store.resolve(doc, group)
+    if chart_id is None:
+        return False
+    try:
+        state = store.read_state(doc, chart_id)
+        if state is None:
+            return False
+        size = group.Size
+        primitives = layout_column(parse(state), state.grouping, size.Width, size.Height)
+    except ValueError:  # StateError, or the group is too small to lay out
+        return False
+    # No undo lock needed: LibreOffice does not record geometry changes made through the API.
+    # "mismatch" means the children are being replaced right now (e.g. a redraw in progress);
+    # leave them alone, the layout structure itself does not depend on the size.
+    return render.sync_geometry(group, primitives) == "updated"
