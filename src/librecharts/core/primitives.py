@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 TextRole = Literal["value", "total", "category", "series", "annotation"]
-LineRole = Literal["baseline", "connector", "annotation"]
+LineRole = Literal["baseline", "connector", "annotation", "helper"]
 Align = Literal["left", "center", "right"]
 
 
@@ -25,6 +25,12 @@ class Rect:
 
 @dataclass(frozen=True, slots=True)
 class Line:
+    """A line from (x1, y1) to (x2, y2).
+
+    Lines are horizontal, vertical, or run from top-left to bottom-right: the renderer draws them
+    by their bounding box. ``helper`` lines are dashed.
+    """
+
     x1: float
     y1: float
     x2: float

@@ -6,6 +6,9 @@ from librecharts.core.layout.column import (
     LABEL_HEIGHT,
     LANE_HEIGHT,
     LANE_LINE_GAP,
+    LEVEL_ARROW_INSET,
+    LEVEL_LABEL_GAP,
+    LEVEL_LANE_WIDTH,
     MIN_ARROW_LABEL_WIDTH,
     TOP_BAND,
     format_value,
@@ -209,7 +212,11 @@ def test_arrows_pointing_past_the_data_are_not_drawn() -> None:
 @pytest.mark.parametrize("grouping", ["stacked", "clustered"])
 def test_structure_with_arrows_does_not_depend_on_size(grouping: Grouping) -> None:
     chart = data(("A", (1.0, -2.0, None)), ("B", (300.0, 5.0, 0.0)), categories=("X", "Y", "Z"))
-    arrows = (Annotation("difference", 0, 2), Annotation("cagr", 2, 1, series=1))
+    arrows = (
+        Annotation("difference", 0, 2),
+        Annotation("cagr", 2, 1, series=1),
+        Annotation("difference", 1, 0, style="level"),
+    )
 
     def shape(width: float, height: float) -> list[tuple[str, str]]:
         return [
@@ -232,3 +239,60 @@ def test_arrow_geometry_stays_inside_the_box() -> None:
         else:
             assert min(p.y1, p.y2) >= 0
             assert max(p.y1, p.y2) <= 12000
+
+
+def test_level_arrow_golden_geometry() -> None:
+    # one level lane takes 2000 of the 4000 wide box; plot 800..9000, axis 0..20
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    arrow = Annotation("difference", 0, 1, style="level")
+    primitives = layout_column(chart, "stacked", 4000, 10000, (arrow,))
+    assert primitives[0] == Line(0, 9000, 2000, 9000, "baseline")
+    arrow_x = 2000 + LEVEL_ARROW_INSET
+    assert primitives[-4:] == (
+        Line(850, 4900, arrow_x, 4900, "helper"),
+        Line(1850, 800, arrow_x, 800, "helper"),
+        Line(arrow_x, 4900, arrow_x, 800, "annotation", arrow=True),
+        Text(
+            arrow_x + LEVEL_LABEL_GAP,
+            (4900 + 800 - LABEL_HEIGHT) / 2,
+            LEVEL_LANE_WIDTH - LEVEL_ARROW_INSET - LEVEL_LABEL_GAP,
+            LABEL_HEIGHT,
+            "+100%",
+            "left",
+            "annotation",
+        ),
+    )
+
+
+def test_level_arrows_get_lanes_right_of_the_plot_and_no_lane_above() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    levels = (
+        Annotation("difference", 0, 1, style="level"),
+        Annotation("difference", 1, 0, style="level", label="absolute"),
+    )
+    primitives = layout_column(chart, "stacked", 6000, 10000, levels)
+    heads = [p.x1 for p in primitives if isinstance(p, Line) and p.arrow]
+    assert heads == [2000 + LEVEL_ARROW_INSET, 2000 + LEVEL_LANE_WIDTH + LEVEL_ARROW_INSET]
+    assert min(p.y for p in primitives if isinstance(p, Rect)) == TOP_BAND
+
+
+def test_level_arrow_of_a_clustered_bar_starts_at_its_right_edge() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (5.0, 8.0)), categories=("X", "Y"))
+    arrow = Annotation("difference", 0, 1, series=0, style="level")
+    primitives = layout_column(chart, "clustered", 4000, 10000, (arrow,))
+    helper = next(p for p in primitives if isinstance(p, Line) and p.role == "helper")
+    bar = next(p for p in primitives if isinstance(p, Rect))  # series A in category X
+    assert helper.x1 == pytest.approx(bar.x + bar.width)
+    assert helper.y1 == pytest.approx(bar.y)
+
+
+def test_level_lanes_leave_too_little_room_for_the_plot() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    with pytest.raises(ValueError, match="too small"):
+        layout_column(
+            chart,
+            "stacked",
+            LEVEL_LANE_WIDTH,
+            10000,
+            (Annotation("difference", 0, 1, style="level"),),
+        )

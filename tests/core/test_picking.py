@@ -99,3 +99,10 @@ def test_every_prompt_has_a_message() -> None:
         assert session.prompt in MESSAGES
         session.add((0, None))
         assert session.prompt in MESSAGES
+
+
+def test_level_lanes_right_of_the_plot_hit_nothing() -> None:
+    level = replace(STACKED, annotations=(Annotation("difference", 0, 1, style="level"),))
+    # the plot shrinks to 3000 - LEVEL_LANE_WIDTH = 1000: slots of 333
+    assert target_at(level, WIDTH, 500, 5000) == (1, None)
+    assert target_at(level, WIDTH, 1500, 5000) is None

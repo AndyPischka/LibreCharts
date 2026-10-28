@@ -4,8 +4,9 @@ The kinds and order of the returned primitives depend only on the data, never on
 
 No value axis is drawn (like think-cell): values are labelled directly. The axis range only
 fixes the scale and always includes zero. Above the plot there is a band for total and value
-labels, below it a band for category labels. Arrows (difference, CAGR) run in lanes above the
-label band, one lane per arrow, the first one closest to the plot.
+labels, below it a band for category labels. Bracket arrows (difference, CAGR) run in lanes
+above the label band, one lane per arrow, the first one closest to the plot. Level arrows run in
+lanes right of the plot, the first one closest to it.
 """
 
 from __future__ import annotations
@@ -24,9 +25,10 @@ CATEGORY_BAND = 1000.0  # room below the plot for category names
 MIN_SEGMENT_FOR_LABEL = 500.0  # segments flatter than this get no inside label
 LANE_HEIGHT = 800.0  # room for one arrow above the plot: its label and line
 LANE_LINE_GAP = 100.0  # between an arrow's line and the bottom of its lane, or a column's label
-MIN_ARROW_LABEL_WIDTH = (
-    1800.0  # arrows between neighbouring narrow columns still get a readable label
-)
+MIN_ARROW_LABEL_WIDTH = 1800.0  # arrows between neighbouring narrow columns stay readable
+LEVEL_LANE_WIDTH = 2000.0  # room right of the plot for one level arrow and its label
+LEVEL_ARROW_INSET = 300.0  # from a level lane's left edge to its arrow
+LEVEL_LABEL_GAP = 150.0  # between a level arrow and its label
 
 _YScale = Callable[[float], float]
 
@@ -42,14 +44,15 @@ def layout_column(
 
     Raises ``ValueError`` if the box leaves no room for the plot.
     """
-    arrows = [a for a in annotations if notes.drawable(a, data, "column")]
-    lanes = len(arrows) * LANE_HEIGHT
+    brackets, levels = _arrows(data, annotations)
+    lanes = len(brackets) * LANE_HEIGHT
     top_band = lanes + TOP_BAND
+    plot_width = width - len(levels) * LEVEL_LANE_WIDTH
     plot_height = height - top_band - CATEGORY_BAND
     has_negative = any(v is not None and v < 0 for s in data.series for v in s.values)
     # Labels of negative columns hang below them and must not run into the category names.
     scale_height = plot_height - (LABEL_HEIGHT if has_negative else 0.0)
-    if width <= 0 or scale_height <= 0:
+    if plot_width <= 0 or scale_height <= 0:
         raise ValueError("chart area too small")
     if not data.categories or not data.series:
         return ()
@@ -60,9 +63,9 @@ def layout_column(
     def y(value: float) -> float:
         return top_band + (axis.maximum - value) / span * scale_height
 
-    slot = width / len(data.categories)
+    slot = plot_width / len(data.categories)
     column_width = slot * (1 - GAP_RATIO)
-    out: list[Primitive] = [Line(0, y(0), width, y(0), "baseline")]
+    out: list[Primitive] = [Line(0, y(0), plot_width, y(0), "baseline")]
 
     for c, category in enumerate(data.categories):
         slot_x = c * slot
@@ -77,21 +80,31 @@ def layout_column(
             )
         )
 
-    def anchor(category: int, series: int | None) -> tuple[float, float]:
-        """Where an arrow meets a column: top centre, above its label."""
+    def edges(category: int, series: int | None) -> tuple[float, float]:
+        """Left and right edge of the measured column, or of one bar of a clustered column."""
         column_x = category * slot + (slot - column_width) / 2
-        values = [v for s in data.series if (v := s.values[category]) is not None]
         if series is not None and grouping == "clustered":
             bar_width = column_width / len(data.series)
-            value = data.series[series].values[category] or 0.0
-            x, top = column_x + (series + 0.5) * bar_width, max(value, 0.0)
-        elif grouping == "clustered":
-            x, top = column_x + column_width / 2, max([0.0, *values])
-        else:
-            x, top = column_x + column_width / 2, sum(v for v in values if v > 0)
-        return x, y(top) - LABEL_HEIGHT - LANE_LINE_GAP
+            return column_x + series * bar_width, column_x + (series + 1) * bar_width
+        return column_x, column_x + column_width
 
-    for lane, arrow in enumerate(arrows):
+    def anchor(category: int, series: int | None) -> tuple[float, float]:
+        """Where a bracket arrow meets a column: top centre, above its label."""
+        values = [v for s in data.series if (v := s.values[category]) is not None]
+        if series is not None and grouping == "clustered":
+            top = max(data.series[series].values[category] or 0.0, 0.0)
+        elif grouping == "clustered":
+            top = max([0.0, *values])
+        else:
+            top = sum(v for v in values if v > 0)
+        left, right = edges(category, series)
+        return (left + right) / 2, y(top) - LABEL_HEIGHT - LANE_LINE_GAP
+
+    def level(category: int, series: int | None) -> tuple[float, float]:
+        """Where a level arrow's helper line starts: right edge, at the measured value."""
+        return edges(category, series)[1], y(notes.measured_value(data, category, series) or 0.0)
+
+    for lane, arrow in enumerate(brackets):
         line_y = lanes - lane * LANE_HEIGHT - LANE_LINE_GAP
         out.extend(
             _bracket(
@@ -101,7 +114,26 @@ def layout_column(
                 notes.label(arrow, data),
             )
         )
+    for lane, arrow in enumerate(levels):
+        arrow_x = plot_width + lane * LEVEL_LANE_WIDTH + LEVEL_ARROW_INSET
+        out.extend(
+            _level(
+                level(arrow.start, arrow.series),
+                level(arrow.end, arrow.series),
+                arrow_x,
+                notes.label(arrow, data),
+            )
+        )
     return tuple(out)
+
+
+def _arrows(
+    data: ChartData, annotations: tuple[Annotation, ...]
+) -> tuple[list[Annotation], list[Annotation]]:
+    """The drawable arrows: (bracket arrows above the plot, level arrows right of it)."""
+    shown = [a for a in annotations if notes.drawable(a, data, "column")]
+    levels = [a for a in shown if a.kind == "difference" and a.style == "level"]
+    return [a for a in shown if a not in levels], levels
 
 
 def column_at(
@@ -117,10 +149,11 @@ def column_at(
     Uses the geometry of :func:`layout_column`. Points in the arrow lanes or outside the box hit
     nothing; between the bars of a clustered column, or on its labels below, the series is ``None``.
     """
-    lanes = sum(LANE_HEIGHT for a in annotations if notes.drawable(a, data, "column"))
-    if not data.categories or not 0 <= x < width or y < lanes:
+    brackets, levels = _arrows(data, annotations)
+    plot_width = width - len(levels) * LEVEL_LANE_WIDTH
+    if not data.categories or not 0 <= x < plot_width or y < len(brackets) * LANE_HEIGHT:
         return None
-    slot = width / len(data.categories)
+    slot = plot_width / len(data.categories)
     category = int(x // slot)
     if grouping == "stacked" or not data.series:
         return category, None
@@ -149,6 +182,27 @@ def _bracket(
             LABEL_HEIGHT,
             label,
             "center",
+            "annotation",
+        ),
+    ]
+
+
+def _level(
+    start: tuple[float, float], end: tuple[float, float], arrow_x: float, label: str
+) -> list[Primitive]:
+    """Dashed lines from both levels to ``arrow_x``, an arrow from one level to the other."""
+    (x1, y1), (x2, y2) = start, end
+    return [
+        Line(x1, y1, arrow_x, y1, "helper"),
+        Line(x2, y2, arrow_x, y2, "helper"),
+        Line(arrow_x, y1, arrow_x, y2, "annotation", arrow=True),
+        Text(
+            arrow_x + LEVEL_LABEL_GAP,
+            (y1 + y2 - LABEL_HEIGHT) / 2,
+            LEVEL_LANE_WIDTH - LEVEL_ARROW_INSET - LEVEL_LABEL_GAP,
+            LABEL_HEIGHT,
+            label,
+            "left",
             "annotation",
         ),
     ]
