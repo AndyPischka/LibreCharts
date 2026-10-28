@@ -95,7 +95,8 @@ def main() -> int:
         with contextlib.suppress(Exception):  # connection drops while LibreOffice shuts down
             desktop.terminate()
     print(f"{passed} passed, {failed} failed, {skipped} skipped")
-    return 1 if failed or not passed else 0
+    # A run without any test is an error (wrong module name); one with only skips is not.
+    return 1 if failed or not (passed or skipped) else 0
 
 
 if __name__ == "__main__":
