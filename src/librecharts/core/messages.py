@@ -36,10 +36,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Now click the column the arrow points to. Esc cancels.",
         "de": "Jetzt die Säule anklicken, auf die der Pfeil zeigt. Esc bricht ab.",
     },
-    "pick_break": {
-        "en": "Click the column to shorten with an axis break. Esc cancels.",
-        "de": "Säule anklicken, die mit einem Achsenbruch gekürzt wird. Esc bricht ab.",
-    },
     "menu_edit_data": {
         "en": "Edit chart data",
         "de": "Diagrammdaten bearbeiten",
@@ -73,8 +69,56 @@ MESSAGES: dict[str, dict[str, str]] = {
         "de": "Achsenbruch hinzufügen",
     },
     "menu_axis_break": {
-        "en": "Axis break {start}",
-        "de": "Achsenbruch {start}",
+        "en": "Axis break ({range})",
+        "de": "Achsenbruch ({range})",
+    },
+    "menu_change_break": {
+        "en": "Change axis break...",
+        "de": "Achsenbruch ändern...",
+    },
+    "break_title": {
+        "en": "Axis break",
+        "de": "Achsenbruch",
+    },
+    "break_auto": {
+        "en": "Automatic",
+        "de": "Automatisch",
+    },
+    "break_manual": {
+        "en": "Remove the values between",
+        "de": "Werte entfernen zwischen",
+    },
+    "break_lower": {
+        "en": "Lower value:",
+        "de": "Unterer Wert:",
+    },
+    "break_upper": {
+        "en": "Upper value:",
+        "de": "Oberer Wert:",
+    },
+    "break_hint": {
+        "en": "The tallest column reaches {tallest}.",
+        "de": "Die höchste Säule reicht bis {tallest}.",
+    },
+    "break_not_a_number": {
+        "en": "Please enter numbers.",
+        "de": "Bitte Zahlen eingeben.",
+    },
+    "break_order": {
+        "en": "The lower value must be at least 0 and below the upper value.",
+        "de": "Der untere Wert muss mindestens 0 und kleiner als der obere sein.",
+    },
+    "break_too_high": {
+        "en": "The upper value must not exceed the tallest column.",
+        "de": "Der obere Wert darf die höchste Säule nicht übersteigen.",
+    },
+    "button_ok": {
+        "en": "OK",
+        "de": "OK",
+    },
+    "button_cancel": {
+        "en": "Cancel",
+        "de": "Abbrechen",
     },
     "menu_show_absolute": {
         "en": "Show absolute difference",

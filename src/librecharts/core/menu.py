@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
+from librecharts.core.axis_break import describe
 from librecharts.core.datasheet import ChartData, parse
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, ChartState
@@ -38,7 +39,7 @@ def chart_menu(state: ChartState, locale: str) -> MenuItem:
             _command("menu_add_difference", "PickAnnotation?kind=difference", locale),
             _command("menu_add_level", "PickAnnotation?kind=difference&style=level", locale),
             _command("menu_add_cagr", "PickAnnotation?kind=cagr", locale),
-            _command("menu_add_break", "PickAnnotation?kind=axis_break", locale),
+            _command("menu_add_break", "AxisBreak", locale),
         ]
     data = parse(state)
     shown = [
@@ -61,6 +62,8 @@ def _command(key: str, command: str, locale: str) -> MenuItem:
 
 
 def _title(annotation: Annotation, data: ChartData, locale: str) -> str:
+    if annotation.kind == "axis_break":
+        return text("menu_axis_break", locale, range=describe(annotation))
     key = (
         f"menu_{annotation.style}" if annotation.kind == "difference" else f"menu_{annotation.kind}"
     )
@@ -78,6 +81,8 @@ def _title(annotation: Annotation, data: ChartData, locale: str) -> str:
 def _actions(index: int, annotation: Annotation, locale: str) -> tuple[MenuItem, ...]:
     change = f"ChangeAnnotation?index={index}&"
     actions: list[MenuItem] = []
+    if annotation.kind == "axis_break":
+        actions.append(_command("menu_change_break", "EditAxisBreak", locale))
     if annotation.kind == "difference":
         if annotation.label == "percent":
             actions.append(_command("menu_show_absolute", change + "label=absolute", locale))

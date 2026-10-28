@@ -21,8 +21,19 @@ def _v1_to_v2(raw: _Raw) -> _Raw:
     return {**raw, "annotations": []}
 
 
+def _v2_to_v3(raw: _Raw) -> _Raw:
+    """Version 3 gave axis breaks a value range (null: automatic) and made them global."""
+    annotations: list[Any] = []
+    for annotation in _as_list(raw.get("annotations", [])):
+        entry = {**_as_object(annotation), "lower": None, "upper": None}
+        if entry.get("kind") == "axis_break":
+            entry["start"] = entry["end"] = 0
+        annotations.append(entry)
+    return {**raw, "annotations": annotations}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
-_MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {1: _v1_to_v2}
+_MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {1: _v1_to_v2, 2: _v2_to_v3}
 
 
 class StateError(ValueError):
@@ -73,6 +84,8 @@ def _annotation_to_raw(annotation: Annotation) -> _Raw:
         "series": annotation.series,
         "style": annotation.style,
         "label": annotation.label,
+        "lower": annotation.lower,
+        "upper": annotation.upper,
     }
 
 
@@ -147,6 +160,8 @@ def _as_annotation(value: object) -> Annotation:
         series=None if series is None else _as_index(series),
         style=_get(raw, "style"),
         label=_get(raw, "label"),
+        lower=_as_number(_get(raw, "lower")),
+        upper=_as_number(_get(raw, "upper")),
     )
 
 

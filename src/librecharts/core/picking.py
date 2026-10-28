@@ -8,7 +8,7 @@ annotation. Everything here is plain data, so the flow is tested without LibreOf
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import cast, get_args
+from typing import Literal, cast, get_args
 from urllib.parse import parse_qs
 
 from librecharts.core import annotations as notes
@@ -30,7 +30,7 @@ def target_at(state: ChartState, width: float, x: float, y: float) -> Target | N
 class PickSession:
     """Collects the picks for one annotation of ``kind``."""
 
-    kind: AnnotationKind
+    kind: Literal["difference", "cagr"]
     style: ArrowStyle = "bracket"
     picks: list[Target] = field(default_factory=list[Target])
 
@@ -42,21 +42,15 @@ class PickSession:
         """
         args = {key: values[-1] for key, values in parse_qs(query).items()}
         kind, style = args.get("kind"), args.get("style", "bracket")
-        if kind not in get_args(AnnotationKind):
+        if kind not in ("difference", "cagr"):  # an axis break needs no picks
             raise ValueError(f"unknown annotation kind: {kind!r}")
         if style not in get_args(ArrowStyle):
             raise ValueError(f"unknown arrow style: {style!r}")
-        return cls(cast("AnnotationKind", kind), cast("ArrowStyle", style))
-
-    @property
-    def needed(self) -> int:
-        return 1 if self.kind == "axis_break" else 2
+        return cls(kind, cast("ArrowStyle", style))
 
     @property
     def prompt(self) -> str:
         """Message key telling the user what to click next."""
-        if self.kind == "axis_break":
-            return "pick_break"
         return "pick_end" if self.picks else "pick_start"
 
     def add(self, target: Target) -> Annotation | None:
@@ -67,13 +61,11 @@ class PickSession:
         if self.picks and target[0] == self.picks[0][0]:
             return None
         self.picks.append(target)
-        if len(self.picks) < self.needed:
+        if len(self.picks) < 2:
             return None
-        (start, start_series), (end, end_series) = self.picks[0], self.picks[-1]
+        (start, start_series), (end, end_series) = self.picks
         # Both ends must measure the same thing: one series' bars, or else the column totals.
-        # An axis break cuts the whole column.
-        same = start_series == end_series and self.kind != "axis_break"
-        series = start_series if same else None
+        series = start_series if start_series == end_series else None
         return Annotation(self.kind, start, end, series, self.style)
 
 

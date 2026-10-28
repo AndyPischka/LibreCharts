@@ -82,17 +82,28 @@ def _signed(value: float, decimals: int) -> str:
     return "0" if text in ("+0", "-0") else text
 
 
+def added(annotations: tuple[Annotation, ...], new: Annotation) -> tuple[Annotation, ...]:
+    """``annotations`` plus ``new``; a chart has one axis break, a new one replaces the old."""
+    if new.kind == "axis_break":
+        annotations = tuple(a for a in annotations if a.kind != "axis_break")
+    return (*annotations, new)
+
+
 def changed(annotations: tuple[Annotation, ...], query: str) -> tuple[Annotation, ...]:
-    """Apply ``index=1&label=absolute`` (or ``style=...``) to the annotation at that index.
+    """Apply ``index=1&label=absolute`` (or ``style=...``, ``lower=..&upper=..``) to the
+    annotation at that index; ``lower=&upper=`` (empty) makes an axis break automatic.
 
     Raises ``ValueError`` for a missing or invalid index or value.
     """
     args = _args(query)
     index = _index(args, annotations)
+    old = annotations[index]
     annotation = replace(
-        annotations[index],
-        label=args.get("label", annotations[index].label),  # pyright: ignore[reportArgumentType]
-        style=args.get("style", annotations[index].style),  # pyright: ignore[reportArgumentType]
+        old,
+        label=args.get("label", old.label),  # pyright: ignore[reportArgumentType]
+        style=args.get("style", old.style),  # pyright: ignore[reportArgumentType]
+        lower=_optional_float(args["lower"]) if "lower" in args else old.lower,
+        upper=_optional_float(args["upper"]) if "upper" in args else old.upper,
     )
     return (*annotations[:index], annotation, *annotations[index + 1 :])
 
@@ -104,7 +115,7 @@ def removed(annotations: tuple[Annotation, ...], query: str) -> tuple[Annotation
 
 
 def _args(query: str) -> dict[str, str]:
-    return {key: values[-1] for key, values in parse_qs(query).items()}
+    return {key: values[-1] for key, values in parse_qs(query, keep_blank_values=True).items()}
 
 
 def _index(args: dict[str, str], annotations: tuple[Annotation, ...]) -> int:
@@ -114,14 +125,20 @@ def _index(args: dict[str, str], annotations: tuple[Annotation, ...]) -> int:
     return index
 
 
+def _optional_float(text: str) -> float | None:
+    return float(text) if text else None
+
+
 def from_query(query: str) -> Annotation:
     """Parse command arguments like ``kind=difference&start=0&end=2&label=absolute``.
 
-    Raises ``ValueError`` for missing or invalid arguments.
+    An axis break needs no ``start``: ``kind=axis_break`` (automatic) or with
+    ``&lower=10&upper=50``. Raises ``ValueError`` for missing or invalid arguments.
     """
     args = {key: values[-1] for key, values in parse_qs(query, strict_parsing=True).items()}
     try:
-        kind, start = args["kind"], int(args["start"])
+        kind = args["kind"]
+        start = int(args.get("start", "0") if kind == "axis_break" else args["start"])
     except KeyError as exc:
         raise ValueError(f"missing argument {exc}") from exc
     series = args.get("series")
@@ -132,4 +149,6 @@ def from_query(query: str) -> Annotation:
         series=None if series is None else int(series),
         style=args.get("style", "bracket"),  # pyright: ignore[reportArgumentType]
         label=args.get("label", "percent"),  # pyright: ignore[reportArgumentType]
+        lower=_optional_float(args.get("lower", "")),
+        upper=_optional_float(args.get("upper", "")),
     )

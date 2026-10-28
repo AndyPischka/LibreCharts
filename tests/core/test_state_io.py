@@ -25,7 +25,12 @@ ARROW = {
     "series": None,
     "style": "bracket",
     "label": "percent",
+    "lower": None,
+    "upper": None,
 }
+
+
+BREAK = {**ARROW, "kind": "axis_break", "start": 0, "end": 0}
 
 
 def valid_raw() -> dict[str, Any]:
@@ -42,10 +47,22 @@ def test_round_trip_preserves_annotations() -> None:
         Annotation("difference", 0, 1),
         Annotation("difference", 1, 0, series=2, style="level", label="absolute"),
         Annotation("cagr", 0, 1),
-        Annotation("axis_break", 1, 1),
+        Annotation("axis_break", 0, 0),
+        Annotation("axis_break", 0, 0, lower=10.0, upper=50.5),
     )
     state = make_state(annotations=annotations)
     assert from_json(to_json(state)).annotations == annotations
+
+
+def test_version_2_annotations_are_migrated_to_automatic_global_axis_breaks() -> None:
+    raw = valid_raw()
+    old_arrow = {k: v for k, v in ARROW.items() if k not in ("lower", "upper")}
+    old_break = {**old_arrow, "kind": "axis_break", "start": 2, "end": 2}
+    raw["annotations"] = [old_arrow, old_break]
+    raw["v"] = 2
+    restored = from_json(json.dumps(raw))
+    assert restored.version == SCHEMA_VERSION
+    assert restored.annotations == (Annotation("difference", 0, 1), Annotation("axis_break", 0, 0))
 
 
 def test_version_1_state_gets_no_annotations() -> None:
@@ -103,6 +120,12 @@ def test_integers_in_values_become_floats() -> None:
         lambda r: r.update(annotations=[{**ARROW, "end": -1}]),
         lambda r: r.update(annotations=[{**ARROW, "series": 1.5}]),
         lambda r: r.update(annotations=[{**ARROW, "end": 0}]),
+        lambda r: r.update(annotations=[{**ARROW, "lower": 1.0, "upper": 2.0}]),
+        lambda r: r.update(annotations=[{**BREAK, "lower": 1.0}]),
+        lambda r: r.update(annotations=[{**BREAK, "lower": 5.0, "upper": 2.0}]),
+        lambda r: r.update(annotations=[{**BREAK, "lower": -1.0, "upper": 2.0}]),
+        lambda r: r.update(annotations=[{**BREAK, "lower": "1", "upper": 2.0}]),
+        lambda r: r.update(annotations=[{k: v for k, v in BREAK.items() if k != "upper"}]),
         lambda r: r.update(annotations=[{**ARROW, "kind": "axis_break"}]),
         lambda r: r.update(annotations=[{k: v for k, v in ARROW.items() if k != "label"}]),
     ],
@@ -147,3 +170,9 @@ def test_older_state_is_migrated(monkeypatch: pytest.MonkeyPatch) -> None:
     restored = from_json(json.dumps(raw))
     assert restored.grouping == "clustered"
     assert restored.version == newer
+
+
+@pytest.mark.parametrize("bounds", [(1.0, float("inf")), (float("nan"), 5.0)])
+def test_the_model_rejects_a_non_finite_axis_break_range(bounds: tuple[float, float]) -> None:
+    with pytest.raises(ValueError, match="finite"):
+        Annotation("axis_break", 0, 0, lower=bounds[0], upper=bounds[1])

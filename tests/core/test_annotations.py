@@ -2,6 +2,7 @@ import pytest
 
 from librecharts.core.annotations import (
     NOT_AVAILABLE,
+    added,
     changed,
     drawable,
     from_query,
@@ -93,8 +94,14 @@ def test_from_query_with_all_arguments() -> None:
     assert from_query(query) == Annotation("difference", 1, 0, 2, "level", "absolute")
 
 
-def test_from_query_axis_break_needs_no_end() -> None:
-    assert from_query("kind=axis_break&start=1") == Annotation("axis_break", 1, 1)
+def test_from_query_axis_break_is_automatic_without_a_range() -> None:
+    assert from_query("kind=axis_break") == Annotation("axis_break", 0, 0)
+
+
+def test_from_query_axis_break_with_a_range() -> None:
+    assert from_query("kind=axis_break&lower=10&upper=50.5") == Annotation(
+        "axis_break", 0, 0, lower=10.0, upper=50.5
+    )
 
 
 @pytest.mark.parametrize(
@@ -107,6 +114,10 @@ def test_from_query_axis_break_needs_no_end() -> None:
         "kind=pie&start=0&end=1",
         "kind=difference&start=0&end=0",
         "kind=difference&start=0&end=-1",
+        "kind=axis_break&lower=10",
+        "kind=axis_break&lower=50&upper=10",
+        "kind=axis_break&lower=x&upper=5",
+        "kind=difference&start=0&end=1&lower=1&upper=2",
     ],
 )
 def test_from_query_rejects_bad_arguments(query: str) -> None:
@@ -136,3 +147,22 @@ def test_removed_drops_one_annotation() -> None:
 def test_changed_rejects_bad_arguments(query: str) -> None:
     with pytest.raises(ValueError, match=r"."):
         changed(ARROWS, query)
+
+
+def test_added_appends_arrows_and_replaces_the_axis_break() -> None:
+    arrow, first, second = (
+        Annotation("difference", 0, 1),
+        Annotation("axis_break", 0, 0),
+        Annotation("axis_break", 0, 0, lower=10.0, upper=50.0),
+    )
+    assert added((arrow,), first) == (arrow, first)
+    assert added((first, arrow), second) == (arrow, second)
+    assert added((arrow,), Annotation("cagr", 0, 1)) == (arrow, Annotation("cagr", 0, 1))
+
+
+def test_changed_sets_or_clears_the_range_of_an_axis_break() -> None:
+    notes = (Annotation("axis_break", 0, 0),)
+    manual = changed(notes, "index=0&lower=10&upper=50")
+    assert manual == (Annotation("axis_break", 0, 0, lower=10.0, upper=50.0),)
+    assert changed(manual, "index=0&lower=&upper=") == notes
+    assert changed(manual, "index=0&label=absolute")[0].upper == 50.0  # range untouched

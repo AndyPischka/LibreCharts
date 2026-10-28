@@ -69,12 +69,6 @@ def test_bars_of_different_series_measure_column_totals() -> None:
     assert session.add((1, 2)) == Annotation("difference", 0, 1, style="level")
 
 
-def test_axis_break_needs_one_pick() -> None:
-    session = PickSession("axis_break")
-    assert session.prompt == "pick_break"
-    assert session.add((1, 2)) == Annotation("axis_break", 1, 1)  # cuts the whole column
-
-
 def test_supports_follows_the_chart_kind() -> None:
     assert supports(STACKED, "difference")
     assert supports(STACKED, "axis_break")
@@ -88,14 +82,16 @@ def test_session_from_query() -> None:
     )
 
 
-@pytest.mark.parametrize("query", ["", "kind=pie", "kind=difference&style=curly"])
+@pytest.mark.parametrize(
+    "query", ["", "kind=pie", "kind=axis_break", "kind=difference&style=curly"]
+)
 def test_session_from_bad_query_is_rejected(query: str) -> None:
     with pytest.raises(ValueError, match="unknown"):
         PickSession.from_query(query)
 
 
 def test_every_prompt_has_a_message() -> None:
-    for session in (PickSession("difference"), PickSession("axis_break")):
+    for session in (PickSession("difference"), PickSession("cagr")):
         assert session.prompt in MESSAGES
         session.add((0, None))
         assert session.prompt in MESSAGES
