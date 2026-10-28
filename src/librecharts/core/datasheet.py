@@ -9,6 +9,7 @@ shows up as its text. Only the value grid is evaluated by Calc.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -79,6 +80,31 @@ def state_from_table(
         for row in table
     )
     return ChartState(kind=kind, grouping=grouping, cells=cells, values=values)
+
+
+def state_from_sheet(
+    kind: ChartKind,
+    grouping: Grouping,
+    formulas: Sequence[Sequence[str]],
+    results: Sequence[Sequence[object]],
+) -> ChartState:
+    """Build a state from a Calc range read with ``getFormulaArray`` and ``getDataArray``.
+
+    ``formulas`` are the raw contents (numbers, text, ``=...``), ``results`` what Calc computed:
+    floats for numbers, strings for text and empty cells. Non-numbers become ``None``.
+    """
+    return ChartState(
+        kind=kind,
+        grouping=grouping,
+        cells=tuple(tuple(str(cell) for cell in row) for row in formulas),
+        values=tuple(tuple(_number(result) for result in row) for row in results),
+    )
+
+
+def _number(result: object) -> float | None:
+    if isinstance(result, bool) or not isinstance(result, (int, float)):
+        return None
+    return float(result) if math.isfinite(result) else None
 
 
 def sample_state() -> ChartState:

@@ -1,4 +1,13 @@
-from librecharts.core.datasheet import ChartData, Series, parse, sample_state, state_from_table
+import pytest
+
+from librecharts.core.datasheet import (
+    ChartData,
+    Series,
+    parse,
+    sample_state,
+    state_from_sheet,
+    state_from_table,
+)
 
 
 def test_parses_categories_series_and_values() -> None:
@@ -69,3 +78,30 @@ def test_sample_state_is_a_complete_chart() -> None:
     assert data.categories == ("2023", "2024", "2025")
     assert [s.name for s in data.series] == ["Product A", "Product B", "Product C"]
     assert all(None not in s.values for s in data.series)
+
+
+def test_state_from_sheet_keeps_formulas_and_numeric_results() -> None:
+    state = state_from_sheet(
+        "column",
+        "stacked",
+        formulas=[["", "2024"], ["Sales", "=4*5"]],
+        results=[["", 2024.0], ["Sales", 20.0]],
+    )
+    assert state.cells == (("", "2024"), ("Sales", "=4*5"))
+    assert state.values == ((None, 2024.0), (None, 20.0))
+
+
+def test_state_from_sheet_treats_text_errors_and_bools_as_empty() -> None:
+    state = state_from_sheet(
+        "column",
+        "clustered",
+        formulas=[["a", "=1/0", "x", "TRUE()"]],
+        results=[["a", float("inf"), "x", True]],
+    )
+    assert state.values == ((None, None, None, None),)
+    assert state.grouping == "clustered"
+
+
+def test_state_from_sheet_rejects_mismatched_grids() -> None:
+    with pytest.raises(ValueError, match="same number of rows"):
+        state_from_sheet("column", "stacked", formulas=[["1"], ["2"]], results=[[1.0]])
