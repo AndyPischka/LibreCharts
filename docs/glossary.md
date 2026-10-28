@@ -16,8 +16,10 @@ Use these terms consistently in code, UI strings and docs.
 | **Series** | One set of values across categories; one colour, one legend entry. |
 | **Segment** | One rectangle: the value of one series in one category. |
 | **Total label** | The label above a stacked column showing the sum of its segments. |
-| **Waterfall** | Bridge chart: floating segments show increases and decreases between a start and an end value. |
-| **Subtotal** | A waterfall column that shows the running total instead of a change. |
+| **Waterfall** | Bridge chart: floating steps show increases and decreases between a start and an end value. Data sheet rows: names, values, "Total" marker (ADR 0008). |
+| **Subtotal** | A waterfall column (marked in the "Total" row) that shows the running total instead of a change. |
+| **Step** | One change column of a waterfall, floating between the running totals before and after it. |
+| **Connector** | The thin line from the end of one waterfall column to the start of the next. |
 | **Marimekko (Mekko)** | Stacked chart whose column width is also data (e.g. market size); segments are usually in percent. |
 | **Difference arrow** | Annotation that shows the absolute or relative difference between two segments or columns. |
 | **CAGR arrow** | Annotation that shows the compound annual growth rate between two columns. |

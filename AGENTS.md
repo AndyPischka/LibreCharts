@@ -83,6 +83,11 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 - In `tests/lo`, read a shape's geometry in one pass (`child = group.getByIndex(i)`, read, move
   on). Proxies collected in a list and read later intermittently returned default geometry
   (0, 0, 100, 100) in LibreOffice 26.8.
+- Code that must run *inside LibreOffice* (resize watcher, document job) only runs there: importing
+  `librecharts.lo.resize` in a test starts a watcher in the test process, not in LibreOffice. Insert
+  charts through `dispatch(ctx, doc, "org.librecharts:...")` when a test needs the watcher.
+- LibreOffice scales group children when the group is resized; zero-size children (waterfall gaps)
+  become non-zero. The resize watcher puts them back, so never skip it for such charts.
 - `tests/lo/` holds plain `test_*(ctx)` functions run by `tests/lo/runner.py`, not pytest; pytest
   ignores that directory. Shared helpers live in `tests/lo/helpers.py`.
 - Do not use `LibreOffice-minimal-version` in `extension/description.xml`: LibreOffice 26.8 rejected

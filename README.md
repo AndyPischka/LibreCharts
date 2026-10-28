@@ -3,9 +3,10 @@
 think-cell-style charts for **LibreOffice Impress**, as an open-source extension.
 Charts are drawn as native shapes and fed from a Calc data sheet.
 
-> **Status: M1 in progress.** Stacked and clustered **column and bar charts** work: edit the data in
+> **Status: M1 nearly done, M2 done.** Stacked and clustered **column and bar charts** and
+> **waterfall charts** work: edit the data in
 > a Calc window (formulas included), resize charts freely, undo everything, save as ODP or PPTX.
-> Waterfall, Marimekko and annotations (difference/CAGR arrows) follow, see [ROADMAP.md](ROADMAP.md).
+> Marimekko and annotations (difference/CAGR arrows) follow, see [ROADMAP.md](ROADMAP.md).
 > LibreCharts is inspired by think-cell and empower charts but is not affiliated with them and
 > does not read or write their files.
 
@@ -17,7 +18,7 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 
 1. Build the package (see below) or take `LibreCharts-<version>.oxt` from a release.
 2. In LibreOffice: *Tools → Extension Manager → Add…* and pick the `.oxt`; restart LibreOffice.
-3. In Impress, use the **LibreCharts** menu or toolbar: *Insert column chart*, *Insert bar chart*,
+3. In Impress, use the **LibreCharts** menu or toolbar: *Insert column chart*, *Insert bar chart*, *Insert waterfall chart*,
    then select a chart and choose *Edit chart data*.
 
 ## Develop

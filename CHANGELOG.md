@@ -11,6 +11,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   shapes with segment and total labels. Insert is a single undo step.
 - A "LibreCharts" toolbar with icons for both commands. In the Notebookbar (ribbon) interface it
   appears in the "Extension" group.
+- *LibreCharts → Insert waterfall chart* (and a toolbar button): steps float between running
+  totals, columns marked in the "Total" row of the data sheet show subtotals, connectors link the
+  columns and steps carry their sign.
 - *LibreCharts → Insert bar chart* (and a toolbar button) inserts a horizontal bar chart with the
   same data sheet, resizing, undo and ODP/PPTX support as column charts.
 - Resizing a chart lays it out again for the new size instead of stretching it; undo and redo

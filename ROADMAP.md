@@ -9,7 +9,7 @@ Single tasks live in the issue tracker, not here.
 |---|---|---|---|
 | M0 | Foundation | Repo scaffold, `check` + CI, `.oxt` build, menu entry with placeholder shape | done |
 | M1 | Column and bar charts | Stacked and clustered column charts; Calc data sheet with live sync; chart persistence (ODP and PPTX); copies; toolbar. bar charts; re-layout on resize. Open: `test-lo` in CI, double-click to edit | in progress |
-| M2 | Waterfall | Bridge chart with subtotals | open |
+| M2 | Waterfall | Bridge chart with subtotals (ADR 0008) | done |
 | M3 | Marimekko | Variable column widths, percent and absolute | open |
 | M4 | Annotations | Difference arrows, CAGR arrows, total labels, axis break | open |
 | 1.0 | First release | `SECURITY.md`, packaging for extensions.libreoffice.org, German/English UI review | open |
