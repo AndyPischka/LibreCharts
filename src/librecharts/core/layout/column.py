@@ -104,6 +104,33 @@ def layout_column(
     return tuple(out)
 
 
+def column_at(
+    data: ChartData,
+    grouping: Grouping,
+    width: float,
+    annotations: tuple[Annotation, ...],
+    x: float,
+    y: float,
+) -> tuple[int, int | None] | None:
+    """The category (and, for a bar of a clustered chart, the series) at chart point (x, y).
+
+    Uses the geometry of :func:`layout_column`. Points in the arrow lanes or outside the box hit
+    nothing; between the bars of a clustered column, or on its labels below, the series is ``None``.
+    """
+    lanes = sum(LANE_HEIGHT for a in annotations if notes.drawable(a, data, "column"))
+    if not data.categories or not 0 <= x < width or y < lanes:
+        return None
+    slot = width / len(data.categories)
+    category = int(x // slot)
+    if grouping == "stacked" or not data.series:
+        return category, None
+    column_width = slot * (1 - GAP_RATIO)
+    offset = x - category * slot - (slot - column_width) / 2
+    if not 0 <= offset < column_width:
+        return category, None
+    return category, int(offset // (column_width / len(data.series)))
+
+
 def _bracket(
     start: tuple[float, float], end: tuple[float, float], line_y: float, label: str
 ) -> list[Primitive]:
