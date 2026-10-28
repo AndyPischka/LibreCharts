@@ -27,6 +27,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 |---|---|
 | `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, schema version) |
 | `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows, command arguments (ADR 0010) |
+| `axis_break.py` | The axis break: automatic or manual value range to remove from the scale, `fold`, validation of the dialog's input |
 | `picking.py` | Pick mode: chart point -> column, `PickSession` collects the picks for one annotation |
 | `menu.py` | Contents of the chart's context menu as plain data |
 | `state_io.py` | `ChartState` <-> JSON with schema migrations; malformed input raises `StateError` |
@@ -71,6 +72,7 @@ so every released schema version must stay readable (`state_io.py`).
 | `commands.py` | Menu commands (selection handling, messages); called by `extension/entry.py` |
 | `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place (ADR 0007) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
+| `axisdialog.py` | The axis break dialog (modal, built in code); asks, then adds or changes the break |
 | `pick.py` | Pick mode: enters the chart group, turns selected shapes into an annotation (ADR 0010) |
 | `contextmenu.py` | One interceptor per presentation: the LibreCharts submenu in a chart's context menu |
 | `ui.py` | UI locale and message boxes; texts come from `core/messages.py` |

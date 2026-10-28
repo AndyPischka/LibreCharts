@@ -98,6 +98,9 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 - Do not map mouse pixels to slide coordinates: handler coordinates are relative to an inner edit
   window that `VisibleArea` does not match. Let Impress hit-test (pick mode, ADR 0010); in tests,
   `controller.select(child)` inside an entered group stands in for a click.
+- `test-lo` starts LibreOffice with `--headless`: a modal dialog's `execute()` returns at once
+  there, so dialogs (`lo/axisdialog.py`) cannot be driven by tests; test the logic behind them in
+  `core/` and the dialog by hand.
 - PPTX import turns text boxes and rectangles into custom shapes; do not filter by `ShapeType` when
   checking labels of a reloaded chart.
 - Pass a UNO object as an `any` argument via

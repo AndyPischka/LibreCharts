@@ -31,4 +31,4 @@ logic has to be testable without LibreOffice (ADR 0001).
 - Category and series names come from raw cell text, so a formula in a header cell shows as text.
 - Number labels are locale-neutral (`2.5`); localised number formats are not implemented.
 - Re-layout when the user resizes the group is not implemented yet.
-- Schema 2 added annotations (ADR 0010).
+- Schema 2 added annotations, schema 3 gave axis breaks a value range (ADR 0010).

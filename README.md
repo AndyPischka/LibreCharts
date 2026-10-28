@@ -22,10 +22,12 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 3. In Impress, use the **LibreCharts** menu or toolbar to insert a column, bar, waterfall or
    Marimekko chart; double-click a chart (or select it and choose *Edit chart data*) to change its
    data in Calc.
-4. To annotate a column chart, select it and choose *Add difference arrow*, *Add level difference*,
-   *Add CAGR arrow* or *Add axis break* (menu, toolbar or the chart's context menu), then click the
-   columns as the bar above the slide says; `Esc` cancels. The context menu of the chart switches
-   arrows between percent and absolute, or bracket and level, and removes them.
+4. To annotate a column chart, select it and choose *Add difference arrow*, *Add level difference*
+   or *Add CAGR arrow* (menu, toolbar or the chart's context menu), then click the columns as the
+   bar above the slide says; `Esc` cancels. *Add axis break* opens a dialog: automatic, or the lower
+   and upper value to cut out of the whole axis. The context menu of the chart switches arrows
+   between percent and absolute, or bracket and level, changes the axis break and removes
+   annotations.
 
 ## Develop
 

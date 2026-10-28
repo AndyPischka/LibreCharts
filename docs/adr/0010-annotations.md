@@ -17,10 +17,20 @@ think-cell. An extension cannot ask Impress which shape is under the mouse.
   clustered chart; otherwise the column total), and for difference arrows a style (bracket/level)
   and a label mode (percent/absolute). An annotation whose indices no longer exist after a data
   edit stays stored but is not drawn, so undoing the edit brings it back.
+  Schema 3 gave axis breaks a value range, see below.
 - **Layout**: part of the column layout. Every bracket arrow gets a lane above the plot, every level
-  arrow a lane right of it; the number of lanes depends on the annotations only (ADR 0007). An
-  axis break excludes its column from the scale and draws it from 0.85 to 1.15 times the tallest
-  other column, with a white gap; labels keep the real values.
+  arrow a lane right of it; the number of lanes depends on the annotations only (ADR 0007).
+- **Axis break** (`core/axis_break.py`): one per chart, for the **whole axis**. It removes the value
+  range `[lower, upper]` from the scale: values up to `lower` are drawn as is, values inside the
+  range end at the break, values above `upper` continue right after `lower`. Every column reaching
+  beyond `lower` gets a break mark (a white gap with two slanted lines); labels and arrows keep
+  the real values. `lower` and `upper` are `None` for *automatic*: the break sits 10 % above the
+  second tallest column and the tallest continues up to 130 % of it, so the second tallest is
+  never cut; no break if no column dwarfs the others. Manual values must satisfy
+  `0 <= lower < upper <= tallest column`. A dialog (`lo/axisdialog.py`, validation in core) asks
+  for automatic or the two values, when adding and when changing (*Change axis break...*). The
+  break belongs to no category (`start == end == 0`); schema 3 migrates old per-column breaks to
+  an automatic global one.
 - **Pick mode**: a command enters the chart group (`.uno:EnterGroup`); a click inside then selects
   the shape under the mouse, and a selection listener maps that shape's centre to a column with the
   layout's own geometry (`core/picking.py`). An info bar says what to click; `Esc` or a selection
@@ -49,6 +59,9 @@ think-cell. An extension cannot ask Impress which shape is under the mouse.
   redraw after the pick replaces the children anyway.
 - The context menu cannot offer actions for the right-clicked column, only for the whole chart.
 - Axis break gaps are white; on a coloured slide background they show.
+- The axis break dialog is modal and cannot be driven by `test-lo`: its LibreOffice runs headless,
+  where modal dialogs return at once. The dialog is tested by hand; everything behind it
+  (validation, layout, storing) is tested without it.
 - Only column charts have annotations so far; bar and waterfall charts can follow with the same
   state and pick mode.
 - Arrow labels are locale-neutral like all labels (ADR 0006).

@@ -31,7 +31,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - difference arrows above the columns or as a level difference right of the chart, showing the
     change in percent or as an absolute value;
   - CAGR arrows, counting the years named by the categories;
-  - an axis break that shortens a column dwarfing the others.
+  - an axis break for the whole axis: automatic, or a lower and an upper value to cut out,
+    chosen in a dialog (also changeable later). Columns reaching beyond it get a break mark and
+    keep their real labels.
   Annotations follow data edits, resizing, undo, copies and ODP/PPTX files.
 - The chart's context menu has a "LibreCharts" submenu: edit data, add annotations, switch or
   remove existing ones.
