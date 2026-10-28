@@ -1,0 +1,68 @@
+[project]
+name = "librecharts"
+version = "0.0.0"
+description = "think-cell-style chart extension for LibreOffice Impress"
+readme = "README.md"
+license = "MPL-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+# The extension runs inside LibreOffice's bundled Python: no runtime dependencies allowed (ADR 0001).
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "poethepoet>=0.30",
+    "pre-commit>=4.0",
+    "pyright>=1.1.400",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.9",
+]
+
+[tool.uv]
+package = false
+
+[tool.poe.tasks]
+setup = { sequence = [
+    { cmd = "uv sync" },
+    { cmd = "pre-commit install" },
+], help = "Install dependencies and git hooks" }
+test = { cmd = "pytest", help = "Run unit tests (no LibreOffice needed)" }
+lint = { cmd = "ruff check .", help = "Lint" }
+format = { cmd = "ruff format .", help = "Format code in place" }
+format-check = { cmd = "ruff format --check .", help = "Verify formatting" }
+typecheck = { cmd = "pyright", help = "Type-check" }
+build = { cmd = "python scripts/build_oxt.py", help = "Build dist/LibreCharts-<version>.oxt" }
+check = { sequence = ["lint", "format-check", "typecheck", "test"], help = "Everything CI runs" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "scripts"]
+addopts = "--cov=librecharts.core --cov-report=term-missing --cov-fail-under=90"
+
+[tool.coverage.run]
+branch = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4", "RUF", "PT", "TID", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+# Only the UNO adapter layers may touch the LibreOffice API (see ARCHITECTURE.md).
+"src/librecharts/lo/**" = ["TID251"]
+"extension/**" = ["TID251"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"uno".msg = "Only src/librecharts/lo and extension/ may import uno (ARCHITECTURE.md)."
+"unohelper".msg = "Only src/librecharts/lo and extension/ may import unohelper (ARCHITECTURE.md)."
+
+[tool.pyright]
+include = ["src", "tests", "scripts", "extension"]
+extraPaths = ["src", "scripts"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+strict = ["src/librecharts/core"]
