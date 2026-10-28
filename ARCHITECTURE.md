@@ -27,6 +27,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 |---|---|
 | `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, schema version) |
 | `state_io.py` | `ChartState` <-> JSON with schema migrations; malformed input raises `StateError` |
+| `messages.py` | All user-visible strings in English and German (a test enforces both) |
 | `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series); sample data |
 | `scale.py` | "Nice" value axis ranges |
 | `primitives.py` | `Rect`, `Line`, `Text`: layout output in 1/100 mm, styling left to the renderer |
@@ -54,7 +55,10 @@ so every released schema version must stay readable (`state_io.py`).
 | `store.py` | Chart id anchor (group name `librecharts:<id>`) and state in a document custom property; no `uno` import, unit-tested with fakes |
 | `render.py` | Primitives -> shapes in a group; `rerender` replaces children in place |
 | `undo.py` | One explicit undo action per chart operation |
-| `chart.py` | `insert_column_chart`, `redraw`: what menu commands call |
+| `chart.py` | `insert_column_chart`, `redraw`: chart operations on a presentation |
+| `datasheet.py` | Calc window as a transient view: write stored cells, sync every committed edit back |
+| `commands.py` | Menu commands (selection handling, messages); called by `extension/entry.py` |
+| `ui.py` | UI locale and message boxes; texts come from `core/messages.py` |
 
 Further invariants of the adapter:
 
@@ -63,8 +67,8 @@ Further invariants of the adapter:
 7. **Every chart operation is exactly one undo step.** LibreOffice does not record API shape
    inserts, so `lo/undo.py` locks its recording and registers an explicit action.
 
-## Not yet decided
-
-- The exact Calc ↔ slide synchronisation mechanism (M1 step 5, see `docs/plans/`).
+8. **The data sheet is a view, the document property is the truth.** Every committed Calc edit
+   is stored and redrawn immediately; the Calc document's modified flag is reset after each sync,
+   so closing it never asks to save. It is never written to disk.
 
 Update this file whenever a module is added or a boundary changes.

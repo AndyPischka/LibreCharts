@@ -21,7 +21,11 @@ def desktop(ctx):
 
 
 def new_impress(ctx):
-    """A hidden, empty presentation; the caller closes it."""
+    """A hidden, empty presentation; the caller closes it.
+
+    Keep test documents hidden: in headless mode LibreOffice 26.8 intermittently aborts when a
+    *visible* Calc window is closed. Data sheets of hidden presentations open hidden as well.
+    """
     doc = desktop(ctx).loadComponentFromURL(
         "private:factory/simpress", "_blank", 0, (prop("Hidden", True),)
     )
@@ -54,3 +58,22 @@ def save_and_reload(ctx, doc, fmt):
 
 def first_page(doc):
     return doc.getDrawPages().getByIndex(0)
+
+
+def datasheets(ctx):
+    """All open LibreCharts data sheets (Calc documents whose window title says so)."""
+    found = []
+    components = desktop(ctx).getComponents().createEnumeration()
+    while components.hasMoreElements():
+        component = components.nextElement()
+        if not component.supportsService("com.sun.star.sheet.SpreadsheetDocument"):
+            continue
+        title = component.getCurrentController().getFrame().Title
+        if title.startswith("LibreCharts"):
+            found.append(component)
+    return found
+
+
+def close_datasheets(ctx):
+    for calc in datasheets(ctx):
+        calc.close(True)

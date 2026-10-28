@@ -10,3 +10,5 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - *LibreCharts → Insert column chart* inserts a stacked column chart with sample data, drawn as native
   shapes with segment and total labels. Insert is a single undo step.
 - Chart data is stored in the document and survives saving as ODP and PPTX.
+- *LibreCharts → Edit chart data* opens the chart's data in a Calc window. Every edit updates the
+  chart immediately (one undo step each); formulas are kept when the window is closed and reopened.

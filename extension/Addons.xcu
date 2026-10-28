@@ -30,6 +30,19 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m2" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Edit chart data</value>
+              <value xml:lang="de">Diagrammdaten bearbeiten</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:EditData</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
         </node>
       </node>
     </node>

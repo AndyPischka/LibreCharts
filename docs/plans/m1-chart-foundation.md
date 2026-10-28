@@ -84,8 +84,13 @@ Everything in `core/` is unit-tested with pytest; `lo/` gets `tests/lo/` scripts
 
 ## Steps (each ends green: `check`, and `test-lo` from step 4)
 
-Done: 1-4 (2026-10-28). Undo grouping, planned for step 6, was pulled into step 4: API shape inserts
+Done: 1-5 (2026-10-28). Undo grouping, planned for step 6, was pulled into step 4: API shape inserts
 are not recorded by LibreOffice, so `lo/undo.py` registers explicit undo actions.
+
+Step 5 deviations: no debounce (Calc reports committed edits only, and syncing immediately keeps
+the Calc document unmodified, so closing it never asks to save); no double-click yet (Impress uses
+it to enter the group), a menu command "Edit chart data" instead; the data sheet follows the
+presentation's visibility (hidden presentation -> hidden Calc document).
 
 1. `core/model.py`, `state_io.py` with schema v1 and round-trip/validation tests.
 2. `core/datasheet.py`: table parsing incl. empty cells, text in number cells, extra rows; raw

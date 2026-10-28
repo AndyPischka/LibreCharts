@@ -68,6 +68,12 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 - UNO text properties (`shape.String`) only stick after the shape is added to a draw page or group.
 - LibreOffice does not record shapes inserted via the API for undo. Wrap chart changes in
   `lo/undo.py` (lock recording, add one explicit action); an undo context alone is a no-op entry.
+- Never let an exception escape a dispatch or a UNO listener: LibreOffice may abort. `entry.py`
+  and the listeners in `lo/` catch and print them.
+- On documents, `addEventListener` is ambiguous in PyUNO and picks the wrong interface. Use
+  `addDocumentEventListener` for document lifetime events.
+- In headless mode LibreOffice 26.8 intermittently aborts when a *visible* Calc window is closed.
+  Keep test documents hidden; data sheets of hidden presentations open hidden too.
 - `tests/lo/` holds plain `test_*(ctx)` functions run by `tests/lo/runner.py`, not pytest; pytest
   ignores that directory. Shared helpers live in `tests/lo/helpers.py`.
 - Do not use `LibreOffice-minimal-version` in `extension/description.xml`: LibreOffice 26.8 rejected

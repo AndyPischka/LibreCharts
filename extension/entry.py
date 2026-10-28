@@ -6,6 +6,7 @@ Runs inside LibreOffice's bundled Python. Keep it thin: logic belongs in librech
 
 import os
 import sys
+import traceback
 
 # Make the bundled librecharts package importable from inside the .oxt.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -14,7 +15,7 @@ import unohelper
 from com.sun.star.frame import XDispatch, XDispatchProvider
 from com.sun.star.lang import XInitialization, XServiceInfo
 
-from librecharts.lo.chart import insert_column_chart
+from librecharts.lo import commands
 
 IMPLEMENTATION_NAME = "org.librecharts.ProtocolHandler"
 SERVICE_NAME = "com.sun.star.frame.ProtocolHandler"
@@ -40,10 +41,16 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
 
     # XDispatch
     def dispatch(self, url, arguments):
-        if url.Path == "InsertColumnChart" and self.frame is not None:
-            controller = self.frame.getController()
-            group = insert_column_chart(controller.getModel(), controller.getCurrentPage())
-            controller.select(group)
+        if self.frame is None:
+            return
+        try:
+            if url.Path == "InsertColumnChart":
+                commands.insert_column_chart(self.frame)
+            elif url.Path == "EditData":
+                commands.edit_data(self.ctx, self.frame)
+        except Exception:
+            # An exception escaping a Python dispatch can take LibreOffice down with it.
+            traceback.print_exc()
 
     def addStatusListener(self, control, url):
         pass
