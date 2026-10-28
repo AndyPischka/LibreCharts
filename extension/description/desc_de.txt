@@ -1,0 +1,1 @@
+Charts im Stil von think-cell (Säulen, Wasserfall, Marimekko, Annotationen) für LibreOffice Impress.

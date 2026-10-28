@@ -1,0 +1,1 @@
+Think-cell-style charts (column, waterfall, Marimekko, annotations) for LibreOffice Impress.

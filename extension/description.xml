@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<description xmlns="http://openoffice.org/extensions/description/2006"
+             xmlns:d="http://openoffice.org/extensions/description/2006"
+             xmlns:xlink="http://www.w3.org/1999/xlink">
+  <identifier value="org.librecharts.extension"/>
+  <version value="@VERSION@"/>
+  <dependencies>
+    <!-- Baseline only: LibreOffice-minimal-version was rejected by LO 26.8 ("unsatisfied dependencies").
+         The real minimum (LibreOffice 25.8) is documented in README.md and ADR 0001. -->
+    <OpenOffice.org-minimal-version value="4.1" d:name="OpenOffice.org 4.1"/>
+  </dependencies>
+  <display-name>
+    <name lang="en">LibreCharts</name>
+    <name lang="de">LibreCharts</name>
+  </display-name>
+  <extension-description>
+    <src lang="en" xlink:href="description/desc_en.txt"/>
+    <src lang="de" xlink:href="description/desc_de.txt"/>
+  </extension-description>
+</description>
