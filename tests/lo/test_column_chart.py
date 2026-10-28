@@ -99,3 +99,15 @@ def test_redraw_is_one_undo_step(ctx):
         assert manager.getCurrentUndoActionTitle() == "Insert LibreCharts chart"
     finally:
         doc.close(True)
+
+
+def test_toolbar_is_registered_for_presentations(ctx):
+    doc = new_impress(ctx)
+    try:
+        layout = doc.getCurrentController().getFrame().LayoutManager
+        assert layout.getElement("private:resource/toolbar/addon_no.such.toolbar") is None
+        toolbar = layout.getElement("private:resource/toolbar/addon_org.librecharts.toolbar")
+        assert toolbar is not None, "LibreCharts toolbar not registered"
+        assert toolbar.ResourceURL == "private:resource/toolbar/addon_org.librecharts.toolbar"
+    finally:
+        doc.close(True)

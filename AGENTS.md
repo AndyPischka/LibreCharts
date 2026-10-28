@@ -68,6 +68,8 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 - UNO text properties (`shape.String`) only stick after the shape is added to a draw page or group.
 - LibreOffice does not record shapes inserted via the API for undo. Wrap chart changes in
   `lo/undo.py` (lock recording, add one explicit action); an undo context alone is a no-op entry.
+- Extensions cannot add tabs to the Notebookbar (ribbon): its tabs are fixed in LibreOffice. An
+  `OfficeToolBar` in `Addons.xcu` is shown in its "Extension" group and in the classic UI.
 - Never let an exception escape a dispatch or a UNO listener: LibreOffice may abort. `entry.py`
   and the listeners in `lo/` catch and print them.
 - On documents, `addEventListener` is ambiguous in PyUNO and picks the wrong interface. Use
