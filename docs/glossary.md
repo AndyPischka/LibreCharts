@@ -5,6 +5,8 @@ Use these terms consistently in code, UI strings and docs.
 | Term | Meaning |
 |---|---|
 | **Chart** | One LibreCharts object on a slide: a group of shapes plus its data. |
+| **Chart state** | The persisted description of a chart: raw data sheet cells (incl. formulas), their evaluated values, chart kind, grouping and a schema version. Stored as JSON in the document. |
+| **Primitive** | A rectangle, line or text box produced by layout; plain geometry in 1/100 mm that the adapter turns into a shape. |
 | **Data sheet** | The Calc document in which the user edits a chart's values (ADR 0003). |
 | **Category** | One position on the category axis (x-axis of a column chart). |
 | **Series** | One set of values across categories; one colour, one legend entry. |

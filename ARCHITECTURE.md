@@ -21,6 +21,21 @@ src/librecharts/core/       Pure Python. Chart models, layout, axis scaling. Inp
 
 Dependencies point downward only: `core` knows nothing about `lo` or `extension`.
 
+## Modules in `core/`
+
+| Module | Role |
+|---|---|
+| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, schema version) |
+| `state_io.py` | `ChartState` <-> JSON with schema migrations; malformed input raises `StateError` |
+| `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series); sample data |
+| `scale.py` | "Nice" value axis ranges |
+| `primitives.py` | `Rect`, `Line`, `Text`: layout output in 1/100 mm, styling left to the renderer |
+| `layout/column.py` | `ChartData` + size -> primitives for stacked and clustered columns |
+
+Data flow: Calc cells -> `ChartState` (stored in the document) -> `datasheet.parse` -> `ChartData`
+-> `layout_column` -> primitives -> `lo/` draws shapes. Stored state is part of the user's files,
+so every released schema version must stay readable (`state_io.py`).
+
 ## Invariants
 
 1. **`core/` never imports `uno`.** Enforced by ruff (`TID251`) so that the layout logic is unit-testable
