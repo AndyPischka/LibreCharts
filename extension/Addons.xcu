@@ -95,6 +95,19 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m3b" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Add level difference</value>
+              <value xml:lang="de">Niveaudifferenz hinzufügen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:PickAnnotation?kind=difference&amp;style=level</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
           <node oor:name="m4" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>
@@ -209,6 +222,22 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      <node oor:name="t3b" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:PickAnnotation?kind=difference&amp;style=level</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Add level difference</value>
+          <value xml:lang="de">Niveaudifferenz hinzufügen</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
       <node oor:name="t4" oor:op="replace">
         <prop oor:name="URL" oor:type="xs:string">
           <value>org.librecharts:PickAnnotation?kind=cagr</value>
@@ -303,6 +332,19 @@
           </prop>
           <prop oor:name="ImageBigURL" oor:type="xs:string">
             <value>%origin%/images/difference_26.png</value>
+          </prop>
+        </node>
+      </node>
+      <node oor:name="org.librecharts.image3b" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:PickAnnotation?kind=difference&amp;style=level</value>
+        </prop>
+        <node oor:name="UserDefinedImages">
+          <prop oor:name="ImageSmallURL" oor:type="xs:string">
+            <value>%origin%/images/level_16.png</value>
+          </prop>
+          <prop oor:name="ImageBigURL" oor:type="xs:string">
+            <value>%origin%/images/level_26.png</value>
           </prop>
         </node>
       </node>

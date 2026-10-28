@@ -142,3 +142,21 @@ def test_resized_chart_keeps_its_arrow_laid_out(ctx):
         assert _arrowheads(group) == 1
     finally:
         doc.close(True)
+
+
+def test_level_arrow_points_up_with_dashed_helper_lines(ctx):
+    doc, group, _ = _chart(ctx)
+    try:
+        dispatch(ctx, doc, DIFFERENCE + "&style=level")  # 35 -> 45: the arrow points up
+        dashed = start_heads = end_heads = 0
+        for i in range(group.getCount()):
+            child = group.getByIndex(i)  # read in one pass, see AGENTS.md
+            if child.ShapeType != "com.sun.star.drawing.LineShape":
+                continue
+            dashed += child.LineStyle.value == "DASH"
+            start_heads += bool(child.LineStartName)
+            end_heads += bool(child.LineEndName)
+        assert (dashed, start_heads, end_heads) == (2, 1, 0)
+        assert "+28.6%" in _labels(group)
+    finally:
+        doc.close(True)

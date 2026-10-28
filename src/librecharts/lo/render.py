@@ -23,11 +23,13 @@ LINE_WIDTH = 25  # 1/100 mm
 FONT_HEIGHT_PT = 10.0
 ARROW_NAME = "Arrow"  # a line end from LibreOffice's standard arrow list
 ARROW_WIDTH = 250  # 1/100 mm
+DASH_LENGTH = 100  # 1/100 mm, dashes and gaps of helper lines
 
 _FILL_NONE = uno.Enum("com.sun.star.drawing.FillStyle", "NONE")
 _FILL_SOLID = uno.Enum("com.sun.star.drawing.FillStyle", "SOLID")
 _LINE_NONE = uno.Enum("com.sun.star.drawing.LineStyle", "NONE")
 _LINE_SOLID = uno.Enum("com.sun.star.drawing.LineStyle", "SOLID")
+_LINE_DASH = uno.Enum("com.sun.star.drawing.LineStyle", "DASH")
 _V_CENTER = uno.Enum("com.sun.star.drawing.TextVerticalAdjust", "CENTER")
 _H_BLOCK = uno.Enum("com.sun.star.drawing.TextHorizontalAdjust", "BLOCK")
 _PARA_ADJUST = {
@@ -121,11 +123,19 @@ def _specs(
     for p in primitives:
         if isinstance(p, Rect):
             specs.append(_spec("RectangleShape", p, x + p.x, y + p.y, p.width, p.height))
-        elif isinstance(p, Line):
-            specs.append(_spec("LineShape", p, x + p.x1, y + p.y1, p.x2 - p.x1, p.y2 - p.y1))
+        elif isinstance(p, Line):  # by bounding box, see Line
+            left, top = x + min(p.x1, p.x2), y + min(p.y1, p.y2)
+            specs.append(_spec("LineShape", p, left, top, abs(p.x2 - p.x1), abs(p.y2 - p.y1)))
         else:
             specs.append(_spec("TextShape", p, x + p.x, y + p.y, p.width, p.height))
     return specs
+
+
+def _dash() -> Any:
+    dash = uno.createUnoStruct("com.sun.star.drawing.LineDash")
+    dash.Style = uno.Enum("com.sun.star.drawing.DashStyle", "RECT")
+    dash.Dashes, dash.DashLen, dash.Distance = 1, DASH_LENGTH, DASH_LENGTH
+    return dash
 
 
 def _create(doc: Any, group: Any, spec: _Spec) -> None:
@@ -141,7 +151,11 @@ def _create(doc: Any, group: Any, spec: _Spec) -> None:
         shape.LineStyle = _LINE_NONE
     elif isinstance(p, Line):
         shape.LineStyle, shape.LineColor, shape.LineWidth = _LINE_SOLID, LINE_COLOR, LINE_WIDTH
-        if p.arrow:  # the line runs top-left to bottom-right, so its end is (x2, y2)
+        if p.role == "helper":
+            shape.LineStyle, shape.LineDash = _LINE_DASH, _dash()
+        if p.arrow and (p.x2 < p.x1 or p.y2 < p.y1):  # drawn reversed: (x2, y2) is its start
+            shape.LineStartName, shape.LineStartWidth = ARROW_NAME, ARROW_WIDTH
+        elif p.arrow:
             shape.LineEndName, shape.LineEndWidth = ARROW_NAME, ARROW_WIDTH
     else:
         shape.TextAutoGrowHeight = False
