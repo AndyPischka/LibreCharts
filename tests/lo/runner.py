@@ -1,9 +1,10 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
 """Minimal test runner for UNO integration tests. Runs under LibreOffice's own Python.
 
-Started by scripts/test_lo.py: ``python runner.py <pipe-name>``. Connects to the soffice listening
-on that pipe, calls every ``test_*(ctx)`` function of every ``tests/lo/test_*.py`` module in file
-order, prints PASS/FAIL per test, then always asks LibreOffice to terminate.
+Started by scripts/test_lo.py: ``python runner.py <pipe-name> [module]``. Connects to the soffice
+listening on that pipe, calls every ``test_*(ctx)`` function of the given ``tests/lo`` module (or of
+all ``test_*.py`` modules) in file order, prints PASS/FAIL per test, then always asks LibreOffice to
+terminate. ``python runner.py --list`` prints the module names.
 """
 
 import contextlib
@@ -36,8 +37,14 @@ def connect(pipe: str):
     raise SystemExit(f"could not connect to soffice on pipe {pipe!r}")
 
 
-def collect():
+def modules() -> list[str]:
+    return [path.stem for path in sorted(HERE.glob("test_*.py"))]
+
+
+def collect(only=None):
     for path in sorted(HERE.glob("test_*.py")):
+        if only is not None and path.stem != only:
+            continue
         module = importlib.import_module(path.stem)
         functions = inspect.getmembers(module, inspect.isfunction)
         for name, fn in sorted(functions, key=lambda item: item[1].__code__.co_firstlineno):
@@ -54,11 +61,15 @@ def _alive(ctx) -> bool:
 
 
 def main() -> int:
+    if sys.argv[1] == "--list":
+        print("\n".join(modules()))
+        return 0
+    only = sys.argv[2] if len(sys.argv) > 2 else None
     ctx = connect(sys.argv[1])
     desktop = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
     passed = failed = 0
     try:
-        for test_id, fn in collect():
+        for test_id, fn in collect(only):
             try:
                 fn(ctx)
             except Exception:

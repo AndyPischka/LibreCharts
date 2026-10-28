@@ -63,36 +63,51 @@ def runner_environment(program: Path) -> dict[str, str]:
 
 
 def main() -> int:
+    """Run every tests/lo module in its own LibreOffice, so a crash only affects that module."""
     program = find_program_dir()
     python = find_python(program)
+    env = runner_environment(program)
     oxt = build()
-    pipe = f"librecharts_{uuid.uuid4().hex[:12]}"
+    listing = subprocess.run(
+        [str(python), str(RUNNER), "--list"], check=True, env=env, capture_output=True, text=True
+    )
+    modules = listing.stdout.split()
 
+    failed: list[str] = []
     with tempfile.TemporaryDirectory(prefix="librecharts_profile_") as tmp:
         profile = f"-env:UserInstallation={Path(tmp).as_uri()}"
         subprocess.run([str(program / _exe("unopkg")), "add", profile, str(oxt)], check=True)
+        for module in modules:
+            print(f"=== {module}", flush=True)
+            if run_module(program, python, env, profile, module) != 0:
+                failed.append(module)
 
-        soffice = subprocess.Popen(
-            [
-                str(program / _exe("soffice")),
-                profile,
-                "--headless",
-                "--invisible",
-                "--norestore",
-                f"--accept=pipe,name={pipe};urp;",
-            ]
-        )
+    print(f"=== modules failed: {', '.join(failed) or 'none'}", flush=True)
+    return 1 if failed else 0
+
+
+def run_module(program: Path, python: Path, env: dict[str, str], profile: str, module: str) -> int:
+    pipe = f"librecharts_{uuid.uuid4().hex[:12]}"
+    soffice = subprocess.Popen(
+        [
+            str(program / _exe("soffice")),
+            profile,
+            "--headless",
+            "--invisible",
+            "--norestore",
+            f"--accept=pipe,name={pipe};urp;",
+        ]
+    )
+    try:
+        result = subprocess.run([str(python), str(RUNNER), pipe, module], check=False, env=env)
+    finally:
+        # The runner asks LibreOffice to terminate; only our own child is ever killed.
         try:
-            result = subprocess.run(
-                [str(python), str(RUNNER), pipe], check=False, env=runner_environment(program)
-            )
-        finally:
-            # The runner asks LibreOffice to terminate; only our own child is ever killed.
-            try:
-                soffice.wait(timeout=SHUTDOWN_TIMEOUT_S)
-            except subprocess.TimeoutExpired:
-                soffice.kill()
-        return result.returncode
+            soffice.wait(timeout=SHUTDOWN_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            soffice.kill()
+            soffice.wait()
+    return result.returncode
 
 
 if __name__ == "__main__":
