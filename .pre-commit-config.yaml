@@ -10,18 +10,16 @@ repos:
       - id: check-yaml
       - id: check-xml
       - id: check-added-large-files
-  - repo: local
+  # Managed by pre-commit itself so hooks work from GUIs without uv on PATH.
+  # Keep rev in sync with the ruff version in uv.lock.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.3
     hooks:
       - id: ruff-check
-        name: ruff check
-        entry: uv run ruff check --fix
-        language: system
-        types_or: [python, pyi]
+        args: [--fix]
       - id: ruff-format
-        name: ruff format
-        entry: uv run ruff format
-        language: system
-        types_or: [python, pyi]
+  - repo: local
+    hooks:
       - id: conventional-commit
         name: conventional commit message
         language: pygrep
