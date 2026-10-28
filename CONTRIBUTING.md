@@ -28,8 +28,8 @@ This installs Python 3.11 and the dev tools into `.venv` and activates the git h
 
 - Do not mock code from this repo. Fake UNO objects only at the `lo/` boundary.
 - `core/` has a 90 % coverage gate.
-- `test-lo` ([scripts/test_lo.py](scripts/test_lo.py)) builds the `.oxt`, installs it into a throwaway
-  profile and runs each `tests/lo/test_*.py` module in its own `soffice --headless`, under
+- `test-lo` ([scripts/test_lo.py](scripts/test_lo.py)) builds the `.oxt` and runs each
+  `tests/lo/test_*.py` module in its own `soffice --headless` with a fresh throwaway profile, under
   LibreOffice's own Python (plain `test_*(ctx)` functions, no pytest there). A crash of LibreOffice
   only fails its own module. Set `LIBREOFFICE_PROGRAM` if LibreOffice is not found.
 - CI job `integration` runs `test-lo` on Ubuntu against LibreOffice **25.8.7**, the minimum version

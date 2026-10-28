@@ -63,7 +63,8 @@ def runner_environment(program: Path) -> dict[str, str]:
 
 
 def main() -> int:
-    """Run every tests/lo module in its own LibreOffice, so a crash only affects that module."""
+    """Run every tests/lo module in its own LibreOffice and profile, so modules cannot affect
+    each other."""
     program = find_program_dir()
     python = find_python(program)
     env = runner_environment(program)
@@ -74,11 +75,13 @@ def main() -> int:
     modules = listing.stdout.split()
 
     failed: list[str] = []
-    with tempfile.TemporaryDirectory(prefix="librecharts_profile_") as tmp:
-        profile = f"-env:UserInstallation={Path(tmp).as_uri()}"
-        subprocess.run([str(program / _exe("unopkg")), "add", profile, str(oxt)], check=True)
-        for module in modules:
-            print(f"=== {module}", flush=True)
+    for module in modules:
+        print(f"=== {module}", flush=True)
+        # A fresh profile per module: state that LibreOffice keeps in the profile made the mouse
+        # tests of a later module miss their target.
+        with tempfile.TemporaryDirectory(prefix="librecharts_profile_") as tmp:
+            profile = f"-env:UserInstallation={Path(tmp).as_uri()}"
+            subprocess.run([str(program / _exe("unopkg")), "add", profile, str(oxt)], check=True)
             if run_module(program, python, env, profile, module) != 0:
                 failed.append(module)
 
