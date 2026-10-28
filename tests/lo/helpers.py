@@ -105,6 +105,20 @@ def skip_on_headless_linux(reason):
         raise Skip(reason)
 
 
+def set_chart_state(ctx, doc, chart_id, state):
+    """Give the selected chart ``state`` (without annotations) and redraw it inside LibreOffice.
+
+    Only the document property is written from this test process; the RemoveAnnotations command
+    then redraws from it inside LibreOffice. A redraw over the bridge (``chart.redraw`` called
+    from here) is suspected of aborting LibreOffice 25.8 in headless Linux CI while the
+    extension's resize watcher is active.
+    """
+    from librecharts.lo import store
+
+    store.write_state(doc, chart_id, state)
+    dispatch(ctx, doc, "org.librecharts:RemoveAnnotations")
+
+
 def click(ctx, doc, x, y, clicks=1):
     """Click the left mouse button ``clicks`` times near document position (``x``, ``y``).
 

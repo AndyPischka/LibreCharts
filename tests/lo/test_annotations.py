@@ -11,13 +11,14 @@ from helpers import (
     first_page,
     new_impress,
     save_and_reload,
+    set_chart_state,
     uno_command,
 )
 
 from librecharts.core.datasheet import state_from_table
 from librecharts.core.layout.column import CATEGORY_BAND
 from librecharts.core.model import Annotation
-from librecharts.lo import chart, store
+from librecharts.lo import store
 
 INSERT = "org.librecharts:InsertColumnChart"
 ADD = "org.librecharts:AddAnnotation?"
@@ -207,8 +208,7 @@ def test_axis_break_cuts_a_tall_column_with_a_white_gap(ctx):
         tall = state_from_table(
             "column", "stacked", [[None, "2023", "2024", "2025"], ["Sales", 10, 12, 100]]
         )
-        chart.redraw(doc, group, tall)
-        doc.getCurrentController().select(group)
+        set_chart_state(ctx, doc, chart_id, tall)
         dispatch(ctx, doc, ADD + "kind=axis_break&start=2")
         assert _annotations(doc, chart_id) == (Annotation("axis_break", 2, 2),)
         gaps = 0

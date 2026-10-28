@@ -10,11 +10,11 @@ import time
 from dataclasses import replace
 
 import uno
-from helpers import dispatch, first_page, new_impress, skip_on_headless_linux
+from helpers import dispatch, first_page, new_impress, set_chart_state, skip_on_headless_linux
 
 from librecharts.core.datasheet import sample_state
 from librecharts.core.model import Annotation
-from librecharts.lo import chart, commands, store
+from librecharts.lo import commands, store
 
 INSERT = "org.librecharts:InsertColumnChart"
 PICK = "org.librecharts:PickAnnotation?kind="
@@ -92,9 +92,8 @@ def test_picking_the_start_column_again_keeps_waiting(ctx):
 def test_picking_bars_of_a_clustered_chart_measures_that_series(ctx):
     doc, group, chart_id = _chart(ctx)
     try:
-        chart.redraw(doc, group, replace(sample_state(), grouping="clustered"))
+        set_chart_state(ctx, doc, chart_id, replace(sample_state(), grouping="clustered"))
         controller = doc.getCurrentController()
-        controller.select(group)
         dispatch(ctx, doc, PICK + "difference")
         # Product B's value labels sit above its bars: 20 (2023) and 21 (2025)
         controller.select(_child_with_text(group, "20"))
