@@ -54,4 +54,15 @@ jobs:
       - name: Missing shared libraries (diagnostics)
         if: failure()
         run: ldd "$LIBREOFFICE_PROGRAM/soffice.bin" | grep "not found" || true
-      - run: uv run --locked poe test-lo
+      - name: Integration tests
+        shell: bash
+        run: |
+          set +e
+          uv run --locked poe test-lo 2>&1 | tee "$RUNNER_TEMP/test-lo.log"
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # Repeat the tail as an annotation so it shows on the run summary page.
+            msg="$(tail -c 3500 "$RUNNER_TEMP/test-lo.log" | python3 -c "import sys; sys.stdout.write(sys.stdin.read().replace('%', '%25').replace('\r', '').replace('\n', '%0A'))")"
+            echo "::error title=test-lo output::$msg"
+          fi
+          exit "$status"
