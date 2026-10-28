@@ -8,6 +8,7 @@ directory to override discovery.
 
 from __future__ import annotations
 
+import glob
 import os
 import subprocess
 import sys
@@ -28,6 +29,7 @@ def find_program_dir() -> Path:
         r"C:\Program Files (x86)\LibreOffice\program",
         "/usr/lib/libreoffice/program",
         "/opt/libreoffice/program",
+        *sorted(glob.glob("/opt/libreoffice*/program"), reverse=True),
         "/Applications/LibreOffice.app/Contents/MacOS",
     ]
     for candidate in candidates:
@@ -45,8 +47,19 @@ def find_python(program: Path) -> Path:
         path = program / _exe(name)
         if path.exists():
             return path
-    # Linux packages use the system Python, which has the uno module installed.
+    # Distribution packages use the system Python, which has the uno module installed.
     return Path(sys.executable) if sys.platform != "win32" else program / "python.exe"
+
+
+def runner_environment(program: Path) -> dict[str, str]:
+    """Environment for the runner; on Linux the bundled Python finds uno and its libraries by it."""
+    env = dict(os.environ)
+    if sys.platform.startswith("linux"):
+        env["PYTHONPATH"] = os.pathsep.join(filter(None, [str(program), env.get("PYTHONPATH")]))
+        env["LD_LIBRARY_PATH"] = os.pathsep.join(
+            filter(None, [str(program), env.get("LD_LIBRARY_PATH")])
+        )
+    return env
 
 
 def main() -> int:
@@ -70,7 +83,9 @@ def main() -> int:
             ]
         )
         try:
-            result = subprocess.run([str(python), str(RUNNER), pipe], check=False)
+            result = subprocess.run(
+                [str(python), str(RUNNER), pipe], check=False, env=runner_environment(program)
+            )
         finally:
             # The runner asks LibreOffice to terminate; only our own child is ever killed.
             try:

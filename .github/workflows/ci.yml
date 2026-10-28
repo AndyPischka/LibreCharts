@@ -18,3 +18,31 @@ jobs:
       # setup-uv publishes no moving major tag (no "v10"), so pin the full version.
       - uses: astral-sh/setup-uv@v10.3.2
       - run: uv run --locked --python ${{ matrix.python }} poe check
+
+  # The UNO integration tests against the oldest supported LibreOffice (see README: 25.8).
+  integration:
+    runs-on: ubuntu-latest
+    env:
+      LO_VERSION: "25.8.7"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.2
+      - name: Install LibreOffice ${{ env.LO_VERSION }} (extracted, not installed system-wide)
+        run: |
+          base="https://download.documentfoundation.org/libreoffice/stable/${LO_VERSION}/deb/x86_64"
+          tgz="LibreOffice_${LO_VERSION}_Linux_x86-64_deb.tar.gz"
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o "$tgz" "$base/$tgz"
+          curl -fsSL "$base/$tgz.sha256" | sha256sum -c -
+          tar xzf "$tgz"
+          for deb in LibreOffice_*/DEBS/*.deb; do
+            case "$deb" in *kde-integration*|*gnome-integration*) continue ;; esac
+            dpkg -x "$deb" lo
+          done
+          program="$(echo "$RUNNER_TEMP"/lo/opt/libreoffice*/program)"
+          echo "LIBREOFFICE_PROGRAM=$program" >> "$GITHUB_ENV"
+          "$program/soffice" --version
+      - name: Missing shared libraries (diagnostics)
+        if: failure()
+        run: ldd "$LIBREOFFICE_PROGRAM/soffice.bin" | grep "not found" || true
+      - run: uv run --locked poe test-lo
