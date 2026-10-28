@@ -36,8 +36,11 @@ This installs Python 3.11 and the dev tools into `.venv` and activates the git h
   (official packages, extracted, checksum pinned in the workflow). On failure the first error is
   shown as an annotation on the run page. Clipboard tests and tests needing visible documents are
   skipped on headless Linux (they abort LibreOffice there) and run on Windows only.
-- Known issue: on headless Linux, a resize test made LibreOffice abort once in three CI runs; the
-  cause is not found yet.
+- Known issue: on headless Linux, LibreOffice sometimes aborts during a test (most often
+  `test_resize::test_too_small_chart_is_left_stretched_and_recovers`); the cause is not found yet.
+  When that happens, the job prints the Python stack of the extension code that was running
+  (`PYTHONFAULTHANDLER`) and, from the core dump, a `gdb` backtrace of every LibreOffice thread;
+  the crashing thread also appears as an annotation on the run page.
 
 ## Releases
 

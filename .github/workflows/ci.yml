@@ -56,7 +56,15 @@ jobs:
         run: ldd "$LIBREOFFICE_PROGRAM/soffice.bin" | grep "not found" || true
       - name: Integration tests
         shell: bash
+        env:
+          # If LibreOffice crashes, its embedded Python prints the stack of the extension code
+          # that was running.
+          PYTHONFAULTHANDLER: "1"
         run: |
+          # Keep core dumps of crashing LibreOffice processes for the backtrace step below.
+          mkdir -p "$RUNNER_TEMP/cores"
+          sudo sysctl -q -w kernel.core_pattern="$RUNNER_TEMP/cores/core.%e.%p"
+          ulimit -c unlimited
           set +e
           uv run --locked poe test-lo 2>&1 | tee "$RUNNER_TEMP/test-lo.log"
           status=${PIPESTATUS[0]}
@@ -68,9 +76,34 @@ jobs:
           start = log.find('FAIL ')
           first = log[start:start + 3000] if start >= 0 else log[-3000:]
           tail = '\n'.join(l for l in log.splitlines() if l.startswith(('ABORT', 'FAIL ', '===')) or ' passed, ' in l)
-          text = first + '\n...\n' + tail
+          crash = log.find('Fatal Python error')
+          python_stack = log[crash:crash + 2500] + '\n...\n' if crash >= 0 else ''
+          text = python_stack + first + '\n...\n' + tail
           sys.stdout.write(text.replace('%', '%25').replace('\r', '').replace('\n', '%0A'))
           " "$RUNNER_TEMP/test-lo.log")"
             echo "::error title=test-lo output::$msg"
           fi
           exit "$status"
+      - name: Backtraces of LibreOffice crashes
+        if: failure()
+        shell: bash
+        run: |
+          shopt -s nullglob
+          cores=("$RUNNER_TEMP"/cores/core.*)
+          if [ ${#cores[@]} -eq 0 ]; then
+            echo "No core dumps."
+            exit 0
+          fi
+          sudo apt-get install -y -qq gdb > /dev/null
+          bin="$LIBREOFFICE_PROGRAM/soffice.bin"
+          for core in "${cores[@]}"; do
+            name="$(basename "$core")"
+            echo "::group::$name: all threads"
+            gdb -batch -q -ex "thread apply all bt 30" "$bin" "$core" 2>&1
+            echo "::endgroup::"
+            # The crashing thread as an annotation on the run summary page (release build:
+            # exported function names only, no line numbers).
+            msg="$(gdb -batch -q -ex "bt 40" "$bin" "$core" 2>/dev/null | grep '^#' |
+              python3 -c "import sys; sys.stdout.write(sys.stdin.read().replace('%', '%25').replace('\n', '%0A'))")"
+            echo "::error title=LibreOffice crash ($name)::$msg"
+          done
