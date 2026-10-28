@@ -11,6 +11,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   shapes with segment and total labels. Insert is a single undo step.
 - A "LibreCharts" toolbar with icons for both commands. In the Notebookbar (ribbon) interface it
   appears in the "Extension" group.
+- Copied or duplicated charts can be edited independently of the original.
 - Chart data is stored in the document and survives saving as ODP and PPTX.
 - *LibreCharts → Edit chart data* opens the chart's data in a Calc window. Every edit updates the
   chart immediately (one undo step each); formulas are kept when the window is closed and reopened.

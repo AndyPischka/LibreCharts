@@ -7,6 +7,7 @@ Use these terms consistently in code, UI strings and docs.
 | **Chart** | One LibreCharts object on a slide: a group of shapes plus its data. |
 | **Chart state** | The persisted description of a chart: raw data sheet cells (incl. formulas), their evaluated values, chart kind, grouping and a schema version. Stored as JSON in the document. |
 | **Chart id** | Short random id of a chart. The chart's group shape is named `librecharts:<id>` (its *anchor*); the chart state is stored under the same key in the document. |
+| **Fork** | Giving a copied chart its own id and its own copy of the state before editing it. |
 | **Orphaned chart** | A chart whose group has an anchor but whose state is missing from the document, e.g. after copying it into another presentation. It still looks right but cannot be edited. |
 | **Primitive** | A rectangle, line or text box produced by layout; plain geometry in 1/100 mm that the adapter turns into a shape. |
 | **Data sheet** | The Calc document in which the user edits a chart's values (ADR 0003). |

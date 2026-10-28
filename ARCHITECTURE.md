@@ -46,13 +46,14 @@ so every released schema version must stay readable (`state_io.py`).
 3. **A chart is a group of native Draw shapes** (ADR 0002); the slide still looks right if the
    extension is not installed.
 4. **Layout is a pure function** of chart data and available size: same input, same geometry.
-5. **The data sheet is a Calc document** (ADR 0003); the chart on the slide is a projection of it.
+5. **The chart state in the document is the truth; the Calc data sheet is a view** (ADRs 0003, 0005).
+   State lives in a document property anchored by the group name (ADR 0004, schema in ADR 0006).
 
 ## Modules in `lo/`
 
 | Module | Role |
 |---|---|
-| `store.py` | Chart id anchor (group name `librecharts:<id>`) and state in a document custom property; no `uno` import, unit-tested with fakes |
+| `store.py` | Chart id anchor (group name `librecharts:<id>`), state in a document custom property, `claim` forks renamed copies; no `uno` import, unit-tested with fakes |
 | `render.py` | Primitives -> shapes in a group; `rerender` replaces children in place |
 | `undo.py` | One explicit undo action per chart operation |
 | `chart.py` | `insert_column_chart`, `redraw`: chart operations on a presentation |
