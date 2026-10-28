@@ -103,16 +103,3 @@ class Skip(Exception):
 def skip_on_headless_linux(reason):
     if sys.platform.startswith("linux"):
         raise Skip(reason)
-
-
-def flush_clipboard(ctx):
-    """Detach the clipboard from the documents its content came from.
-
-    In headless mode on Linux, LibreOffice 25.8 died when a new document was created after a
-    document that had put a chart on the clipboard was closed. LibreOffice flushes the clipboard
-    the same way on exit.
-    """
-    clipboard = ctx.ServiceManager.createInstanceWithContext(
-        "com.sun.star.datatransfer.clipboard.SystemClipboard", ctx
-    )
-    clipboard.flushClipboard()
