@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
 from librecharts.core.axis_break import describe
-from librecharts.core.datasheet import ChartData, parse
+from librecharts.core.datasheet import ChartData
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, ChartState
 from librecharts.core.picking import supports
@@ -39,9 +39,12 @@ def chart_menu(state: ChartState, locale: str) -> MenuItem:
             _command("menu_add_difference", "PickAnnotation?kind=difference", locale),
             _command("menu_add_level", "PickAnnotation?kind=difference&style=level", locale),
             _command("menu_add_cagr", "PickAnnotation?kind=cagr", locale),
-            _command("menu_add_break", "AxisBreak", locale),
         ]
-    data = parse(state)
+    if supports(state, "axis_break"):
+        if not supports(state, "difference"):
+            items.append(SEPARATOR)
+        items.append(_command("menu_add_break", "AxisBreak", locale))
+    data = notes.measured(state)
     shown = [
         (index, annotation)
         for index, annotation in enumerate(state.annotations)

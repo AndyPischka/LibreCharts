@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from librecharts.core.axis_break import (
@@ -5,12 +7,15 @@ from librecharts.core.axis_break import (
     SHOW,
     Break,
     automatic,
+    axis,
     check,
     column_tops,
     describe,
+    limit,
     resolve,
+    suggestion,
 )
-from librecharts.core.datasheet import ChartData, Series
+from librecharts.core.datasheet import ChartData, Series, sample_state
 from librecharts.core.model import Annotation
 
 DATA = ChartData(
@@ -105,3 +110,20 @@ def test_describe(annotation: Annotation, text: str) -> None:
 )
 def test_check(lower: str, upper: str, expected: tuple[float, float] | str) -> None:
     assert check(lower, upper, tallest=100.0) == expected
+
+
+def test_limit_and_suggestion_follow_the_data_of_the_state() -> None:
+    state = replace(
+        sample_state(),
+        cells=(("", "A", "B", "C"), ("S", "10", "100", "20")),
+        values=((None, None, None, None), (None, 10.0, 100.0, 20.0)),
+    )
+    assert limit(state) == 100.0
+    assert suggestion(state) == automatic([10.0, 100.0, 20.0])
+
+
+def test_shortened_axis_ends_at_the_folded_tallest_column() -> None:
+    cut = Break(30.0, 80.0)
+    data = ChartData(("A", "B"), (Series("S", (10.0, 100.0)),))
+    assert axis(data, "stacked", cut).maximum >= cut.fold(100.0)
+    assert axis(data, "stacked", cut).minimum == 0.0

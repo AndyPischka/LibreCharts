@@ -14,8 +14,7 @@ from typing import Any
 import unohelper
 from com.sun.star.awt import XActionListener, XCallback, XItemListener
 
-from librecharts.core.axis_break import automatic, check, column_tops
-from librecharts.core.datasheet import parse
+from librecharts.core.axis_break import check, limit, suggestion
 from librecharts.core.layout.common import format_value
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, ChartState
@@ -76,12 +75,10 @@ class _Request(unohelper.Base, XCallback):
 def ask(ctx: Any, frame: Any, state: ChartState, current: Annotation | None) -> Choice | None:
     """Show the dialog (modal); the choice, or ``None`` if cancelled."""
     locale = ui.ui_locale(ctx)
-    data = parse(state)
-    tops = column_tops(data, state.grouping)
-    tallest = max(tops, default=0.0)
+    tallest = limit(state)
     shown = current if current and current.lower is not None else None
-    if shown is None and (suggestion := automatic(tops)) is not None:
-        lower, upper = suggestion.lower, suggestion.upper
+    if shown is None and (proposal := suggestion(state)) is not None:
+        lower, upper = proposal.lower, proposal.upper
     elif shown is not None and shown.lower is not None and shown.upper is not None:
         lower, upper = shown.lower, shown.upper
     else:

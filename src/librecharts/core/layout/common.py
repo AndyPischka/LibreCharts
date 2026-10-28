@@ -16,6 +16,16 @@ def format_value(value: float) -> str:
     return f"{value:.2f}".rstrip("0").rstrip(".") or "0"
 
 
+def column_top(data: ChartData, grouping: Grouping, category: int, series: int | None) -> float:
+    """The highest value of a column (or of one bar of a clustered one); 0 if it only goes down."""
+    values = [v for s in data.series if (v := s.values[category]) is not None]
+    if series is not None and grouping == "clustered":
+        return max(data.series[series].values[category] or 0.0, 0.0)
+    if grouping == "clustered":
+        return max([0.0, *values])
+    return sum(v for v in values if v > 0)
+
+
 def value_axis(data: ChartData, grouping: Grouping) -> Axis:
     """The value range covering all segments (stacked: per-category sums), always including zero."""
     if grouping == "stacked":

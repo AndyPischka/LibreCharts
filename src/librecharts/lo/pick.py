@@ -90,6 +90,7 @@ class _Pick(unohelper.Base, XSelectionChangeListener, XKeyHandler, XCallback):
             target = target_at(
                 self.state,
                 self.group.Size.Width,
+                self.group.Size.Height,
                 position.X - origin.X + size.Width / 2,
                 position.Y - origin.Y + size.Height / 2,
             )

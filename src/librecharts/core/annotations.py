@@ -10,15 +10,30 @@ from __future__ import annotations
 from dataclasses import replace
 from urllib.parse import parse_qs
 
-from librecharts.core.datasheet import ChartData
-from librecharts.core.model import Annotation, ChartKind
+from librecharts.core.datasheet import ChartData, parse
+from librecharts.core.model import Annotation, ChartKind, ChartState
 
 NOT_AVAILABLE = "\u2013"  # en dash
 
-# Annotation kinds per chart kind; bar and waterfall charts follow later (M4 plan).
+# Annotation kinds per chart kind.
 SUPPORTED: dict[ChartKind, frozenset[str]] = {
     "column": frozenset({"difference", "cagr", "axis_break"}),
+    "bar": frozenset({"difference", "cagr", "axis_break"}),
 }
+
+
+def measured(state: ChartState) -> ChartData:
+    """The data an annotation of ``state`` measures: categories and the series values."""
+    return parse(state)
+
+
+def arrows(
+    annotations: tuple[Annotation, ...], data: ChartData, kind: ChartKind
+) -> tuple[list[Annotation], list[Annotation]]:
+    """The drawable arrows: (bracket arrows, level arrows). Axis breaks are not arrows."""
+    shown = [a for a in annotations if a.kind != "axis_break" and drawable(a, data, kind)]
+    levels = [a for a in shown if a.kind == "difference" and a.style == "level"]
+    return [a for a in shown if a not in levels], levels
 
 
 def drawable(annotation: Annotation, data: ChartData, kind: ChartKind) -> bool:

@@ -10,9 +10,10 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from librecharts.core.datasheet import ChartData
+from librecharts.core.datasheet import ChartData, parse
 from librecharts.core.layout.common import format_value
-from librecharts.core.model import Annotation, Grouping
+from librecharts.core.model import Annotation, ChartState, Grouping
+from librecharts.core.scale import Axis, nice_axis
 
 KEEP = 1.1  # automatic: the break starts this far above the second tallest column
 SHOW = 1.3  # automatic: the tallest column continues up to this share of the second tallest
@@ -50,6 +51,15 @@ def column_tops(data: ChartData, grouping: Grouping) -> list[float]:
     return tops
 
 
+def axis(data: ChartData, grouping: Grouping, cut: Break) -> Axis:
+    """The value axis of a column or bar chart on the scale shortened by ``cut``."""
+    lows: list[float] = []
+    for c in range(len(data.categories)):
+        negative = [v for s in data.series if (v := s.values[c]) is not None and v < 0]
+        lows.append(sum(negative) if grouping == "stacked" else min(negative, default=0.0))
+    return nice_axis(min(lows), cut.fold(max(column_tops(data, grouping))))
+
+
 def automatic(tops: list[float]) -> Break | None:
     """The break for columns reaching ``tops``; ``None`` if none dwarfs the others."""
     ranked = sorted(tops, reverse=True)
@@ -57,6 +67,16 @@ def automatic(tops: list[float]) -> Break | None:
         return None
     lower = KEEP * ranked[1]
     return Break(lower, lower + ranked[0] - SHOW * ranked[1])
+
+
+def limit(state: ChartState) -> float:
+    """The highest value a manual break may reach: the tallest column or bar."""
+    return max(column_tops(parse(state), state.grouping), default=0.0)
+
+
+def suggestion(state: ChartState) -> Break | None:
+    """The automatic break of ``state``, shown as the dialog's starting values."""
+    return automatic(column_tops(parse(state), state.grouping))
 
 
 def resolve(

@@ -18,11 +18,11 @@ from collections.abc import Callable
 
 from librecharts.core import annotations as notes
 from librecharts.core.axis_break import Break, column_tops, resolve
+from librecharts.core.axis_break import axis as shortened_axis
 from librecharts.core.datasheet import ChartData
-from librecharts.core.layout.common import GAP_RATIO, format_value, value_axis
+from librecharts.core.layout.common import GAP_RATIO, column_top, format_value, value_axis
 from librecharts.core.model import Annotation, Grouping
 from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
-from librecharts.core.scale import Axis, nice_axis
 
 TOP_BAND = 800.0  # room above the plot for total / outside value labels
 LABEL_HEIGHT = 600.0  # height of a value or total label box
@@ -52,7 +52,7 @@ def layout_column(
 
     Raises ``ValueError`` if the box leaves no room for the plot.
     """
-    brackets, levels = _arrows(data, annotations)
+    brackets, levels = notes.arrows(annotations, data, "column")
     lanes = len(brackets) * LANE_HEIGHT
     top_band = lanes + TOP_BAND
     plot_width = width - len(levels) * LEVEL_LANE_WIDTH
@@ -66,7 +66,7 @@ def layout_column(
         return ()
 
     cut = resolve(annotations, data, grouping)
-    axis = _axis(data, grouping, cut)
+    axis = shortened_axis(data, grouping, cut) if cut else value_axis(data, grouping)
     span = axis.maximum - axis.minimum
 
     def y(value: float) -> float:
@@ -97,21 +97,14 @@ def layout_column(
             return column_x + series * bar_width, column_x + (series + 1) * bar_width
         return column_x, column_x + column_width
 
-    def top(category: int, series: int | None) -> float:
-        """The highest value of the measured column or bar (0 if it only goes down)."""
-        values = [v for s in data.series if (v := s.values[category]) is not None]
-        if series is not None and grouping == "clustered":
-            return max(data.series[series].values[category] or 0.0, 0.0)
-        if grouping == "clustered":
-            return max([0.0, *values])
-        return sum(v for v in values if v > 0)
-
     fold = cut.fold if cut else _same
 
     def anchor(category: int, series: int | None) -> tuple[float, float]:
         """Where a bracket arrow meets a column: top centre, above its label."""
         left, right = edges(category, series)
-        return (left + right) / 2, y(fold(top(category, series))) - LABEL_HEIGHT - LANE_LINE_GAP
+        return (left + right) / 2, y(
+            fold(column_top(data, grouping, category, series))
+        ) - LABEL_HEIGHT - LANE_LINE_GAP
 
     def level(category: int, series: int | None) -> tuple[float, float]:
         """Where a level arrow's helper line starts: right edge, at the measured value."""
@@ -145,17 +138,6 @@ def _same(value: float) -> float:
     return value
 
 
-def _axis(data: ChartData, grouping: Grouping, cut: Break | None) -> Axis:
-    """Like ``value_axis``, but on the shortened scale if there is a break."""
-    if cut is None:
-        return value_axis(data, grouping)
-    lows: list[float] = []
-    for c in range(len(data.categories)):
-        negative = [v for s in data.series if (v := s.values[c]) is not None and v < 0]
-        lows.append(sum(negative) if grouping == "stacked" else min(negative, default=0.0))
-    return nice_axis(min(lows), cut.fold(max(column_tops(data, grouping))))
-
-
 def _break_mark(x: float, width: float, y_break: float, overhang: float) -> list[Primitive]:
     """A white gap across a column or bar with two parallel slanted lines."""
     left, right, top = x - overhang, x + width + overhang, y_break - BREAK_GAP / 2
@@ -164,15 +146,6 @@ def _break_mark(x: float, width: float, y_break: float, overhang: float) -> list
         Line(left, top, right, top + BREAK_SLANT, "annotation"),
         Line(left, top + BREAK_GAP - BREAK_SLANT, right, top + BREAK_GAP, "annotation"),
     ]
-
-
-def _arrows(
-    data: ChartData, annotations: tuple[Annotation, ...]
-) -> tuple[list[Annotation], list[Annotation]]:
-    """The drawable arrows: (bracket arrows above the plot, level arrows right of it)."""
-    shown = [a for a in annotations if a.kind != "axis_break" and notes.drawable(a, data, "column")]
-    levels = [a for a in shown if a.kind == "difference" and a.style == "level"]
-    return [a for a in shown if a not in levels], levels
 
 
 def column_at(
@@ -188,7 +161,7 @@ def column_at(
     Uses the geometry of :func:`layout_column`. Points in the arrow lanes or outside the box hit
     nothing; between the bars of a clustered column, or on its labels below, the series is ``None``.
     """
-    brackets, levels = _arrows(data, annotations)
+    brackets, levels = notes.arrows(annotations, data, "column")
     plot_width = width - len(levels) * LEVEL_LANE_WIDTH
     if not data.categories or not 0 <= x < plot_width or y < len(brackets) * LANE_HEIGHT:
         return None

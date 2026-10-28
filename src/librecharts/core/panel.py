@@ -9,10 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
-from librecharts.core.datasheet import parse
 from librecharts.core.menu import PROTOCOL, annotation_title
 from librecharts.core.messages import text
-from librecharts.core.model import ChartState
+from librecharts.core.model import AnnotationKind, ChartState
 from librecharts.core.picking import supports
 
 
@@ -54,7 +53,7 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
     if state is None:
         status = text("status_orphaned" if selected else "status_none", locale)
     else:
-        data = parse(state)
+        data = notes.measured(state)
         status = text(
             "status_chart",
             locale,
@@ -81,24 +80,28 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
                 "PickAnnotation?kind=difference",
                 "difference",
                 locale,
-                _can_annotate(state, usable),
+                _can_annotate(state, usable, "difference"),
             ),
             _button(
                 "menu_add_level",
                 "PickAnnotation?kind=difference&style=level",
                 "level",
                 locale,
-                _can_annotate(state, usable),
+                _can_annotate(state, usable, "difference"),
             ),
             _button(
                 "menu_add_cagr",
                 "PickAnnotation?kind=cagr",
                 "cagr",
                 locale,
-                _can_annotate(state, usable),
+                _can_annotate(state, usable, "cagr"),
             ),
             _button(
-                "menu_add_break", "AxisBreak", "axis_break", locale, _can_annotate(state, usable)
+                "menu_add_break",
+                "AxisBreak",
+                "axis_break",
+                locale,
+                _can_annotate(state, usable, "axis_break"),
             ),
         ),
         rows=rows,
@@ -106,8 +109,8 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
     )
 
 
-def _can_annotate(state: ChartState | None, usable: bool) -> bool:
-    return usable and state is not None and supports(state, "difference")
+def _can_annotate(state: ChartState | None, usable: bool, kind: AnnotationKind) -> bool:
+    return usable and state is not None and supports(state, kind)
 
 
 def _button(key: str, command: str, icon: str, locale: str, enabled: bool = True) -> Button:
