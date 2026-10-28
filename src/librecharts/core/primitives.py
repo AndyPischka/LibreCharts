@@ -20,7 +20,10 @@ class Rect:
     y: float
     width: float
     height: float
-    series: int  # index into ChartData.series, selects the fill colour
+    series: int  # index into ChartData.series, selects the fill colour; BACKGROUND: none
+
+
+BACKGROUND = -1  # Rect.series of gaps cut into other shapes (axis breaks): slide background
 
 
 @dataclass(frozen=True, slots=True)

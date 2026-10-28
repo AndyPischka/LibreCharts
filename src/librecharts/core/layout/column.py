@@ -7,17 +7,22 @@ fixes the scale and always includes zero. Above the plot there is a band for tot
 labels, below it a band for category labels. Bracket arrows (difference, CAGR) run in lanes
 above the label band, one lane per arrow, the first one closest to the plot. Level arrows run in
 lanes right of the plot, the first one closest to it.
+
+An axis break shortens a column that dwarfs the others: the scale ignores it, and it is drawn
+just above the tallest other column with a break mark; its labels keep the real values.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
 from librecharts.core.datasheet import ChartData
 from librecharts.core.layout.common import GAP_RATIO, format_value, value_axis
 from librecharts.core.model import Annotation, Grouping
-from librecharts.core.primitives import Line, Primitive, Rect, Text
+from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
+from librecharts.core.scale import Axis, nice_axis
 
 TOP_BAND = 800.0  # room above the plot for total / outside value labels
 LABEL_HEIGHT = 600.0  # height of a value or total label box
@@ -29,6 +34,11 @@ MIN_ARROW_LABEL_WIDTH = 1800.0  # arrows between neighbouring narrow columns sta
 LEVEL_LANE_WIDTH = 2000.0  # room right of the plot for one level arrow and its label
 LEVEL_ARROW_INSET = 300.0  # from a level lane's left edge to its arrow
 LEVEL_LABEL_GAP = 150.0  # between a level arrow and its label
+BREAK_KEEP = 0.85  # below its break, a cut column keeps this share of the tallest other column
+BREAK_SHOW = 1.15  # a cut column ends this high, relative to the tallest other column
+BREAK_GAP = 300.0  # height of the white gap of a break mark
+BREAK_SLANT = 100.0  # how far the break lines fall from left to right
+BREAK_OVERHANG = 100.0  # how far a break mark reaches beyond a stacked column
 
 _YScale = Callable[[float], float]
 
@@ -57,7 +67,8 @@ def layout_column(
     if not data.categories or not data.series:
         return ()
 
-    axis = value_axis(data, grouping)
+    cut = _cut(data, grouping, annotations)
+    axis = _axis(data, grouping, cut)
     span = axis.maximum - axis.minimum
 
     def y(value: float) -> float:
@@ -71,9 +82,9 @@ def layout_column(
         slot_x = c * slot
         column_x = slot_x + (slot - column_width) / 2
         if grouping == "stacked":
-            out.extend(_stacked_column(data, c, column_x, column_width, y))
+            out.extend(_stacked_column(data, c, column_x, column_width, y, cut))
         else:
-            out.extend(_clustered_column(data, c, column_x, column_width, y))
+            out.extend(_clustered_column(data, c, column_x, column_width, y, cut))
         out.append(
             Text(
                 slot_x, top_band + plot_height, slot, CATEGORY_BAND, category, "center", "category"
@@ -88,21 +99,30 @@ def layout_column(
             return column_x + series * bar_width, column_x + (series + 1) * bar_width
         return column_x, column_x + column_width
 
-    def anchor(category: int, series: int | None) -> tuple[float, float]:
-        """Where a bracket arrow meets a column: top centre, above its label."""
+    def top(category: int, series: int | None) -> float:
+        """The highest value of the measured column or bar (0 if it only goes down)."""
         values = [v for s in data.series if (v := s.values[category]) is not None]
         if series is not None and grouping == "clustered":
-            top = max(data.series[series].values[category] or 0.0, 0.0)
-        elif grouping == "clustered":
-            top = max([0.0, *values])
-        else:
-            top = sum(v for v in values if v > 0)
+            return max(data.series[series].values[category] or 0.0, 0.0)
+        if grouping == "clustered":
+            return max([0.0, *values])
+        return sum(v for v in values if v > 0)
+
+    def drawn(category: int, series: int | None, value: float) -> float:
+        """The y of ``value`` on the measured column or bar, which may be cut."""
+        fold = cut.fold(category, top(category, series)) if cut else _same
+        return y(fold(value))
+
+    def anchor(category: int, series: int | None) -> tuple[float, float]:
+        """Where a bracket arrow meets a column: top centre, above its label."""
         left, right = edges(category, series)
-        return (left + right) / 2, y(top) - LABEL_HEIGHT - LANE_LINE_GAP
+        y_top = drawn(category, series, top(category, series))
+        return (left + right) / 2, y_top - LABEL_HEIGHT - LANE_LINE_GAP
 
     def level(category: int, series: int | None) -> tuple[float, float]:
         """Where a level arrow's helper line starts: right edge, at the measured value."""
-        return edges(category, series)[1], y(notes.measured_value(data, category, series) or 0.0)
+        value = notes.measured_value(data, category, series) or 0.0
+        return edges(category, series)[1], drawn(category, series, value)
 
     for lane, arrow in enumerate(brackets):
         line_y = lanes - lane * LANE_HEIGHT - LANE_LINE_GAP
@@ -127,11 +147,79 @@ def layout_column(
     return tuple(out)
 
 
+@dataclass(frozen=True, slots=True)
+class _Cut:
+    """Axis breaks: a column (stacked) or bar (clustered) in ``categories`` reaching above
+    ``show`` is cut at ``keep`` and ends at ``show``."""
+
+    categories: frozenset[int]
+    keep: float
+    show: float
+
+    def cuts(self, category: int, top: float) -> bool:
+        return category in self.categories and top > self.show
+
+    def fold(self, category: int, top: float) -> Callable[[float], float]:
+        """Maps a value on a column or bar reaching ``top`` to the value it is drawn at."""
+        if not self.cuts(category, top):
+            return _same
+        removed = top - self.show
+        return lambda value: value if value <= self.keep else max(self.keep, value - removed)
+
+
+def _same(value: float) -> float:
+    return value
+
+
+def _top(data: ChartData, grouping: Grouping, category: int) -> float:
+    values = [v for s in data.series if (v := s.values[category]) is not None]
+    if grouping == "clustered":
+        return max([0.0, *values])
+    return sum(v for v in values if v > 0)
+
+
+def _cut(data: ChartData, grouping: Grouping, annotations: tuple[Annotation, ...]) -> _Cut | None:
+    """The axis breaks to draw, sized by the tallest column without one."""
+    categories = frozenset(
+        a.start for a in annotations if a.kind == "axis_break" and notes.drawable(a, data, "column")
+    )
+    others = [_top(data, grouping, c) for c in range(len(data.categories)) if c not in categories]
+    tallest = max(others, default=0.0)
+    if not categories or tallest <= 0:
+        return None
+    return _Cut(categories, BREAK_KEEP * tallest, BREAK_SHOW * tallest)
+
+
+def _axis(data: ChartData, grouping: Grouping, cut: _Cut | None) -> Axis:
+    """Like ``value_axis``, but cut columns only count up to where they end."""
+    if cut is None:
+        return value_axis(data, grouping)
+    lows: list[float] = []
+    highs: list[float] = []
+    for c in range(len(data.categories)):
+        values = [v for s in data.series if (v := s.values[c]) is not None]
+        negative = [v for v in values if v < 0]
+        lows.append(sum(negative) if grouping == "stacked" else min(negative, default=0.0))
+        high = _top(data, grouping, c)
+        highs.append(min(high, cut.show) if c in cut.categories else high)
+    return nice_axis(min(lows), max(highs))
+
+
+def _break_mark(x: float, width: float, y_break: float, overhang: float) -> list[Primitive]:
+    """A white gap across a column or bar with two parallel slanted lines."""
+    left, right, top = x - overhang, x + width + overhang, y_break - BREAK_GAP / 2
+    return [
+        Rect(left, top, right - left, BREAK_GAP, BACKGROUND),
+        Line(left, top, right, top + BREAK_SLANT, "annotation"),
+        Line(left, top + BREAK_GAP - BREAK_SLANT, right, top + BREAK_GAP, "annotation"),
+    ]
+
+
 def _arrows(
     data: ChartData, annotations: tuple[Annotation, ...]
 ) -> tuple[list[Annotation], list[Annotation]]:
     """The drawable arrows: (bracket arrows above the plot, level arrows right of it)."""
-    shown = [a for a in annotations if notes.drawable(a, data, "column")]
+    shown = [a for a in annotations if a.kind != "axis_break" and notes.drawable(a, data, "column")]
     levels = [a for a in shown if a.kind == "difference" and a.style == "level"]
     return [a for a in shown if a not in levels], levels
 
@@ -208,8 +296,12 @@ def _level(
     ]
 
 
-def _stacked_column(data: ChartData, c: int, x: float, width: float, y: _YScale) -> list[Primitive]:
+def _stacked_column(
+    data: ChartData, c: int, x: float, width: float, y: _YScale, cut: _Cut | None
+) -> list[Primitive]:
     out: list[Primitive] = []
+    column_top = _top(data, "stacked", c)
+    fold = cut.fold(c, column_top) if cut else _same
     positive = negative = 0.0
     segments = 0
     for i, series in enumerate(data.series):
@@ -218,7 +310,7 @@ def _stacked_column(data: ChartData, c: int, x: float, width: float, y: _YScale)
             continue
         segments += 1
         if value > 0:
-            top, bottom = y(positive + value), y(positive)
+            top, bottom = y(fold(positive + value)), y(fold(positive))
             positive += value
         else:
             top, bottom = y(negative), y(negative + value)
@@ -232,7 +324,7 @@ def _stacked_column(data: ChartData, c: int, x: float, width: float, y: _YScale)
         out.append(
             Text(
                 x,
-                y(positive) - LABEL_HEIGHT,
+                y(fold(positive)) - LABEL_HEIGHT,
                 width,
                 LABEL_HEIGHT,
                 format_value(positive + negative),
@@ -240,11 +332,13 @@ def _stacked_column(data: ChartData, c: int, x: float, width: float, y: _YScale)
                 "total",
             )
         )
+    if cut and cut.cuts(c, column_top):
+        out.extend(_break_mark(x, width, y(cut.keep), BREAK_OVERHANG))
     return out
 
 
 def _clustered_column(
-    data: ChartData, c: int, x: float, width: float, y: _YScale
+    data: ChartData, c: int, x: float, width: float, y: _YScale, cut: _Cut | None
 ) -> list[Primitive]:
     out: list[Primitive] = []
     bar_width = width / len(data.series)
@@ -253,10 +347,13 @@ def _clustered_column(
         if value is None:
             continue
         bar_x = x + i * bar_width
-        top, bottom = (y(value), y(0)) if value >= 0 else (y(0), y(value))
+        fold = cut.fold(c, value) if cut else _same
+        top, bottom = (y(fold(value)), y(0)) if value >= 0 else (y(0), y(value))
         out.append(Rect(bar_x, top, bar_width, bottom - top, i))
         label_y = top - LABEL_HEIGHT if value >= 0 else bottom
         out.append(
             Text(bar_x, label_y, bar_width, LABEL_HEIGHT, format_value(value), "center", "value")
         )
+        if cut and cut.cuts(c, value):  # bars sit side by side: the mark stays on its bar
+            out.extend(_break_mark(bar_x, bar_width, y(cut.keep), 0.0))
     return out

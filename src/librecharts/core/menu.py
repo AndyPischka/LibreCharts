@@ -38,6 +38,7 @@ def chart_menu(state: ChartState, locale: str) -> MenuItem:
             _command("menu_add_difference", "PickAnnotation?kind=difference", locale),
             _command("menu_add_level", "PickAnnotation?kind=difference&style=level", locale),
             _command("menu_add_cagr", "PickAnnotation?kind=cagr", locale),
+            _command("menu_add_break", "PickAnnotation?kind=axis_break", locale),
         ]
     data = parse(state)
     shown = [
@@ -60,7 +61,9 @@ def _command(key: str, command: str, locale: str) -> MenuItem:
 
 
 def _title(annotation: Annotation, data: ChartData, locale: str) -> str:
-    key = "menu_cagr" if annotation.kind == "cagr" else f"menu_{annotation.style}"
+    key = (
+        f"menu_{annotation.style}" if annotation.kind == "difference" else f"menu_{annotation.kind}"
+    )
     title = text(
         key,
         locale,

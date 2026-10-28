@@ -2,6 +2,9 @@ import pytest
 
 from librecharts.core.datasheet import ChartData, Series, parse, sample_state
 from librecharts.core.layout.column import (
+    BREAK_GAP,
+    BREAK_OVERHANG,
+    BREAK_SLANT,
     CATEGORY_BAND,
     LABEL_HEIGHT,
     LANE_HEIGHT,
@@ -15,7 +18,7 @@ from librecharts.core.layout.column import (
     layout_column,
 )
 from librecharts.core.model import Annotation, Grouping
-from librecharts.core.primitives import Line, Rect, Text
+from librecharts.core.primitives import BACKGROUND, Line, Rect, Text
 
 
 def data(*series: tuple[str, tuple[float | None, ...]], categories: tuple[str, ...]) -> ChartData:
@@ -216,6 +219,7 @@ def test_structure_with_arrows_does_not_depend_on_size(grouping: Grouping) -> No
         Annotation("difference", 0, 2),
         Annotation("cagr", 2, 1, series=1),
         Annotation("difference", 1, 0, style="level"),
+        Annotation("axis_break", 0, 0),
     )
 
     def shape(width: float, height: float) -> list[tuple[str, str]]:
@@ -296,3 +300,75 @@ def test_level_lanes_leave_too_little_room_for_the_plot() -> None:
             10000,
             (Annotation("difference", 0, 1, style="level"),),
         )
+
+
+TALL = data(("S", (10.0, 100.0, 20.0)), categories=("A", "B", "C"))
+BREAK = (Annotation("axis_break", 1, 1),)
+
+
+def test_axis_break_golden_geometry() -> None:
+    # tallest other column 20: B is cut at 17 and ends at 23; axis 0..25 over 8200 from 800
+    primitives = layout_column(TALL, "stacked", 3000, 10000, BREAK)
+    column_b = [p for p in primitives if isinstance(p, Rect)][1]
+    assert column_b.y == pytest.approx(800 + (25 - 23) / 25 * 8200)
+    label = next(p for p in primitives if isinstance(p, Text) and p.text == "100")
+    assert label.y == pytest.approx(column_b.y)  # inside label keeps the real value
+    y_break = 800 + (25 - 17) / 25 * 8200
+    gap_top = y_break - BREAK_GAP / 2
+    left, right = 1150 - BREAK_OVERHANG, 1850 + BREAK_OVERHANG
+    assert primitives[primitives.index(label) + 1 : primitives.index(label) + 4] == (
+        Rect(left, gap_top, right - left, BREAK_GAP, BACKGROUND),
+        Line(left, gap_top, right, gap_top + BREAK_SLANT, "annotation"),
+        Line(left, gap_top + BREAK_GAP - BREAK_SLANT, right, gap_top + BREAK_GAP, "annotation"),
+    )
+
+
+def test_axis_break_scales_the_other_columns_up() -> None:
+    def height_of_a(annotations: tuple[Annotation, ...]) -> float:
+        rect = next(
+            p
+            for p in layout_column(TALL, "stacked", 3000, 10000, annotations)
+            if isinstance(p, Rect)
+        )
+        return rect.height
+
+    assert height_of_a(BREAK) > 3 * height_of_a(())
+
+
+def test_axis_break_on_a_column_that_is_not_tallest_changes_nothing() -> None:
+    small = (Annotation("axis_break", 0, 0),)
+    assert layout_column(TALL, "stacked", 3000, 10000, small) == layout_column(
+        TALL, "stacked", 3000, 10000
+    )
+
+
+def test_axis_break_cuts_tall_bars_of_a_clustered_column_only() -> None:
+    # tallest bar without a break: 12, so bars above 13.8 are cut
+    chart = data(("A", (10.0, 100.0)), ("B", (12.0, 11.0)), categories=("X", "Y"))
+    primitives = layout_column(chart, "clustered", 2000, 10000, (Annotation("axis_break", 1, 1),))
+    gaps = [p for p in primitives if isinstance(p, Rect) and p.series == BACKGROUND]
+    bars = [p for p in primitives if isinstance(p, Rect) and p.series != BACKGROUND]
+    assert len(gaps) == 1
+    assert gaps[0].x == bars[2].x  # on the cut bar (A in Y), not reaching beyond it
+    assert gaps[0].width == bars[2].width
+    assert bars[3].y > bars[2].y  # B in Y keeps its height below the cut bar
+
+
+def test_arrows_meet_the_cut_column_where_it_ends() -> None:
+    arrows = (*BREAK, Annotation("difference", 0, 1), Annotation("difference", 0, 1, style="level"))
+    primitives = layout_column(TALL, "stacked", 5000, 10000, arrows)
+    column_b = [p for p in primitives if isinstance(p, Rect) and p.series != BACKGROUND][1]
+    head = next(
+        p for p in primitives if isinstance(p, Line) and p.arrow and p.x1 == p.x2 and p.y2 > p.y1
+    )
+    assert head.y2 == pytest.approx(column_b.y - LABEL_HEIGHT - LANE_LINE_GAP)
+    helper = [p for p in primitives if isinstance(p, Line) and p.role == "helper"][1]
+    assert helper.y1 == pytest.approx(column_b.y)
+    assert "+900%" in [p.text for p in primitives if isinstance(p, Text)]
+
+
+def test_axis_break_of_the_only_column_changes_nothing() -> None:
+    chart = data(("S", (10.0,)), categories=("A",))
+    assert layout_column(chart, "stacked", 1000, 10000, (Annotation("axis_break", 0, 0),)) == (
+        layout_column(chart, "stacked", 1000, 10000)
+    )

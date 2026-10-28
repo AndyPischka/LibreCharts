@@ -68,6 +68,14 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "CAGR {start} → {end}",
         "de": "CAGR {start} → {end}",
     },
+    "menu_add_break": {
+        "en": "Add axis break",
+        "de": "Achsenbruch hinzufügen",
+    },
+    "menu_axis_break": {
+        "en": "Axis break {start}",
+        "de": "Achsenbruch {start}",
+    },
     "menu_show_absolute": {
         "en": "Show absolute difference",
         "de": "Absolute Differenz zeigen",

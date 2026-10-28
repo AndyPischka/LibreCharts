@@ -17,7 +17,7 @@ NOT_AVAILABLE = "\u2013"  # en dash
 
 # Annotation kinds per chart kind; bar and waterfall charts follow later (M4 plan).
 SUPPORTED: dict[ChartKind, frozenset[str]] = {
-    "column": frozenset({"difference", "cagr"}),
+    "column": frozenset({"difference", "cagr", "axis_break"}),
 }
 
 

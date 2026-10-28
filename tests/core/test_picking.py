@@ -72,12 +72,12 @@ def test_bars_of_different_series_measure_column_totals() -> None:
 def test_axis_break_needs_one_pick() -> None:
     session = PickSession("axis_break")
     assert session.prompt == "pick_break"
-    assert session.add((1, None)) == Annotation("axis_break", 1, 1)
+    assert session.add((1, 2)) == Annotation("axis_break", 1, 1)  # cuts the whole column
 
 
 def test_supports_follows_the_chart_kind() -> None:
     assert supports(STACKED, "difference")
-    assert not supports(STACKED, "axis_break")  # not yet (M4 step 8)
+    assert supports(STACKED, "axis_break")
     assert not supports(sample_mekko_state(), "difference")
 
 

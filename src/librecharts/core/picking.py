@@ -71,7 +71,9 @@ class PickSession:
             return None
         (start, start_series), (end, end_series) = self.picks[0], self.picks[-1]
         # Both ends must measure the same thing: one series' bars, or else the column totals.
-        series = start_series if start_series == end_series else None
+        # An axis break cuts the whole column.
+        same = start_series == end_series and self.kind != "axis_break"
+        series = start_series if same else None
         return Annotation(self.kind, start, end, series, self.style)
 
 

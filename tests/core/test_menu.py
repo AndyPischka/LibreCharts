@@ -10,6 +10,7 @@ ADD = (
     MenuItem("Add difference arrow", PROTOCOL + "PickAnnotation?kind=difference"),
     MenuItem("Add level difference", PROTOCOL + "PickAnnotation?kind=difference&style=level"),
     MenuItem("Add CAGR arrow", PROTOCOL + "PickAnnotation?kind=cagr"),
+    MenuItem("Add axis break", PROTOCOL + "PickAnnotation?kind=axis_break"),
 )
 
 
@@ -32,6 +33,7 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
             Annotation("difference", 0, 2),
             Annotation("cagr", 0, 1, series=1),
             Annotation("difference", 2, 1, style="level", label="absolute"),
+            Annotation("axis_break", 1, 1),
         ),
     )
     items = chart_menu(state, "en-US").children[len(ADD) + 1 :]
@@ -40,6 +42,7 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
         "Difference 2023 → 2025",
         "CAGR 2023 → 2024 (Product B)",
         "Level difference 2025 → 2024",
+        "Axis break 2024",
         "Remove all annotations",
     ]
     difference, cagr, level = items[1:4]
@@ -54,6 +57,7 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
         PROTOCOL + "ChangeAnnotation?index=2&style=bracket",
         PROTOCOL + "RemoveAnnotation?index=2",
     ]
+    assert commands(items[4]) == [PROTOCOL + "RemoveAnnotation?index=3"]
     assert items[-1].command == PROTOCOL + "RemoveAnnotations"
 
 
