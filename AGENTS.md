@@ -69,6 +69,10 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 - UNO text properties (`shape.String`) only stick after the shape is added to a draw page or group.
 - LibreOffice does not record shapes inserted via the API for undo. Wrap chart changes in
   `lo/undo.py` (lock recording, add one explicit action); an undo context alone is a no-op entry.
+- Sidebar panel (`lo/sidebar.py`): `UnoControlContainerModel` has no `createInstance` or
+  `insertByName`; create the control and its model with the service manager and `addControl`.
+  Headless LibreOffice has no sidebar: tests build the panel with `UIElementFactoryManager` and read
+  its controls; the look and the clicks are tested by hand.
 - Extensions cannot add tabs to the Notebookbar (ribbon): its tabs are fixed in LibreOffice. An
   `OfficeToolBar` in `Addons.xcu` is shown in its "Extension" group and in the classic UI.
 - Pass `None` for a void `any` argument. `uno.Any(...)` as a plain call argument works on

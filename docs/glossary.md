@@ -26,6 +26,7 @@ Use these terms consistently in code, UI strings and docs.
 | **Difference arrow** | Annotation that shows the relative ("+25%") or absolute ("+5") difference between two columns, or two bars of one series. Drawn as a *bracket* above the columns or as a *level difference*. |
 | **Level difference** | Difference arrow drawn right of the plot: dashed lines at the heights of both columns, a vertical arrow between them. |
 | **CAGR arrow** | Annotation that shows the compound annual growth rate between two columns, over the years named by the categories (else the number of columns between them). |
+| **Sidebar deck** | The LibreCharts tab of the Impress sidebar; its one panel mirrors the menu commands and lists the selected chart's annotations. |
 | **Axis break** | Removes a value range from the scale of the whole axis (automatic, or a lower and an upper value from a dialog): columns reaching beyond it get a white gap with slanted lines and continue above it; labels keep the real values. |
 | **Lane** | The strip one arrow occupies: above the plot for brackets, right of it for level differences. |
 | **Pick mode** | After choosing an annotation command, the user clicks the columns it connects; the chart group is entered meanwhile. |

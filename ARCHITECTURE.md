@@ -30,6 +30,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `axis_break.py` | The axis break: automatic or manual value range to remove from the scale, `fold`, validation of the dialog's input |
 | `picking.py` | Pick mode: chart point -> column, `PickSession` collects the picks for one annotation |
 | `menu.py` | Contents of the chart's context menu as plain data |
+| `panel.py` | Contents of the sidebar panel (buttons, status, annotation list) as plain data |
 | `state_io.py` | `ChartState` <-> JSON with schema migrations; malformed input raises `StateError` |
 | `messages.py` | All user-visible strings in English and German (a test enforces both) |
 | `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series); sample data |
@@ -74,6 +75,7 @@ so every released schema version must stay readable (`state_io.py`).
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
 | `axisdialog.py` | The axis break dialog (modal, built in code); asks, then adds or changes the break |
 | `pick.py` | Pick mode: enters the chart group, turns selected shapes into an annotation (ADR 0010) |
+| `sidebar.py` | The LibreCharts sidebar panel: window with buttons, follows selection and document (ADR 0011) |
 | `contextmenu.py` | One interceptor per presentation: the LibreCharts submenu in a chart's context menu |
 | `ui.py` | UI locale and message boxes; texts come from `core/messages.py` |
 

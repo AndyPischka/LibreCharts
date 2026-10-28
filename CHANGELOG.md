@@ -6,6 +6,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- A LibreCharts deck in the Impress sidebar: buttons to insert charts, edit the selected
+  chart's data and add annotations, and the list of the chart's annotations with a remove button
+  each. It follows the selection.
 - Installable `.oxt` with a "LibreCharts" menu in Impress (German and English UI).
 - *LibreCharts → Insert column chart* inserts a stacked column chart with sample data, drawn as native
   shapes with segment and total labels. Insert is a single undo step.

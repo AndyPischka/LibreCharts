@@ -21,7 +21,8 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 2. In LibreOffice: *Tools → Extension Manager → Add…* and pick the `.oxt`; restart LibreOffice.
 3. In Impress, use the **LibreCharts** menu or toolbar to insert a column, bar, waterfall or
    Marimekko chart; double-click a chart (or select it and choose *Edit chart data*) to change its
-   data in Calc.
+   data in Calc. The **LibreCharts** deck in the sidebar (icon with the difference arrow; *View →
+   Sidebar*) offers the same commands, shows the selected chart and lists its annotations.
 4. To annotate a column chart, select it and choose *Add difference arrow*, *Add level difference*
    or *Add CAGR arrow* (menu, toolbar or the chart's context menu), then click the columns as the
    bar above the slide says; `Esc` cancels. *Add axis break* opens a dialog: automatic, or the lower
