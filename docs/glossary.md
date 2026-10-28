@@ -22,8 +22,12 @@ Use these terms consistently in code, UI strings and docs.
 | **Connector** | The thin line from the end of one waterfall column to the start of the next. |
 | **Marimekko (Mekko)** | Stacked chart whose column width is also data (e.g. market size); segments show percent shares (ADR 0009). |
 | **Width row** | Optional Mekko data sheet row named "Width"/"Breite" right below the category names; sets column widths. |
-| **Difference arrow** | Annotation that shows the absolute or relative difference between two segments or columns. |
-| **CAGR arrow** | Annotation that shows the compound annual growth rate between two columns. |
-| **Axis break** | A gap in the value axis that shortens very tall columns. |
+| **Annotation** | An arrow or axis break the user placed on a chart; stored in the chart state by category index (ADR 0010). |
+| **Difference arrow** | Annotation that shows the relative ("+25%") or absolute ("+5") difference between two columns, or two bars of one series. Drawn as a *bracket* above the columns or as a *level difference*. |
+| **Level difference** | Difference arrow drawn right of the plot: dashed lines at the heights of both columns, a vertical arrow between them. |
+| **CAGR arrow** | Annotation that shows the compound annual growth rate between two columns, over the years named by the categories (else the number of columns between them). |
+| **Axis break** | Shortens a column that dwarfs the others: the scale ignores it, a white gap marks the cut, labels keep the real values. |
+| **Lane** | The strip one arrow occupies: above the plot for brackets, right of it for level differences. |
+| **Pick mode** | After choosing an annotation command, the user clicks the columns it connects; the chart group is entered meanwhile. |
 | **Core** | The pure-Python package `librecharts.core`; no UNO. |
 | **Adapter** | The package `librecharts.lo`; the only place that talks to LibreOffice. |

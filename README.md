@@ -3,10 +3,11 @@
 think-cell-style charts for **LibreOffice Impress**, as an open-source extension.
 Charts are drawn as native shapes and fed from a Calc data sheet.
 
-> **Status: M1, M2 and M3 done.** Stacked and clustered **column and bar charts**,
+> **Status: M1 to M4 done.** Stacked and clustered **column and bar charts**,
 > **waterfall** and **Marimekko charts** work: edit the data in
 > a Calc window (formulas included), resize charts freely, undo everything, save as ODP or PPTX.
-> Annotations (difference/CAGR arrows) follow, see [ROADMAP.md](ROADMAP.md).
+> Column charts take **difference arrows, CAGR arrows and axis breaks**. Next: the first release,
+> see [ROADMAP.md](ROADMAP.md).
 > LibreCharts is inspired by think-cell and empower charts but is not affiliated with them and
 > does not read or write their files.
 
@@ -21,6 +22,10 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 3. In Impress, use the **LibreCharts** menu or toolbar to insert a column, bar, waterfall or
    Marimekko chart; double-click a chart (or select it and choose *Edit chart data*) to change its
    data in Calc.
+4. To annotate a column chart, select it and choose *Add difference arrow*, *Add level difference*,
+   *Add CAGR arrow* or *Add axis break* (menu, toolbar or the chart's context menu), then click the
+   columns as the bar above the slide says; `Esc` cancels. The context menu of the chart switches
+   arrows between percent and absolute, or bracket and level, and removes them.
 
 ## Develop
 

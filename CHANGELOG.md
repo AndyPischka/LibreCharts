@@ -26,3 +26,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - *LibreCharts → Edit chart data* opens the chart's data in a Calc window. Every edit updates the
   chart immediately (one undo step each); formulas are kept when the window is closed and reopened.
 - Double-clicking a chart opens its data sheet, like *Edit chart data*.
+- Column charts take annotations, placed by clicking columns after choosing the command in the
+  menu, the toolbar or the chart's context menu:
+  - difference arrows above the columns or as a level difference right of the chart, showing the
+    change in percent or as an absolute value;
+  - CAGR arrows, counting the years named by the categories;
+  - an axis break that shortens a column dwarfing the others.
+  Annotations follow data edits, resizing, undo, copies and ODP/PPTX files.
+- The chart's context menu has a "LibreCharts" submenu: edit data, add annotations, switch or
+  remove existing ones.

@@ -2,7 +2,7 @@
 
 LibreCharts is a think-cell-style chart extension (`.oxt`) for **LibreOffice Impress**, written in
 Python-UNO. Charts are drawn as native Draw shapes; chart data is edited in a Calc window.
-Status: M1-M3 done (column/bar, waterfall, Marimekko). See [ROADMAP.md](ROADMAP.md) for milestones and non-goals.
+Status: M1-M4 done (column/bar, waterfall, Marimekko, annotations). See [ROADMAP.md](ROADMAP.md) for milestones and non-goals.
 
 ## Commands
 
@@ -91,10 +91,17 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
   charts through `dispatch(ctx, doc, "org.librecharts:...")` when a test needs the watcher.
 - LibreOffice scales group children when the group is resized; zero-size children (waterfall gaps)
   become non-zero. The resize watcher puts them back, so never skip it for such charts.
-- Simulated clicks (`helpers.click`, Toolkit robot) need a visible document. LibreOffice counts
-  double-clicks itself from press timing; it ignores a `ClickCount` you send, so send two quick
-  presses. `test-lo` gives each module a fresh profile: with a shared one, clicks of a later
-  module missed their target.
+- Simulated clicks (`helpers.click`, Toolkit robot) need a visible document and land only roughly
+  where intended. LibreOffice counts double-clicks itself from press timing; it ignores a
+  `ClickCount` you send, so send two quick presses. The robot takes VCL button codes (right = 4).
+  `test-lo` gives each module a fresh profile: with a shared one, clicks of a later module missed.
+- Do not map mouse pixels to slide coordinates: handler coordinates are relative to an inner edit
+  window that `VisibleArea` does not match. Let Impress hit-test (pick mode, ADR 0010); in tests,
+  `controller.select(child)` inside an entered group stands in for a click.
+- PPTX import turns text boxes and rectangles into custom shapes; do not filter by `ShapeType` when
+  checking labels of a reloaded chart.
+- Pass a UNO object as an `any` argument via
+  `uno.invoke(obj, "method", (..., uno.Any("<interface>", value)))` (e.g. context menu entries).
 - Clipboard tests and tests needing visible documents call `helpers.skip_on_headless_linux(...)`:
   both abort LibreOffice in headless Linux (CI). They run locally on Windows.
 - `tests/lo/` holds plain `test_*(ctx)` functions run by `tests/lo/runner.py`, not pytest; pytest

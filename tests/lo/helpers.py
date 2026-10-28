@@ -106,12 +106,12 @@ def skip_on_headless_linux(reason):
 
 
 def click(ctx, doc, x, y, clicks=1):
-    """Click the left mouse button ``clicks`` times at document position (``x``, ``y``).
+    """Click the left mouse button ``clicks`` times near document position (``x``, ``y``).
 
-    Coordinates are in 1/100 mm on the slide and are mapped to pixels through the view's visible
-    area, so the click lands where intended whatever the window size or zoom. Needs a *visible*
-    ``doc``. LibreOffice counts double-clicks itself from the timing of the presses (the event's
-    own ClickCount is ignored), so a double-click is two quick clicks.
+    Coordinates are in 1/100 mm on the slide, mapped to pixels through the view's visible area.
+    The mapping is only rough (ADR 0010), so aim at large shapes such as a whole chart. Needs a
+    *visible* ``doc``. LibreOffice counts double-clicks itself from the timing of the presses (the
+    event's own ClickCount is ignored), so a double-click is two quick clicks.
     """
     controller = doc.getCurrentController()
     window = controller.getFrame().getComponentWindow()

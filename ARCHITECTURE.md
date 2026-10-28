@@ -25,13 +25,16 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 
 | Module | Role |
 |---|---|
-| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, schema version) |
+| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, schema version) |
+| `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows, command arguments (ADR 0010) |
+| `picking.py` | Pick mode: chart point -> column, `PickSession` collects the picks for one annotation |
+| `menu.py` | Contents of the chart's context menu as plain data |
 | `state_io.py` | `ChartState` <-> JSON with schema migrations; malformed input raises `StateError` |
 | `messages.py` | All user-visible strings in English and German (a test enforces both) |
 | `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series); sample data |
 | `scale.py` | "Nice" value axis ranges |
 | `primitives.py` | `Rect`, `Line`, `Text`: layout output in 1/100 mm, styling left to the renderer |
-| `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked and clustered columns / horizontal bars |
+| `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked and clustered columns / horizontal bars; columns also draw annotations |
 | `waterfall.py` | Waterfall data sheet rules (value row, "Total" marker row) -> steps with running totals |
 | `layout/waterfall.py` | Steps -> floating bars, totals, connectors and signed labels |
 | `mekko.py` | Mekko data sheet rules (optional "Width" row, negatives ignored) -> segments and column widths |
@@ -63,11 +66,13 @@ so every released schema version must stay readable (`state_io.py`).
 | `store.py` | Chart id anchor (group name `librecharts:<id>`), state in a document custom property, `claim` forks renamed copies; no `uno` import, unit-tested with fakes |
 | `render.py` | Primitives -> shapes in a group; `rerender` replaces children in place |
 | `undo.py` | One explicit undo action per chart operation |
-| `chart.py` | `insert_column_chart`, `redraw`: chart operations on a presentation |
+| `chart.py` | Insert, `redraw`, `add_annotation`: chart operations on a presentation |
 | `datasheet.py` | Calc window as a transient view: write stored cells, sync every committed edit back |
 | `commands.py` | Menu commands (selection handling, messages); called by `extension/entry.py` |
 | `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place (ADR 0007) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
+| `pick.py` | Pick mode: enters the chart group, turns selected shapes into an annotation (ADR 0010) |
+| `contextmenu.py` | One interceptor per presentation: the LibreCharts submenu in a chart's context menu |
 | `ui.py` | UI locale and message boxes; texts come from `core/messages.py` |
 
 Further invariants of the adapter:
