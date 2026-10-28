@@ -160,3 +160,41 @@ def test_level_arrow_points_up_with_dashed_helper_lines(ctx):
         assert "+28.6%" in _labels(group)
     finally:
         doc.close(True)
+
+
+def test_changing_and_removing_an_arrow_are_undo_steps(ctx):
+    doc, group, chart_id = _chart(ctx)
+    try:
+        children = group.getCount()
+        dispatch(ctx, doc, DIFFERENCE)
+        manager = doc.getUndoManager()
+        depth = len(manager.getAllUndoActionTitles())
+
+        dispatch(ctx, doc, "org.librecharts:ChangeAnnotation?index=0&label=absolute")
+        assert "+10" in _labels(group)
+        dispatch(ctx, doc, "org.librecharts:ChangeAnnotation?index=0&style=level")
+        assert _annotations(doc, chart_id) == (
+            Annotation("difference", 0, 2, style="level", label="absolute"),
+        )
+        dispatch(ctx, doc, "org.librecharts:RemoveAnnotation?index=0")
+        assert _annotations(doc, chart_id) == ()
+        assert group.getCount() == children
+        assert len(manager.getAllUndoActionTitles()) == depth + 3
+
+        uno_command(ctx, doc, ".uno:Undo")
+        assert len(_annotations(doc, chart_id)) == 1
+    finally:
+        doc.close(True)
+
+
+def test_remove_all_annotations(ctx):
+    doc, group, chart_id = _chart(ctx)
+    try:
+        children = group.getCount()
+        dispatch(ctx, doc, DIFFERENCE)
+        dispatch(ctx, doc, ADD + "kind=cagr&start=0&end=1")
+        dispatch(ctx, doc, "org.librecharts:RemoveAnnotations")
+        assert _annotations(doc, chart_id) == ()
+        assert group.getCount() == children
+    finally:
+        doc.close(True)

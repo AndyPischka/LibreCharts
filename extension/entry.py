@@ -16,7 +16,7 @@ from com.sun.star.frame import XDispatch, XDispatchProvider
 from com.sun.star.lang import XInitialization, XServiceInfo
 from com.sun.star.task import XJob
 
-from librecharts.lo import commands, doubleclick, resize
+from librecharts.lo import commands, contextmenu, doubleclick, resize
 
 IMPLEMENTATION_NAME = "org.librecharts.ProtocolHandler"
 SERVICE_NAME = "com.sun.star.frame.ProtocolHandler"
@@ -48,7 +48,9 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
         if self.frame is None:
             return
         try:
-            doubleclick.attach(self.ctx, self.frame)  # also covers documents opened hidden
+            # also covers documents opened hidden, which the document job does not see
+            doubleclick.attach(self.ctx, self.frame)
+            contextmenu.attach(self.ctx, self.frame)
             if url.Path == "InsertColumnChart":
                 commands.insert_column_chart(self.frame)
             elif url.Path == "InsertBarChart":
@@ -63,6 +65,12 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.add_annotation(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("PickAnnotation"):
                 commands.pick_annotation(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("ChangeAnnotation"):
+                commands.change_annotation(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("RemoveAnnotations"):
+                commands.remove_annotations(self.ctx, self.frame)
+            elif url.Path.startswith("RemoveAnnotation"):
+                commands.remove_annotation(self.ctx, self.frame, _query(url))
         except Exception:
             # An exception escaping a Python dispatch can take LibreOffice down with it.
             traceback.print_exc()
@@ -104,7 +112,9 @@ class DocumentJob(unohelper.Base, XJob, XServiceInfo):
             model = next((a.Value for a in environment if a.Name == "Model"), None)
             if model is not None and model.supportsService(PRESENTATION_SERVICE):
                 resize.watch(model)
-                doubleclick.attach(self.ctx, model.getCurrentController().getFrame())
+                frame = model.getCurrentController().getFrame()
+                doubleclick.attach(self.ctx, frame)
+                contextmenu.attach(self.ctx, frame)
         except Exception:
             traceback.print_exc()
         return None

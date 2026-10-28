@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import replace
 from typing import Any
 
 from librecharts.core import annotations
 from librecharts.core.messages import text
-from librecharts.core.model import AnnotationKind, ChartState
+from librecharts.core.model import Annotation, AnnotationKind, ChartState
 from librecharts.core.picking import PickSession, supports
 from librecharts.core.state_io import StateError
 from librecharts.lo import chart, pick, resize, store, ui
@@ -83,9 +85,37 @@ def pick_annotation(ctx: Any, frame: Any, query: str) -> None:
         pick.start(ctx, frame, group, state, session)
 
 
-def _annotatable_chart(ctx: Any, frame: Any, kind: AnnotationKind) -> tuple[Any, ChartState] | None:
-    """The selected chart and its state if it can get an annotation of ``kind``; else tell the
-    user why not and return ``None``."""
+def change_annotation(ctx: Any, frame: Any, query: str) -> None:
+    """Change label or style of one annotation (``index=1&label=absolute``); one undo step."""
+    _update_annotations(ctx, frame, lambda notes: annotations.changed(notes, query))
+
+
+def remove_annotation(ctx: Any, frame: Any, query: str) -> None:
+    """Remove the annotation at ``index=...``; one undo step."""
+    _update_annotations(ctx, frame, lambda notes: annotations.removed(notes, query))
+
+
+def remove_annotations(ctx: Any, frame: Any) -> None:
+    """Remove all annotations of the selected chart; one undo step."""
+    _update_annotations(ctx, frame, lambda _: ())
+
+
+Update = Callable[[tuple[Annotation, ...]], tuple[Annotation, ...]]
+
+
+def _update_annotations(ctx: Any, frame: Any, update: Update) -> None:
+    found = _annotatable_chart(ctx, frame, None)
+    if found is not None:
+        group, state = found
+        doc = frame.getController().getModel()
+        chart.redraw(doc, group, replace(state, annotations=update(state.annotations)))
+
+
+def _annotatable_chart(
+    ctx: Any, frame: Any, kind: AnnotationKind | None
+) -> tuple[Any, ChartState] | None:
+    """The selected chart and its state if it can get an annotation of ``kind`` (any chart for
+    ``None``); else tell the user why not and return ``None``."""
     controller = frame.getController()
     locale = ui.ui_locale(ctx)
     group = selected_chart(controller)
@@ -102,7 +132,7 @@ def _annotatable_chart(ctx: Any, frame: Any, kind: AnnotationKind) -> tuple[Any,
     if state is None:
         ui.show_info(ctx, frame, text("orphaned_chart", locale))
         return None
-    if not supports(state, kind):
+    if kind is not None and not supports(state, kind):
         ui.show_info(ctx, frame, text("annotation_unsupported", locale))
         return None
     return group, state
