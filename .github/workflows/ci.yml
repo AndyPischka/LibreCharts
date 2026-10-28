@@ -15,5 +15,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      # setup-uv publishes no moving major tag (no "v10"), so pin the full version.
+      - uses: astral-sh/setup-uv@v10.3.2
       - run: uv run --locked --python ${{ matrix.python }} poe check
