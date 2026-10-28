@@ -24,16 +24,25 @@ jobs:
     runs-on: ubuntu-latest
     env:
       LO_VERSION: "25.8.7"
+      LO_SHA256: "7f4d7b2e36921eec5122c655249a24cc88935ee357e8261fd3bccd15aa1f7b9f"
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.2
       - name: Install LibreOffice ${{ env.LO_VERSION }} (extracted, not installed system-wide)
         run: |
-          base="https://download.documentfoundation.org/libreoffice/stable/${LO_VERSION}/deb/x86_64"
+          path="libreoffice/stable/${LO_VERSION}/deb/x86_64"
           tgz="LibreOffice_${LO_VERSION}_Linux_x86-64_deb.tar.gz"
           cd "$RUNNER_TEMP"
-          curl -fsSL -o "$tgz" "$base/$tgz"
-          curl -fsSL "$base/$tgz.sha256" | sha256sum -c -
+          # The checksum is pinned here, so any mirror will do; try several in turn.
+          for host in https://download.documentfoundation.org https://ftp.fau.de/tdf https://mirror.netcologne.de/tdf https://ftp.gwdg.de/pub/tdf; do
+            echo "Downloading $host/$path/$tgz"
+            if curl -fsSL --retry 3 --retry-all-errors -o "$tgz" "$host/$path/$tgz" &&
+               echo "$LO_SHA256  $tgz" | sha256sum -c -; then
+              break
+            fi
+            rm -f "$tgz"
+          done
+          test -f "$tgz" || { echo "could not download a verified $tgz"; exit 1; }
           tar xzf "$tgz"
           for deb in LibreOffice_*/DEBS/*.deb; do
             case "$deb" in *kde-integration*|*gnome-integration*) continue ;; esac
