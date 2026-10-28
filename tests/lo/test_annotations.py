@@ -14,9 +14,10 @@ from helpers import (
     uno_command,
 )
 
+from librecharts.core.datasheet import state_from_table
 from librecharts.core.layout.column import CATEGORY_BAND
 from librecharts.core.model import Annotation
-from librecharts.lo import store
+from librecharts.lo import chart, store
 
 INSERT = "org.librecharts:InsertColumnChart"
 ADD = "org.librecharts:AddAnnotation?"
@@ -196,5 +197,26 @@ def test_remove_all_annotations(ctx):
         dispatch(ctx, doc, "org.librecharts:RemoveAnnotations")
         assert _annotations(doc, chart_id) == ()
         assert group.getCount() == children
+    finally:
+        doc.close(True)
+
+
+def test_axis_break_cuts_a_tall_column_with_a_white_gap(ctx):
+    doc, group, chart_id = _chart(ctx)
+    try:
+        tall = state_from_table(
+            "column", "stacked", [[None, "2023", "2024", "2025"], ["Sales", 10, 12, 100]]
+        )
+        chart.redraw(doc, group, tall)
+        doc.getCurrentController().select(group)
+        dispatch(ctx, doc, ADD + "kind=axis_break&start=2")
+        assert _annotations(doc, chart_id) == (Annotation("axis_break", 2, 2),)
+        gaps = 0
+        for i in range(group.getCount()):
+            child = group.getByIndex(i)  # read in one pass, see AGENTS.md
+            if child.ShapeType.endswith("RectangleShape") and child.FillStyle.value == "SOLID":
+                gaps += child.FillColor == 0xFFFFFF
+        assert gaps == 1
+        assert "100" in _labels(group)  # the label keeps the real value
     finally:
         doc.close(True)

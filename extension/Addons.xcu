@@ -121,6 +121,19 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m5" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Add axis break</value>
+              <value xml:lang="de">Achsenbruch hinzufügen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:PickAnnotation?kind=axis_break</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
         </node>
       </node>
     </node>
@@ -254,6 +267,22 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      <node oor:name="t5" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:PickAnnotation?kind=axis_break</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Add axis break</value>
+          <value xml:lang="de">Achsenbruch hinzufügen</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
       </node>
     </node>
     <node oor:name="Images">
@@ -358,6 +387,19 @@
           </prop>
           <prop oor:name="ImageBigURL" oor:type="xs:string">
             <value>%origin%/images/cagr_26.png</value>
+          </prop>
+        </node>
+      </node>
+      <node oor:name="org.librecharts.image5" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:PickAnnotation?kind=axis_break</value>
+        </prop>
+        <node oor:name="UserDefinedImages">
+          <prop oor:name="ImageSmallURL" oor:type="xs:string">
+            <value>%origin%/images/axis_break_16.png</value>
+          </prop>
+          <prop oor:name="ImageBigURL" oor:type="xs:string">
+            <value>%origin%/images/axis_break_26.png</value>
           </prop>
         </node>
       </node>

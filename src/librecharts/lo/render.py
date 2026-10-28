@@ -14,10 +14,11 @@ from typing import Any, Literal
 import uno
 from com.sun.star.awt import Point, Size
 
-from librecharts.core.primitives import Line, Primitive, Rect, Text
+from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
 
 PALETTE = (0x8FB4E3, 0x5E8AC7, 0xC9D8EE, 0xA6A6A6, 0xF4B183, 0xD9D9D9)
 TEXT_COLOR = 0x000000
+BACKGROUND_COLOR = 0xFFFFFF  # gaps of axis breaks; assumes a white slide
 LINE_COLOR = 0x404040
 LINE_WIDTH = 25  # 1/100 mm
 FONT_HEIGHT_PT = 10.0
@@ -147,7 +148,8 @@ def _create(doc: Any, group: Any, spec: _Spec) -> None:
     if p is None:  # the invisible frame
         shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_NONE
     elif isinstance(p, Rect):
-        shape.FillStyle, shape.FillColor = _FILL_SOLID, PALETTE[p.series % len(PALETTE)]
+        color = BACKGROUND_COLOR if p.series == BACKGROUND else PALETTE[p.series % len(PALETTE)]
+        shape.FillStyle, shape.FillColor = _FILL_SOLID, color
         shape.LineStyle = _LINE_NONE
     elif isinstance(p, Line):
         shape.LineStyle, shape.LineColor, shape.LineWidth = _LINE_SOLID, LINE_COLOR, LINE_WIDTH
