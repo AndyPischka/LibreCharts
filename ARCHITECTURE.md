@@ -34,6 +34,8 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked and clustered columns / horizontal bars |
 | `waterfall.py` | Waterfall data sheet rules (value row, "Total" marker row) -> steps with running totals |
 | `layout/waterfall.py` | Steps -> floating bars, totals, connectors and signed labels |
+| `mekko.py` | Mekko data sheet rules (optional "Width" row, negatives ignored) -> segments and column widths |
+| `layout/mekko.py` | Variable-width 100 % columns, percent labels, width labels, series names |
 | `layout/common.py` | Value axis and number format shared by both layouts |
 | `layout/chart.py` | `layout_chart(state, w, h)`: picks the layout by chart kind |
 

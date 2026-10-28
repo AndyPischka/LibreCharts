@@ -11,6 +11,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   shapes with segment and total labels. Insert is a single undo step.
 - A "LibreCharts" toolbar with icons for both commands. In the Notebookbar (ribbon) interface it
   appears in the "Extension" group.
+- *LibreCharts → Insert Marimekko chart* (and a toolbar button): percent Mekko whose column widths are
+  the column sums or the values of an optional "Width" row in the data sheet; shares inside, widths
+  above, series names to the right.
 - *LibreCharts → Insert waterfall chart* (and a toolbar button): steps float between running
   totals, columns marked in the "Total" row of the data sheet show subtotals, connectors link the
   columns and steps carry their sign.

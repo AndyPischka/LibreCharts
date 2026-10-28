@@ -54,6 +54,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.insert_bar_chart(self.frame)
             elif url.Path == "InsertWaterfallChart":
                 commands.insert_waterfall_chart(self.frame)
+            elif url.Path == "InsertMekkoChart":
+                commands.insert_mekko_chart(self.frame)
             elif url.Path == "EditData":
                 commands.edit_data(self.ctx, self.frame)
         except Exception:

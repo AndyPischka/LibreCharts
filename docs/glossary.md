@@ -20,7 +20,8 @@ Use these terms consistently in code, UI strings and docs.
 | **Subtotal** | A waterfall column (marked in the "Total" row) that shows the running total instead of a change. |
 | **Step** | One change column of a waterfall, floating between the running totals before and after it. |
 | **Connector** | The thin line from the end of one waterfall column to the start of the next. |
-| **Marimekko (Mekko)** | Stacked chart whose column width is also data (e.g. market size); segments are usually in percent. |
+| **Marimekko (Mekko)** | Stacked chart whose column width is also data (e.g. market size); segments show percent shares (ADR 0009). |
+| **Width row** | Optional Mekko data sheet row named "Width"/"Breite" right below the category names; sets column widths. |
 | **Difference arrow** | Annotation that shows the absolute or relative difference between two segments or columns. |
 | **CAGR arrow** | Annotation that shows the compound annual growth rate between two columns. |
 | **Axis break** | A gap in the value axis that shortens very tall columns. |

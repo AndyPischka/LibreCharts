@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from librecharts.core.datasheet import sample_state, sample_waterfall_state
+from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
 from librecharts.core.layout.chart import layout_chart
 from librecharts.core.model import ChartState
 from librecharts.lo import render, store, undo
@@ -29,6 +29,11 @@ def insert_bar_chart(doc: Any, page: Any) -> Any:
 def insert_waterfall_chart(doc: Any, page: Any) -> Any:
     """Insert a waterfall chart with sample data centred on ``page``."""
     return _insert(doc, page, sample_waterfall_state())
+
+
+def insert_mekko_chart(doc: Any, page: Any) -> Any:
+    """Insert a percent Marimekko chart with sample data centred on ``page``."""
+    return _insert(doc, page, sample_mekko_state())
 
 
 def _insert(doc: Any, page: Any, state: ChartState) -> Any:

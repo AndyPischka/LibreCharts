@@ -56,6 +56,19 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m1d" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Insert Marimekko chart</value>
+              <value xml:lang="de">Marimekko-Diagramm einfügen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:InsertMekkoChart</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
           <node oor:name="m2" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>
@@ -122,6 +135,22 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      <node oor:name="t1d" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:InsertMekkoChart</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Insert Marimekko chart</value>
+          <value xml:lang="de">Marimekko-Diagramm einfügen</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
       <node oor:name="t2" oor:op="replace">
         <prop oor:name="URL" oor:type="xs:string">
           <value>org.librecharts:EditData</value>
@@ -177,6 +206,19 @@
           </prop>
           <prop oor:name="ImageBigURL" oor:type="xs:string">
             <value>%origin%/images/insert_waterfall_26.png</value>
+          </prop>
+        </node>
+      </node>
+      <node oor:name="org.librecharts.image1d" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:InsertMekkoChart</value>
+        </prop>
+        <node oor:name="UserDefinedImages">
+          <prop oor:name="ImageSmallURL" oor:type="xs:string">
+            <value>%origin%/images/insert_mekko_16.png</value>
+          </prop>
+          <prop oor:name="ImageBigURL" oor:type="xs:string">
+            <value>%origin%/images/insert_mekko_26.png</value>
           </prop>
         </node>
       </node>

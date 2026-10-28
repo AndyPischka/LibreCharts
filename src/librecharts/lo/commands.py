@@ -22,6 +22,10 @@ def insert_waterfall_chart(frame: Any) -> None:
     _insert(frame, chart.insert_waterfall_chart)
 
 
+def insert_mekko_chart(frame: Any) -> None:
+    _insert(frame, chart.insert_mekko_chart)
+
+
 def _insert(frame: Any, insert: Any) -> None:
     controller = frame.getController()
     doc = controller.getModel()
