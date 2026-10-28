@@ -8,7 +8,7 @@ from typing import Literal, get_args
 
 SCHEMA_VERSION = 1
 
-ChartKind = Literal["column"]
+ChartKind = Literal["column", "bar"]
 Grouping = Literal["stacked", "clustered"]
 
 

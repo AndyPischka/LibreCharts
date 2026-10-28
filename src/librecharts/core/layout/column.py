@@ -12,14 +12,13 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from librecharts.core.datasheet import ChartData
+from librecharts.core.layout.common import GAP_RATIO, format_value, value_axis
 from librecharts.core.model import Grouping
 from librecharts.core.primitives import Line, Primitive, Rect, Text
-from librecharts.core.scale import Axis, nice_axis
 
 TOP_BAND = 800.0  # room above the plot for total / outside value labels
 LABEL_HEIGHT = 600.0  # height of a value or total label box
 CATEGORY_BAND = 1000.0  # room below the plot for category names
-GAP_RATIO = 0.3  # share of a category slot left empty between columns
 MIN_SEGMENT_FOR_LABEL = 500.0  # segments flatter than this get no inside label
 
 _YScale = Callable[[float], float]
@@ -41,7 +40,7 @@ def layout_column(
     if not data.categories or not data.series:
         return ()
 
-    axis = _axis(data, grouping)
+    axis = value_axis(data, grouping)
     span = axis.maximum - axis.minimum
 
     def y(value: float) -> float:
@@ -64,26 +63,6 @@ def layout_column(
             )
         )
     return tuple(out)
-
-
-def format_value(value: float) -> str:
-    """Locale-neutral label text: integers plain, others with at most two decimals."""
-    if value == round(value):
-        return str(int(value))
-    return f"{value:.2f}".rstrip("0").rstrip(".") or "0"
-
-
-def _axis(data: ChartData, grouping: Grouping) -> Axis:
-    if grouping == "stacked":
-        lows: list[float] = []
-        highs: list[float] = []
-        for c in range(len(data.categories)):
-            column = [v for s in data.series if (v := s.values[c]) is not None]
-            lows.append(sum(v for v in column if v < 0))
-            highs.append(sum(v for v in column if v > 0))
-        return nice_axis(min(lows), max(highs))
-    values = [v for s in data.series for v in s.values if v is not None]
-    return nice_axis(min(values, default=0.0), max(values, default=0.0))
 
 
 def _stacked_column(data: ChartData, c: int, x: float, width: float, y: _YScale) -> list[Primitive]:
