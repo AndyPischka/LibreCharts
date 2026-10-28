@@ -61,8 +61,16 @@ jobs:
           uv run --locked poe test-lo 2>&1 | tee "$RUNNER_TEMP/test-lo.log"
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
-            # Repeat the tail as an annotation so it shows on the run summary page.
-            msg="$(tail -c 3500 "$RUNNER_TEMP/test-lo.log" | python3 -c "import sys; sys.stdout.write(sys.stdin.read().replace('%', '%25').replace('\r', '').replace('\n', '%0A'))")"
+            # Repeat the first failure and the summary as an annotation on the run summary page.
+            msg="$(python3 -c "
+          import sys
+          log = open(sys.argv[1], encoding='utf-8', errors='replace').read()
+          start = log.find('FAIL ')
+          first = log[start:start + 3000] if start >= 0 else log[-3000:]
+          tail = '\n'.join(l for l in log.splitlines() if l.startswith(('ABORT', 'FAIL ')) or ' passed, ' in l)
+          text = first + '\n...\n' + tail
+          sys.stdout.write(text.replace('%', '%25').replace('\r', '').replace('\n', '%0A'))
+          " "$RUNNER_TEMP/test-lo.log")"
             echo "::error title=test-lo output::$msg"
           fi
           exit "$status"

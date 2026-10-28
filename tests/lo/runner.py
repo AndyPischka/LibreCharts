@@ -45,6 +45,14 @@ def collect():
                 yield f"{path.stem}::{name}", fn
 
 
+def _alive(ctx) -> bool:
+    try:
+        ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
+    except Exception:
+        return False
+    return True
+
+
 def main() -> int:
     ctx = connect(sys.argv[1])
     desktop = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
@@ -56,6 +64,10 @@ def main() -> int:
             except Exception:
                 failed += 1
                 print(f"FAIL {test_id}\n{traceback.format_exc()}")
+                if not _alive(ctx):
+                    # Every further test would only fail on the dead connection.
+                    print(f"ABORT LibreOffice is gone after {test_id}; remaining tests not run")
+                    break
             else:
                 passed += 1
                 print(f"PASS {test_id}")
