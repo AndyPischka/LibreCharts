@@ -21,6 +21,7 @@ from librecharts.lo import commands, store
 
 INSERT = "org.librecharts:InsertColumnChart"
 VISIBLE_ONLY = "real mouse events need a visible document, which aborts headless Linux"
+DOUBLE_CLICK_GAP_S = 1.0  # longer than any double-click time
 
 
 def _visible_presentation_with_a_chart(ctx):
@@ -32,6 +33,12 @@ def _visible_presentation_with_a_chart(ctx):
     # their second press (Impress starts a drag on the first); with real mouse input the first
     # click selects the chart. That path is checked by hand.
     assert commands.selected_chart(doc.getCurrentController()) is not None
+    # The first click on a chart in a fresh LibreOffice keeps it busy for ~0.4 s. LibreOffice
+    # counts simulated presses as a double-click by when it handles them, so the second press of a
+    # cold double-click often came after the double-click time (500 ms on Windows) and the test
+    # failed. A single click first warms it up; then wait so it does not pair with the next one.
+    click(ctx, doc, *_centre(group))
+    time.sleep(DOUBLE_CLICK_GAP_S)
     return doc, group
 
 

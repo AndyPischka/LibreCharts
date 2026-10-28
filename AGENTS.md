@@ -97,7 +97,10 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
   become non-zero. The resize watcher puts them back, so never skip it for such charts.
 - Simulated clicks (`helpers.click`, Toolkit robot) need a visible document and land only roughly
   where intended. LibreOffice counts double-clicks itself from press timing; it ignores a
-  `ClickCount` you send, so send two quick presses. The robot takes VCL button codes (right = 4).
+  `ClickCount` you send, so send two quick presses. It times them when it handles them, not when
+  they are sent: the first click on a chart in a fresh LibreOffice takes ~0.4 s, which pushed cold
+  double-clicks past the 500 ms double-click time. Warm up with a single click first, then wait
+  1 s. The robot takes VCL button codes (right = 4).
   `test-lo` gives each module a fresh profile: with a shared one, clicks of a later module missed.
 - Do not map mouse pixels to slide coordinates: handler coordinates are relative to an inner edit
   window that `VisibleArea` does not match. Let Impress hit-test (pick mode, ADR 0010); in tests,
