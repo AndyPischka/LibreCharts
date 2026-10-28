@@ -47,10 +47,24 @@ so every released schema version must stay readable (`state_io.py`).
 4. **Layout is a pure function** of chart data and available size: same input, same geometry.
 5. **The data sheet is a Calc document** (ADR 0003); the chart on the slide is a projection of it.
 
+## Modules in `lo/`
+
+| Module | Role |
+|---|---|
+| `store.py` | Chart id anchor (group name `librecharts:<id>`) and state in a document custom property; no `uno` import, unit-tested with fakes |
+| `render.py` | Primitives -> shapes in a group; `rerender` replaces children in place |
+| `undo.py` | One explicit undo action per chart operation |
+| `chart.py` | `insert_column_chart`, `redraw`: what menu commands call |
+
+Further invariants of the adapter:
+
+6. **A chart group starts with an invisible frame rectangle** covering the full layout box, so the
+   group's size equals the layout size and re-rendering at the current size is stable.
+7. **Every chart operation is exactly one undo step.** LibreOffice does not record API shape
+   inserts, so `lo/undo.py` locks its recording and registers an explicit action.
+
 ## Not yet decided
 
-- How chart data and settings are stored inside the slide so a chart can be re-opened for editing
-  (idea: serialize into the group shape's user-defined attributes). To be settled in M1 with an ADR.
-- The exact Calc ↔ slide synchronisation mechanism (M1 spike).
+- The exact Calc ↔ slide synchronisation mechanism (M1 step 5, see `docs/plans/`).
 
 Update this file whenever a module is added or a boundary changes.

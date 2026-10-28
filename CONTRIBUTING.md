@@ -23,7 +23,8 @@ This installs Python 3.11 and the dev tools into `.venv` and activates the git h
 |---|---|---|---|
 | Unit tests for `core/` (layout, scaling, models) | `tests/core/` | no | yes |
 | Packaging tests (`.oxt` contents) | `tests/test_build_oxt.py` | no | yes |
-| UNO integration (menu, shape creation, Calc sync) | `tests/lo/` | yes | no (`uv run poe test-lo`) |
+| `lo/store.py` with fake UNO objects | `tests/test_lo_store.py` | no | yes |
+| UNO integration (menu, shapes, undo, ODP/PPTX round trip) | `tests/lo/` | yes | no (`uv run poe test-lo`) |
 
 - Do not mock code from this repo. Fake UNO objects only at the `lo/` boundary.
 - `core/` has a 90 % coverage gate.

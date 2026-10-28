@@ -6,4 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
-- Installable `.oxt` with a "LibreCharts" menu in Impress that inserts a placeholder shape (German and English UI).
+- Installable `.oxt` with a "LibreCharts" menu in Impress (German and English UI).
+- *LibreCharts → Insert column chart* inserts a stacked column chart with sample data, drawn as native
+  shapes with segment and total labels. Insert is a single undo step.
+- Chart data is stored in the document and survives saving as ODP and PPTX.

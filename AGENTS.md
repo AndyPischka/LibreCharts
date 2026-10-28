@@ -30,7 +30,7 @@ src/librecharts/lo/     UNO adapters: turn core models into shapes, Calc sync. O
 extension/              Static .oxt files (manifest, menus, entry.py). entry.py stays thin.
 scripts/build_oxt.py    Packs extension/ + src/librecharts + LICENSE into the .oxt
 tests/                  Mirrors src/; no LibreOffice required
-tests/lo/               UNO integration scripts, run by scripts/test_lo.py under LibreOffice's Python
+tests/lo/               UNO integration tests (`test_*(ctx)`), run under LibreOffice's Python
 docs/adr/               Architecture decision records     docs/plans/   Plans for large features
 ```
 
@@ -65,7 +65,11 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 ## Pitfalls
 
 - `import uno` in `core/` fails lint (ruff `TID251`). Move the code to `lo/` instead of adding a `noqa`.
-- UNO text properties (`shape.String`) only stick after the shape is added to a draw page.
+- UNO text properties (`shape.String`) only stick after the shape is added to a draw page or group.
+- LibreOffice does not record shapes inserted via the API for undo. Wrap chart changes in
+  `lo/undo.py` (lock recording, add one explicit action); an undo context alone is a no-op entry.
+- `tests/lo/` holds plain `test_*(ctx)` functions run by `tests/lo/runner.py`, not pytest; pytest
+  ignores that directory. Shared helpers live in `tests/lo/helpers.py`.
 - Do not use `LibreOffice-minimal-version` in `extension/description.xml`: LibreOffice 26.8 rejected
   it ("unsatisfied dependencies"). The minimum, LibreOffice 25.8, is documented, not enforced.
 - Never kill `soffice` processes by name; the user may have documents open. Use a throwaway

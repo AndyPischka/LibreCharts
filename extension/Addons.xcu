@@ -20,11 +20,11 @@
           <node oor:name="m1" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>
-              <value xml:lang="en-US">Insert chart (placeholder)</value>
-              <value xml:lang="de">Diagramm einfügen (Platzhalter)</value>
+              <value xml:lang="en-US">Insert column chart</value>
+              <value xml:lang="de">Säulendiagramm einfügen</value>
             </prop>
             <prop oor:name="URL" oor:type="xs:string">
-              <value>org.librecharts:InsertChart</value>
+              <value>org.librecharts:InsertColumnChart</value>
             </prop>
             <prop oor:name="Target" oor:type="xs:string">
               <value>_self</value>
