@@ -11,7 +11,7 @@ from librecharts.core.messages import text
 from librecharts.core.model import Annotation, AnnotationKind, ChartState
 from librecharts.core.picking import PickSession, supports
 from librecharts.core.state_io import StateError
-from librecharts.lo import chart, pick, resize, store, ui
+from librecharts.lo import axisdialog, chart, pick, resize, store, ui
 from librecharts.lo.datasheet import OrphanedChartError, open_datasheet
 
 
@@ -83,6 +83,14 @@ def pick_annotation(ctx: Any, frame: Any, query: str) -> None:
     if found is not None:
         group, state = found
         pick.start(ctx, frame, group, state, session)
+
+
+def axis_break(ctx: Any, frame: Any) -> None:
+    """Ask for the axis break of the selected chart (a dialog), then add or change it."""
+    found = _annotatable_chart(ctx, frame, "axis_break")
+    if found is not None:
+        group, state = found
+        axisdialog.request(ctx, frame, group, state)
 
 
 def change_annotation(ctx: Any, frame: Any, query: str) -> None:

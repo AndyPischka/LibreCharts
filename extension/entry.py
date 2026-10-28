@@ -63,6 +63,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.edit_data(self.ctx, self.frame)
             elif url.Path.startswith("AddAnnotation"):
                 commands.add_annotation(self.ctx, self.frame, _query(url))
+            elif url.Path in ("AxisBreak", "EditAxisBreak"):
+                commands.axis_break(self.ctx, self.frame)
             elif url.Path.startswith("PickAnnotation"):
                 commands.pick_annotation(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ChangeAnnotation"):

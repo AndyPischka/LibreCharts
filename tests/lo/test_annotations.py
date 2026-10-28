@@ -209,14 +209,51 @@ def test_axis_break_cuts_a_tall_column_with_a_white_gap(ctx):
             "column", "stacked", [[None, "2023", "2024", "2025"], ["Sales", 10, 12, 100]]
         )
         set_chart_state(ctx, doc, chart_id, tall)
-        dispatch(ctx, doc, ADD + "kind=axis_break&start=2")
-        assert _annotations(doc, chart_id) == (Annotation("axis_break", 2, 2),)
-        gaps = 0
-        for i in range(group.getCount()):
-            child = group.getByIndex(i)  # read in one pass, see AGENTS.md
-            if child.ShapeType.endswith("RectangleShape") and child.FillStyle.value == "SOLID":
-                gaps += child.FillColor == 0xFFFFFF
-        assert gaps == 1
+        dispatch(ctx, doc, ADD + "kind=axis_break")
+        assert _annotations(doc, chart_id) == (Annotation("axis_break", 0, 0),)
+        assert _white_gaps(group) == 1
         assert "100" in _labels(group)  # the label keeps the real value
+    finally:
+        doc.close(True)
+
+
+def _white_gaps(group):
+    gaps = 0
+    for i in range(group.getCount()):
+        child = group.getByIndex(i)  # read in one pass, see AGENTS.md
+        if child.ShapeType.endswith("RectangleShape") and child.FillStyle.value == "SOLID":
+            gaps += child.FillColor == 0xFFFFFF
+    return gaps
+
+
+def test_a_manual_axis_break_cuts_every_column_beyond_it_and_a_new_one_replaces_it(ctx):
+    doc, group, chart_id = _chart(ctx)
+    try:
+        table = [[None, "2023", "2024", "2025"], ["Sales", 10, 100, 90]]
+        set_chart_state(ctx, doc, chart_id, state_from_table("column", "stacked", table))
+        dispatch(ctx, doc, ADD + "kind=axis_break&lower=30&upper=60")
+        assert _annotations(doc, chart_id) == (Annotation("axis_break", 0, 0, lower=30, upper=60),)
+        assert _white_gaps(group) == 2  # 2024 and 2025 reach beyond 30
+
+        dispatch(ctx, doc, ADD + "kind=axis_break&lower=95&upper=99")
+        assert _annotations(doc, chart_id) == (Annotation("axis_break", 0, 0, lower=95, upper=99),)
+        assert _white_gaps(group) == 1  # only 2024 reaches beyond 95
+        assert "100" in _labels(group)
+        uno_command(ctx, doc, ".uno:Undo")
+        assert _white_gaps(group) == 2
+    finally:
+        doc.close(True)
+
+
+def test_changing_the_range_of_an_axis_break(ctx):
+    doc, _, chart_id = _chart(ctx)
+    try:
+        table = [[None, "2023", "2024", "2025"], ["Sales", 10, 100, 90]]
+        set_chart_state(ctx, doc, chart_id, state_from_table("column", "stacked", table))
+        dispatch(ctx, doc, ADD + "kind=axis_break")
+        dispatch(ctx, doc, "org.librecharts:ChangeAnnotation?index=0&lower=30&upper=60")
+        assert _annotations(doc, chart_id) == (Annotation("axis_break", 0, 0, lower=30, upper=60),)
+        dispatch(ctx, doc, "org.librecharts:ChangeAnnotation?index=0&lower=&upper=")
+        assert _annotations(doc, chart_id) == (Annotation("axis_break", 0, 0),)
     finally:
         doc.close(True)

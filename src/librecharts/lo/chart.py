@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
+from librecharts.core import annotations
 from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
 from librecharts.core.layout.chart import layout_chart
 from librecharts.core.model import Annotation, ChartState
@@ -75,12 +76,15 @@ def redraw(doc: Any, group: Any, state: ChartState) -> None:
 
 
 def add_annotation(doc: Any, group: Any, annotation: Annotation) -> None:
-    """Add ``annotation`` to the chart in ``group`` and redraw it: one undo step."""
+    """Add ``annotation`` to the chart in ``group`` and redraw it: one undo step.
+
+    A new axis break replaces the chart's old one.
+    """
     chart_id = store.chart_id_of(group)
     state = store.read_state(doc, chart_id) if chart_id else None
     if state is None:
         raise ValueError("chart has no stored state")
-    redraw(doc, group, replace(state, annotations=(*state.annotations, annotation)))
+    redraw(doc, group, replace(state, annotations=annotations.added(state.annotations, annotation)))
 
 
 def _apply(doc: Any, group: Any, chart_id: str, state: ChartState) -> None:

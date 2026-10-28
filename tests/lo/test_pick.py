@@ -143,14 +143,3 @@ def test_escape_cancels(ctx):
         assert _annotations(doc, chart_id) == ()
     finally:
         doc.close(True)
-
-
-def test_picking_one_column_adds_an_axis_break(ctx):
-    doc, group, chart_id = _chart(ctx)
-    try:
-        dispatch(ctx, doc, PICK + "axis_break")
-        doc.getCurrentController().select(_child_with_text(group, "2025"))
-        _wait_for(lambda: _annotations(doc, chart_id) == (Annotation("axis_break", 2, 2),))
-        _wait_for(lambda: _chart_selected(doc))
-    finally:
-        doc.close(True)
