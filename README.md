@@ -6,8 +6,8 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 > **Status: M1 to M4 done.** Stacked and clustered **column and bar charts**,
 > **waterfall** and **Marimekko charts** work: edit the data in
 > a Calc window (formulas included), resize charts freely, undo everything, save as ODP or PPTX.
-> Column charts take **difference arrows, CAGR arrows and axis breaks**. Next: the first release,
-> see [ROADMAP.md](ROADMAP.md).
+> Column, bar and waterfall charts take **difference arrows, CAGR arrows and axis breaks**. Next:
+> the first release, see [ROADMAP.md](ROADMAP.md).
 > LibreCharts is inspired by think-cell and empower charts but is not affiliated with them and
 > does not read or write their files.
 
@@ -23,7 +23,7 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
    Marimekko chart; double-click a chart (or select it and choose *Edit chart data*) to change its
    data in Calc. The **LibreCharts** deck in the sidebar (icon with the difference arrow; *View →
    Sidebar*) offers the same commands, shows the selected chart and lists its annotations.
-4. To annotate a column chart, select it and choose *Add difference arrow*, *Add level difference*
+4. To annotate a column, bar or waterfall chart, select it and choose *Add difference arrow*, *Add level difference*
    or *Add CAGR arrow* (menu, toolbar or the chart's context menu), then click the columns as the
    bar above the slide says; `Esc` cancels. *Add axis break* opens a dialog: automatic, or the lower
    and upper value to cut out of the whole axis. The context menu of the chart switches arrows

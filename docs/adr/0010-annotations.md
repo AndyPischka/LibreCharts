@@ -20,6 +20,13 @@ think-cell. An extension cannot ask Impress which shape is under the mouse.
   Schema 3 gave axis breaks a value range, see below.
 - **Layout**: part of the column layout. Every bracket arrow gets a lane above the plot, every level
   arrow a lane right of it; the number of lanes depends on the annotations only (ADR 0007).
+  **Bar charts** are the same turned by 90 degrees: bracket lanes right of the outside labels,
+  level lanes below the plot, a vertical break mark. **Waterfall charts** use the column lanes; an
+  arrow measures the level a column ends at (`waterfall.levels`), so start to end total reads as a
+  percentage. On a waterfall the axis break only removes a range below all steps (`waterfall.floor`):
+  it cuts the totals and moves the floating steps down as a whole; a range reaching a step is not
+  drawn. Automatic: when the steps use less than half the height, the break covers 20 % to 90 % of
+  the lowest step's level.
 - **Axis break** (`core/axis_break.py`): one per chart, for the **whole axis**. It removes the value
   range `[lower, upper]` from the scale: values up to `lower` are drawn as is, values inside the
   range end at the break, values above `upper` continue right after `lower`. Every column reaching
@@ -62,6 +69,6 @@ think-cell. An extension cannot ask Impress which shape is under the mouse.
 - The axis break dialog is modal and cannot be driven by `test-lo`: its LibreOffice runs headless,
   where modal dialogs return at once. The dialog is tested by hand; everything behind it
   (validation, layout, storing) is tested without it.
-- Only column charts have annotations so far; bar and waterfall charts can follow with the same
-  state and pick mode.
+- Mekko charts have no annotations. On waterfall charts an arrow cannot compare the change of two
+  steps, only levels; that could become an option.
 - Arrow labels are locale-neutral like all labels (ADR 0006).

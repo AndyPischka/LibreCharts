@@ -23,8 +23,8 @@ Use these terms consistently in code, UI strings and docs.
 | **Marimekko (Mekko)** | Stacked chart whose column width is also data (e.g. market size); segments show percent shares (ADR 0009). |
 | **Width row** | Optional Mekko data sheet row named "Width"/"Breite" right below the category names; sets column widths. |
 | **Annotation** | An arrow or axis break the user placed on a chart; stored in the chart state by category index (ADR 0010). |
-| **Difference arrow** | Annotation that shows the relative ("+25%") or absolute ("+5") difference between two columns, or two bars of one series. Drawn as a *bracket* above the columns or as a *level difference*. |
-| **Level difference** | Difference arrow drawn right of the plot: dashed lines at the heights of both columns, a vertical arrow between them. |
+| **Difference arrow** | Annotation that shows the relative ("+25%") or absolute ("+5") difference between two columns, or two bars of one series. Drawn as a *bracket* (above columns, right of bars) or as a *level difference*. On a waterfall chart it measures the level a column ends at. |
+| **Level difference** | Difference arrow drawn right of the plot (below it on bar charts): dashed lines at the values of both columns, an arrow between them. |
 | **CAGR arrow** | Annotation that shows the compound annual growth rate between two columns, over the years named by the categories (else the number of columns between them). |
 | **Sidebar deck** | The LibreCharts tab of the Impress sidebar; its one panel mirrors the menu commands and lists the selected chart's annotations. |
 | **Axis break** | Removes a value range from the scale of the whole axis (automatic, or a lower and an upper value from a dialog): columns reaching beyond it get a white gap with slanted lines and continue above it; labels keep the real values. |
