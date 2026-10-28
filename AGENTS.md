@@ -2,7 +2,7 @@
 
 LibreCharts is a think-cell-style chart extension (`.oxt`) for **LibreOffice Impress**, written in
 Python-UNO. Charts are drawn as native Draw shapes; chart data is edited in a Calc window.
-Status: M0 (scaffold). See [ROADMAP.md](ROADMAP.md) for milestones and non-goals.
+Status: M1-M3 done (column/bar, waterfall, Marimekko). See [ROADMAP.md](ROADMAP.md) for milestones and non-goals.
 
 ## Commands
 
@@ -91,6 +91,10 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
   charts through `dispatch(ctx, doc, "org.librecharts:...")` when a test needs the watcher.
 - LibreOffice scales group children when the group is resized; zero-size children (waterfall gaps)
   become non-zero. The resize watcher puts them back, so never skip it for such charts.
+- Simulated clicks (`helpers.click`, Toolkit robot) need a visible document. LibreOffice counts
+  double-clicks itself from press timing; it ignores a `ClickCount` you send, so send two quick
+  presses. `test-lo` gives each module a fresh profile: with a shared one, clicks of a later
+  module missed their target.
 - Clipboard tests and tests needing visible documents call `helpers.skip_on_headless_linux(...)`:
   both abort LibreOffice in headless Linux (CI). They run locally on Windows.
 - `tests/lo/` holds plain `test_*(ctx)` functions run by `tests/lo/runner.py`, not pytest; pytest
