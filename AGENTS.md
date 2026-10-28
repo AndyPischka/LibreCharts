@@ -70,6 +70,8 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
   `lo/undo.py` (lock recording, add one explicit action); an undo context alone is a no-op entry.
 - Extensions cannot add tabs to the Notebookbar (ribbon): its tabs are fixed in LibreOffice. An
   `OfficeToolBar` in `Addons.xcu` is shown in its "Extension" group and in the classic UI.
+- Pass `None` for a void `any` argument. `uno.Any(...)` as a plain call argument works on
+  LibreOffice 26.8 but raises on 25.8 ("use uno.invoke instead"); CI tests on 25.8.
 - Never let an exception escape a dispatch or a UNO listener: LibreOffice may abort. `entry.py`
   and the listeners in `lo/` catch and print them.
 - On documents, `addEventListener` is ambiguous in PyUNO and picks the wrong interface. Use

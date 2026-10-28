@@ -53,7 +53,9 @@ class _Watcher(unohelper.Base, XModifyListener, XCallback):
         if self._pending or self._busy:  # coalesce, and ignore our own changes
             return
         try:
-            self._async.addCallback(self, uno.Any("void", None))
+            # None is the void "any". An explicit uno.Any("void", None) works on LibreOffice 26.8
+            # but is rejected by the PyUNO of 25.8 ("uno.Any instance not accepted").
+            self._async.addCallback(self, None)
             self._pending = True
         except Exception:
             # Never let an exception escape into the notification of LibreOffice.
