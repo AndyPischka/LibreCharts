@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 TextRole = Literal["value", "total", "category"]
-LineRole = Literal["baseline"]
+LineRole = Literal["baseline", "connector"]
 Align = Literal["left", "center", "right"]
 
 

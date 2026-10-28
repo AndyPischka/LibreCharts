@@ -107,6 +107,22 @@ def _number(result: object) -> float | None:
     return float(result) if math.isfinite(result) else None
 
 
+def sample_waterfall_state() -> ChartState:
+    """A bridge from a start value to an end value: what a new waterfall chart shows.
+
+    ``grouping`` has no meaning for waterfalls and stays "stacked".
+    """
+    return state_from_table(
+        "waterfall",
+        "stacked",
+        [
+            [None, "Start", "Growth", "New markets", "Costs", "Currency", "End"],
+            ["Value", 100, 30, 15, -25, -10, None],
+            ["Total", "x", None, None, None, None, "x"],
+        ],
+    )
+
+
 def sample_state() -> ChartState:
     """Three products over three years: what a newly inserted chart shows."""
     return state_from_table(
