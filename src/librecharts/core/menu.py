@@ -50,7 +50,10 @@ def chart_menu(state: ChartState, locale: str) -> MenuItem:
     if shown:
         items.append(SEPARATOR)
         items += [
-            MenuItem(_title(annotation, data, locale), children=_actions(index, annotation, locale))
+            MenuItem(
+                annotation_title(annotation, data, locale),
+                children=_actions(index, annotation, locale),
+            )
             for index, annotation in shown
         ]
         items.append(_command("menu_remove_all", "RemoveAnnotations", locale))
@@ -61,7 +64,8 @@ def _command(key: str, command: str, locale: str) -> MenuItem:
     return MenuItem(text(key, locale), PROTOCOL + command)
 
 
-def _title(annotation: Annotation, data: ChartData, locale: str) -> str:
+def annotation_title(annotation: Annotation, data: ChartData, locale: str) -> str:
+    """The label of an annotation in menus and the sidebar, e.g. "Difference 2023 to 2025"."""
     if annotation.kind == "axis_break":
         return text("menu_axis_break", locale, range=describe(annotation))
     key = (

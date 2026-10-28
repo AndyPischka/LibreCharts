@@ -148,6 +148,74 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "The data of this chart cannot be read: {detail}",
         "de": "Die Daten dieses Diagramms können nicht gelesen werden: {detail}",
     },
+    "sidebar_title": {
+        "en": "LibreCharts",
+        "de": "LibreCharts",
+    },
+    "panel_insert": {
+        "en": "Insert chart",
+        "de": "Diagramm einfügen",
+    },
+    "panel_chart": {
+        "en": "Selected chart",
+        "de": "Ausgewähltes Diagramm",
+    },
+    "panel_annotations": {
+        "en": "Add annotation",
+        "de": "Annotation hinzufügen",
+    },
+    "panel_list": {
+        "en": "Annotations on this chart",
+        "de": "Annotationen dieses Diagramms",
+    },
+    "panel_no_annotations": {
+        "en": "None yet.",
+        "de": "Noch keine.",
+    },
+    "insert_column": {
+        "en": "Column chart",
+        "de": "Säulendiagramm",
+    },
+    "insert_bar": {
+        "en": "Bar chart",
+        "de": "Balkendiagramm",
+    },
+    "insert_waterfall": {
+        "en": "Waterfall chart",
+        "de": "Wasserfalldiagramm",
+    },
+    "insert_mekko": {
+        "en": "Marimekko chart",
+        "de": "Marimekko-Diagramm",
+    },
+    "kind_column": {
+        "en": "Column chart",
+        "de": "Säulendiagramm",
+    },
+    "kind_bar": {
+        "en": "Bar chart",
+        "de": "Balkendiagramm",
+    },
+    "kind_waterfall": {
+        "en": "Waterfall chart",
+        "de": "Wasserfalldiagramm",
+    },
+    "kind_mekko": {
+        "en": "Marimekko chart",
+        "de": "Marimekko-Diagramm",
+    },
+    "status_none": {
+        "en": "No chart selected.",
+        "de": "Kein Diagramm ausgewählt.",
+    },
+    "status_chart": {
+        "en": "{kind}, {count} categories",
+        "de": "{kind}, {count} Kategorien",
+    },
+    "status_orphaned": {
+        "en": "This chart's data is not in this presentation.",
+        "de": "Die Daten dieses Diagramms sind nicht in dieser Präsentation.",
+    },
 }
 
 
