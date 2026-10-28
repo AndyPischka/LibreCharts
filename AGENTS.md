@@ -90,6 +90,9 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
   charts through `dispatch(ctx, doc, "org.librecharts:...")` when a test needs the watcher.
 - LibreOffice scales group children when the group is resized; zero-size children (waterfall gaps)
   become non-zero. The resize watcher puts them back, so never skip it for such charts.
+- Tests that copy to the clipboard call `helpers.flush_clipboard(ctx)` before closing their
+  document (headless Linux died otherwise). Tests needing visible documents call
+  `helpers.skip_on_headless_linux(...)`; CI runs on Linux, so they only run locally on Windows.
 - `tests/lo/` holds plain `test_*(ctx)` functions run by `tests/lo/runner.py`, not pytest; pytest
   ignores that directory. Shared helpers live in `tests/lo/helpers.py`.
 - Do not use `LibreOffice-minimal-version` in `extension/description.xml`: LibreOffice 26.8 rejected

@@ -1,5 +1,9 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
-"""Copies of a chart (paste, duplicated slide) are edited independently of the original."""
+"""Copies of a chart (paste, duplicated slide) are edited independently of the original.
+
+On Windows the clipboard tests use the real system clipboard even in headless mode: copying
+something yourself while they run can make one of them fail.
+"""
 
 import time
 
@@ -8,6 +12,7 @@ from helpers import (
     datasheets,
     dispatch,
     first_page,
+    flush_clipboard,
     new_impress,
     uno_command,
 )
@@ -60,6 +65,7 @@ def test_pasted_chart_is_renamed_and_has_no_state_of_its_own(ctx):
         assert copy_id.split(" ")[0] == original_id  # new ids end in a letter: nothing is cut
         assert store.read_state(doc, copy_id) is None
     finally:
+        flush_clipboard(ctx)
         doc.close(True)
 
 
@@ -77,6 +83,7 @@ def test_editing_a_pasted_chart_forks_it(ctx):
             assert store.read_state(doc, chart_id) is not None
     finally:
         close_datasheets(ctx)
+        flush_clipboard(ctx)
         doc.close(True)
 
 
@@ -102,4 +109,5 @@ def test_editing_a_copy_does_not_touch_the_original(ctx):
         assert original_state.values[1][1] == 10
     finally:
         close_datasheets(ctx)
+        flush_clipboard(ctx)
         doc.close(True)

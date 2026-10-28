@@ -4,7 +4,15 @@
 import time
 
 import uno
-from helpers import dispatch, first_page, new_impress, prop, save_and_reload, uno_command
+from helpers import (
+    dispatch,
+    first_page,
+    new_impress,
+    prop,
+    save_and_reload,
+    skip_on_headless_linux,
+    uno_command,
+)
 
 from librecharts.core.layout.column import CATEGORY_BAND
 from librecharts.lo import store
@@ -119,6 +127,9 @@ def test_undo_and_redo_of_a_resize(ctx):
 
 
 def test_charts_in_a_reloaded_presentation_are_watched(ctx):
+    # Needs a visible document (document-open jobs skip hidden ones). Visible documents abort
+    # LibreOffice in headless mode on Linux; this test runs on Windows.
+    skip_on_headless_linux("visible documents are not stable in headless Linux")
     doc = new_impress(ctx)
     try:
         _chart(ctx, doc)

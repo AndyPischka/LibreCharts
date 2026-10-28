@@ -20,6 +20,8 @@ import uno
 HERE = Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE), str(HERE.parent.parent / "src")]
 
+import helpers  # noqa: E402 - needs the path above
+
 CONNECT_TIMEOUT_S = 60
 
 
@@ -67,11 +69,15 @@ def main() -> int:
     only = sys.argv[2] if len(sys.argv) > 2 else None
     ctx = connect(sys.argv[1])
     desktop = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
-    passed = failed = 0
+    passed = failed = skipped = 0
     try:
         for test_id, fn in collect(only):
             try:
                 fn(ctx)
+            except helpers.Skip as reason:
+                skipped += 1
+                print(f"SKIP {test_id}: {reason}")
+                continue
             except Exception:
                 failed += 1
                 print(f"FAIL {test_id}\n{traceback.format_exc()}")
@@ -88,7 +94,7 @@ def main() -> int:
     finally:
         with contextlib.suppress(Exception):  # connection drops while LibreOffice shuts down
             desktop.terminate()
-    print(f"{passed} passed, {failed} failed")
+    print(f"{passed} passed, {failed} failed, {skipped} skipped")
     return 1 if failed or not passed else 0
 
 
