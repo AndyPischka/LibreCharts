@@ -82,6 +82,9 @@ def main() -> int:
             else:
                 passed += 1
                 print(f"PASS {test_id}")
+        if passed + failed and not _alive(ctx):
+            failed += 1
+            print("ABORT LibreOffice died after the last test of this run")
     finally:
         with contextlib.suppress(Exception):  # connection drops while LibreOffice shuts down
             desktop.terminate()

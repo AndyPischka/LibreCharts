@@ -18,6 +18,25 @@ INSERT = "org.librecharts:InsertColumnChart"
 EDIT = "org.librecharts:EditData"
 
 
+def test_duplicated_slide_yields_independent_charts(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, INSERT)
+        uno_command(ctx, doc, ".uno:DuplicatePage")
+        assert doc.getDrawPages().getCount() == 2
+        second = doc.getDrawPages().getByIndex(1)
+        copy, _ = store.find_charts(second)[0]
+        doc.getCurrentController().setCurrentPage(second)
+        doc.getCurrentController().select(copy)
+        dispatch(ctx, doc, EDIT)
+        ids = [chart_id for _, chart_id in store.all_charts(doc)]
+        assert len(set(ids)) == len(ids)
+        assert all(store.read_state(doc, i) is not None for i in ids)
+    finally:
+        close_datasheets(ctx)
+        doc.close(True)
+
+
 def _inserted_and_pasted(ctx):
     doc = new_impress(ctx)
     dispatch(ctx, doc, INSERT)
@@ -81,25 +100,6 @@ def test_editing_a_copy_does_not_touch_the_original(ctx):
         original_state = store.read_state(doc, original_id)
         assert original_state is not None
         assert original_state.values[1][1] == 10
-    finally:
-        close_datasheets(ctx)
-        doc.close(True)
-
-
-def test_duplicated_slide_yields_independent_charts(ctx):
-    doc = new_impress(ctx)
-    try:
-        dispatch(ctx, doc, INSERT)
-        uno_command(ctx, doc, ".uno:DuplicatePage")
-        assert doc.getDrawPages().getCount() == 2
-        second = doc.getDrawPages().getByIndex(1)
-        copy, _ = store.find_charts(second)[0]
-        doc.getCurrentController().setCurrentPage(second)
-        doc.getCurrentController().select(copy)
-        dispatch(ctx, doc, EDIT)
-        ids = [chart_id for _, chart_id in store.all_charts(doc)]
-        assert len(set(ids)) == len(ids)
-        assert all(store.read_state(doc, i) is not None for i in ids)
     finally:
         close_datasheets(ctx)
         doc.close(True)
