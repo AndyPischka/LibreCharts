@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 
 from librecharts.core import state_io
-from librecharts.core.model import SCHEMA_VERSION, ChartState
+from librecharts.core.model import SCHEMA_VERSION, Annotation, ChartState
 from librecharts.core.state_io import StateError, from_json, to_json
 
 
@@ -18,6 +18,16 @@ def make_state(**overrides: Any) -> ChartState:
     return ChartState(**{**fields, **overrides})
 
 
+ARROW = {
+    "kind": "difference",
+    "start": 0,
+    "end": 1,
+    "series": None,
+    "style": "bracket",
+    "label": "percent",
+}
+
+
 def valid_raw() -> dict[str, Any]:
     return json.loads(to_json(make_state()))
 
@@ -25,6 +35,26 @@ def valid_raw() -> dict[str, Any]:
 def test_round_trip_preserves_state() -> None:
     state = make_state(grouping="clustered")
     assert from_json(to_json(state)) == state
+
+
+def test_round_trip_preserves_annotations() -> None:
+    annotations = (
+        Annotation("difference", 0, 1),
+        Annotation("difference", 1, 0, series=2, style="level", label="absolute"),
+        Annotation("cagr", 0, 1),
+        Annotation("axis_break", 1, 1),
+    )
+    state = make_state(annotations=annotations)
+    assert from_json(to_json(state)).annotations == annotations
+
+
+def test_version_1_state_gets_no_annotations() -> None:
+    raw = valid_raw()
+    del raw["annotations"]
+    raw["v"] = 1
+    restored = from_json(json.dumps(raw))
+    assert restored.annotations == ()
+    assert restored.version == SCHEMA_VERSION
 
 
 def test_round_trip_keeps_unicode_and_formulas() -> None:
@@ -62,6 +92,19 @@ def test_integers_in_values_become_floats() -> None:
         lambda r: r.update(values=[[None, None, None], [None, True, 20]]),
         lambda r: r.update(values=[[None, None, None]]),
         lambda r: r.update(values=[[None, None], [None, 1]]),
+        lambda r: r.pop("annotations"),
+        lambda r: r.update(annotations={}),
+        lambda r: r.update(annotations=[5]),
+        lambda r: r.update(annotations=[{**ARROW, "kind": "pie"}]),
+        lambda r: r.update(annotations=[{**ARROW, "style": "curly"}]),
+        lambda r: r.update(annotations=[{**ARROW, "label": "roman"}]),
+        lambda r: r.update(annotations=[{**ARROW, "start": "0"}]),
+        lambda r: r.update(annotations=[{**ARROW, "end": True}]),
+        lambda r: r.update(annotations=[{**ARROW, "end": -1}]),
+        lambda r: r.update(annotations=[{**ARROW, "series": 1.5}]),
+        lambda r: r.update(annotations=[{**ARROW, "end": 0}]),
+        lambda r: r.update(annotations=[{**ARROW, "kind": "axis_break"}]),
+        lambda r: r.update(annotations=[{k: v for k, v in ARROW.items() if k != "label"}]),
     ],
 )
 def test_malformed_state_is_rejected(mutate: Any) -> None:
@@ -93,13 +136,14 @@ def test_older_state_is_migrated(monkeypatch: pytest.MonkeyPatch) -> None:
     raw = valid_raw()
     raw["grouping"] = "legacy-name"
 
-    def v1_to_v2(old: dict[str, Any]) -> dict[str, Any]:
+    def upgrade(old: dict[str, Any]) -> dict[str, Any]:
         return {**old, "grouping": "clustered"}
 
-    monkeypatch.setattr("librecharts.core.state_io.SCHEMA_VERSION", 2)
-    monkeypatch.setattr("librecharts.core.model.SCHEMA_VERSION", 2)
-    monkeypatch.setitem(state_io._MIGRATIONS, 1, v1_to_v2)  # pyright: ignore[reportPrivateUsage]
+    newer = SCHEMA_VERSION + 1
+    monkeypatch.setattr("librecharts.core.state_io.SCHEMA_VERSION", newer)
+    monkeypatch.setattr("librecharts.core.model.SCHEMA_VERSION", newer)
+    monkeypatch.setitem(state_io._MIGRATIONS, SCHEMA_VERSION, upgrade)  # pyright: ignore[reportPrivateUsage]
 
     restored = from_json(json.dumps(raw))
     assert restored.grouping == "clustered"
-    assert restored.version == 2
+    assert restored.version == newer

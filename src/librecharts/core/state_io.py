@@ -11,12 +11,18 @@ import json
 from collections.abc import Callable
 from typing import Any, cast
 
-from librecharts.core.model import SCHEMA_VERSION, ChartState
+from librecharts.core.model import SCHEMA_VERSION, Annotation, ChartState
 
 _Raw = dict[str, Any]
 
+
+def _v1_to_v2(raw: _Raw) -> _Raw:
+    """Version 2 added annotations."""
+    return {**raw, "annotations": []}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
-_MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {}
+_MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {1: _v1_to_v2}
 
 
 class StateError(ValueError):
@@ -31,6 +37,7 @@ def to_json(state: ChartState) -> str:
             "grouping": state.grouping,
             "cells": [list(row) for row in state.cells],
             "values": [list(row) for row in state.values],
+            "annotations": [_annotation_to_raw(a) for a in state.annotations],
         },
         separators=(",", ":"),
         ensure_ascii=False,
@@ -51,10 +58,22 @@ def from_json(text: str) -> ChartState:
             values=tuple(
                 tuple(_as_number(v) for v in row) for row in _as_rows(_get(raw, "values"))
             ),
+            annotations=tuple(_as_annotation(a) for a in _as_list(_get(raw, "annotations"))),
             version=raw["v"],
         )
     except ValueError as exc:
         raise StateError(str(exc)) from exc
+
+
+def _annotation_to_raw(annotation: Annotation) -> _Raw:
+    return {
+        "kind": annotation.kind,
+        "start": annotation.start,
+        "end": annotation.end,
+        "series": annotation.series,
+        "style": annotation.style,
+        "label": annotation.label,
+    }
 
 
 def _reject_constant(name: str) -> object:
@@ -110,3 +129,28 @@ def _as_number(value: object) -> float | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise StateError("values must be numbers or null")
     return float(value)
+
+
+def _as_list(value: object) -> list[object]:
+    if not isinstance(value, list):
+        raise StateError("annotations must be a list")
+    return cast("list[object]", value)
+
+
+def _as_annotation(value: object) -> Annotation:
+    raw = _as_object(value)
+    series = _get(raw, "series")
+    return Annotation(
+        kind=_get(raw, "kind"),
+        start=_as_index(_get(raw, "start")),
+        end=_as_index(_get(raw, "end")),
+        series=None if series is None else _as_index(series),
+        style=_get(raw, "style"),
+        label=_get(raw, "label"),
+    )
+
+
+def _as_index(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise StateError("annotation indices must be integers")
+    return value
