@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-TextRole = Literal["value", "total", "category"]
+TextRole = Literal["value", "total", "category", "series"]
 LineRole = Literal["baseline", "connector"]
 Align = Literal["left", "center", "right"]
 

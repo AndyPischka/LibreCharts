@@ -123,6 +123,20 @@ def sample_waterfall_state() -> ChartState:
     )
 
 
+def sample_mekko_state() -> ChartState:
+    """Market sizes by region and product: what a new Mekko chart shows (widths = column sums)."""
+    return state_from_table(
+        "mekko",
+        "stacked",
+        [
+            [None, "Europe", "Americas", "Asia", "Other"],
+            ["Product A", 40, 30, 20, 4],
+            ["Product B", 25, 45, 40, 3],
+            ["Product C", 15, 10, 30, 3],
+        ],
+    )
+
+
 def sample_state() -> ChartState:
     """Three products over three years: what a newly inserted chart shows."""
     return state_from_table(
