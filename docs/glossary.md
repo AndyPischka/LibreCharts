@@ -34,6 +34,10 @@ Use these terms consistently in code, UI strings and docs.
 | **Slide element** | A Harvey ball or check mark: a group of native shapes whose whole state is its group name (ADR 0021). |
 | **Harvey ball** | A circle filled to 0, 25, 50, 75 or 100 %, drawn as an outline plus a sector. |
 | **Check mark** | A tick, a cross or an empty circle; tick and cross have fixed colours. |
+| **Agenda** | The chapters of a presentation, shown on the *main agenda slide* and on one *divider* per chapter; stored as `librecharts:agenda` (ADR 0022). |
+| **Chapter** | One entry of the agenda: a title (one paragraph of the main slide's list) and an id; its slides are the ones after its divider. |
+| **Main agenda slide** | The slide whose list (`librecharts-agenda`) shows all chapters; chapter titles are edited there. |
+| **Divider** | The agenda slide before a chapter: the same list with that chapter highlighted (`librecharts-agenda:<chapter id>`); generated, never edited by hand. |
 | **Gantt chart** | A project timeline: one row per data sheet row (label, start, end, remark, phase marker by column position), a two-level date scale on top (ADR 0019). |
 | **Activity** | A Gantt row with a start and an end date, drawn as a bar from the start of its first to the end of its last day. |
 | **Milestone** | A Gantt row with a single date (or start equal to end), drawn as a diamond with its date. |

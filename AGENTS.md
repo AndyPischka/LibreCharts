@@ -126,6 +126,13 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 - Never kill `soffice` processes by name; the user may have documents open. Use a throwaway
   profile (`-env:UserInstallation=file:///.../tmp_profile`) for experiments and let the script
   call `desktop.terminate()` itself.
+- Slides cannot be moved through the API (`.uno:MovePage*` needs the slide sorter, which hidden
+  documents lack). `insertNewByIndex(i)` inserts *after* slide `i`, never before the first; removing
+  a slide is recorded for undo unless recording is locked. Slide names do not survive PPTX: mark a
+  slide with a named shape instead (ADR 0022).
+- Character attributes set on a paragraph object lose against those of its text portions (e.g. in
+  a reloaded document). Set them through `text.createTextCursorByRange(paragraph)` and read them
+  from the paragraph's first portion.
 - Windows is the primary dev OS; use forward slashes in scripts and avoid shell-specific syntax in poe tasks.
 
 ## Definition of done

@@ -46,6 +46,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `primitives.py` | `Rect`, `Line`, `Polyline`, `Polygon`, `Marker`, `Bubble`, `Text`: layout output in 1/100 mm, styling left to the renderer (`BACKGROUND` and `SHADE` fills, bold `heading` text) |
 | `elements.py` | Harvey ball and check mark names (state in the group name, ending in a letter), the cycle of states and the primitives of each (ADR 0021) |
 | `arrange.py` | Geometry of same width / height / size, grid and swap on rectangles |
+| `agenda.py` | The agenda: list shape names, chapters and their JSON, titles from the main slide's text, reconciling edits, what *Insert agenda*, *Start chapter here* and *Update agenda* change, the numbered and highlighted list lines (ADR 0022) |
 | `geometry.py` | Circle geometry: `polar` and `sector` (pie and doughnut segments as point lists; shared with the Harvey balls of M12) |
 | `gantt.py` | Gantt data sheet rules (one row per activity; label, start, end, remark, phase by column position) -> rows of type bar, milestone, phase or heading; Calc serial numbers <-> dates; sort by start (ADR 0019) |
 | `timescale.py` | The Gantt date scale: unit pair from the date range, periods, header labels and date texts per language |
@@ -86,13 +87,14 @@ so every released schema version must stay readable (`state_io.py`).
 
 | Module | Role |
 |---|---|
-| `store.py` | Chart id anchor (group name `librecharts:<id>`), state in a document custom property, the document's colour scheme property, `claim` forks renamed copies; no `uno` import, unit-tested with fakes |
+| `store.py` | Chart id anchor (group name `librecharts:<id>`), state in a document custom property, the document-wide scheme and agenda properties, `claim` forks renamed copies; no `uno` import, unit-tested with fakes |
 | `render.py` | Primitives -> shapes in a group with a `Look` (scheme plus series colours); `rerender` replaces children in place, `sync_geometry` moves them for a resize (poly shapes through `PolyPolygon`) |
 | `scheme.py` | Reads and writes the document's colour scheme; the configured default for new documents; builds the renderer's `Look` (ADR 0016) |
 | `samescale.py` | Collects a scale group's charts and sizes, redraws every affected chart in one lock (ADR 0017) |
 | `undo.py` | One explicit undo action per chart operation |
 | `elements.py` | Harvey balls and check marks: find, insert, change state (one undo step), re-lay out after a resize; the state is the group name (ADR 0021) |
 | `arrange.py` | The selected shapes and the undo action for same size, grid and swap; the geometry is `core/arrange.py` |
+| `agenda.py` | Finds the agenda slides by their list shapes, inserts and removes slides, writes the lists; every command is one undo action that re-applies the agenda before or after it (ADR 0022) |
 | `chart.py` | Insert (with the UI locale for number formats), `redraw`, `add_annotation`, `apply_changes`, `set_scheme`, `fit_to_size`: chart operations on a presentation |
 | `datasheet.py` | Calc window as a transient view: write stored cells (Gantt date columns in a date format), sync every committed edit back; a protected read-only view for linked charts |
 | `links.py` | Data links: find, open (hidden, read-only, no macros) and read the sources of linked charts, each once per update; the info bar when sources changed (ADR 0020) |

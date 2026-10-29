@@ -3,7 +3,7 @@
 think-cell-style charts for **LibreOffice Impress**, as an open-source extension.
 Charts are drawn as native shapes and fed from a Calc data sheet.
 
-> **Status: M1 to M11 done, M12 (Harvey balls, check marks, arranging shapes) in progress.** Stacked, clustered and 100 % **column and bar charts**,
+> **Status: M1 to M12 done.** Stacked, clustered and 100 % **column and bar charts**,
 > **line, stacked and 100 % area charts**, **pie, doughnut, scatter, bubble and butterfly
 > charts**, **waterfall**, **Marimekko** and **Gantt charts** work: edit the
 > data in a Calc window (formulas included), resize charts freely, undo everything, save as ODP or
@@ -14,6 +14,8 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 > A **colour scheme** styles the whole deck, single series can take another palette colour, charts
 > can share a **same scale** across slides, and a **chart format** can be copied to other charts.
 > A chart can take its data from a **linked Calc or Excel file** and be updated in one step.
+> Beyond charts: **Harvey balls**, **check marks**, **arranging shapes** (same size, grid, swap)
+> and an **agenda** with a highlighted divider slide before every chapter.
 > Next: the 1.0 release, see [ROADMAP.md](ROADMAP.md).
 > LibreCharts is inspired by think-cell and empower charts but is not affiliated with them and
 > does not read or write their files.

@@ -13,6 +13,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - **Arranging shapes** (*Same width*, *Same height*, *Same size*, *Arrange in grid*, *Swap
   positions* in the LibreCharts menu and the sidebar): works on any selected shapes, charts included;
   one undo step each. The grid offers 2, 3 or 4 columns with 5 mm gaps.
+- **Agenda** (*Insert agenda*, *Start chapter here*, *Update agenda* in the LibreCharts menu and the
+  sidebar): an agenda slide with a numbered list of chapters, and before every chapter a divider
+  slide with the same list and that chapter highlighted. Type the chapters on the agenda slide, one
+  per line; *Start chapter here* on the first slide of a chapter inserts its divider, *Update
+  agenda* renames, adds and removes chapters on every divider. A chapter is the slides after its
+  divider: move a chapter by moving its slides together with the divider. Dividers repeat the
+  agenda slide's title, layout and list, not its other content, and are rewritten on every update.
+  Each command is one undo step; the agenda survives saving as ODP or PPTX.
 - **Data links** (*Link data...* in the context menu, the sidebar or the LibreCharts menu): a chart
   takes its data from a range or a named range of a Calc, Excel or CSV file. *Update link* reads
   the selected charts' files again, *Update all links* every linked chart of the presentation, in
