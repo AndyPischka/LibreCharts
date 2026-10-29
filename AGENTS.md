@@ -91,6 +91,10 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 - Commands dispatched from `tests/lo` run on a UNO bridge thread, beside the resize watcher on the
   main thread. Store chart states before redrawing (`lo/samescale.py`), or the watcher lays out a
   chart from its stale state.
+- A chart redraw sets every property of every new shape and fires thousands of document modify
+  events. A `doc.addModifyListener` must not do real work in `modified`: coalesce into one
+  `AsyncCallback` (`lo/resize.py`, `lo/sidebar.py`). A synchronous sidebar refresh made a Gantt
+  date edit take 20 s+.
 - Layout output must have the same primitive structure for every size (resize re-layout, ADR 0007).
 - In `tests/lo`, read a shape's geometry in one pass (`child = group.getByIndex(i)`, read, move
   on). Proxies collected in a list and read later intermittently returned default geometry
@@ -133,6 +137,19 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 - Character attributes set on a paragraph object lose against those of its text portions (e.g. in
   a reloaded document). Set them through `text.createTextCursorByRange(paragraph)` and read them
   from the paragraph's first portion.
+- A chart's position and size are those of its invisible frame (`render.layout_box`), never of the
+  group: a label moved out of the chart makes the group's bounding box grow (ADR 0023).
+- Shapes removed from a group and added again lose their geometry (position 0/0, 100 x 100 after a
+  redo), so LibreOffice's undo steps cannot be rescued by putting shapes back: `render.rerender`
+  updates them in place when the primitive structure is unchanged.
+- In `tests/lo`, move a child like a user does: enter the chart (`MoveLabels`) and place it with
+  `.uno:TransformDialog` (`TransformPosX`/`TransformPosY`), which LibreOffice records as one undo
+  step; an API move records nothing. Session registries such as `labels.active` live in the
+  LibreOffice process, not in the test process.
+- Reading every child of a chart costs milliseconds (17 ms for 122 shapes): never do it for all
+  charts on every modify event (`lo/resize.py` reads them where a label can have moved).
+- `XUndoManagerListener` methods are `undoActionAdded`, `actionUndone`, `actionRedone`, ...; a
+  missing method makes `addUndoAction` raise an `AttributeError` through the bridge.
 - Windows is the primary dev OS; use forward slashes in scripts and avoid shell-specific syntax in poe tasks.
 
 ## Definition of done

@@ -28,7 +28,7 @@ from librecharts.core.layout.common import (
     format_value,
     legend,
 )
-from librecharts.core.model import Annotation, Format
+from librecharts.core.model import Annotation, Format, LabelKey
 from librecharts.core.primitives import MARKER_SIZE, Bubble, Line, Marker, Primitive, Text
 from librecharts.core.scale import Axis, nice_axis
 from librecharts.core.scatter import ScatterData, levels
@@ -101,7 +101,7 @@ def layout_scatter(
     sized = sorted((p for p in data.points if p.size is not None), key=lambda p: -(p.size or 0.0))
     out.extend(Bubble(x(p.x), y(p.y), diameter(p.size or 0.0), p.group) for p in sized)
     out.extend(Marker(x(p.x), y(p.y), p.group) for p in data.points if p.size is None)
-    for point in data.points:
+    for number, point in enumerate(data.points):
         if not point.label:
             continue
         reach = (MARKER_SIZE if point.size is None else diameter(point.size)) / 2
@@ -115,6 +115,7 @@ def layout_scatter(
                 point.label,
                 "left",
                 "value",
+                key=LabelKey("value", number),
             )
         )
     for lane, level in enumerate(marked):

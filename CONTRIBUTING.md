@@ -44,4 +44,4 @@ This installs Python 3.11 and the dev tools into `.venv` and activates the git h
 
 ## Releases
 
-Not set up yet (M1.0). Tags and releases are created by the maintainer only.
+Not set up yet (release 3.0). Tags and releases are created by the maintainer only.

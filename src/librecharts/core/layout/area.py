@@ -24,7 +24,7 @@ from librecharts.core.layout.common import (
     vertical_axis,
     vertical_grid,
 )
-from librecharts.core.model import Annotation, Format
+from librecharts.core.model import Annotation, Format, LabelKey
 from librecharts.core.percent import column_total, share, share_label
 from librecharts.core.primitives import Line, Polygon, Primitive, Text
 from librecharts.core.scale import Axis, nice_axis
@@ -120,13 +120,11 @@ def layout_area(
             out.append(Polygon(tuple(points), index))
             for c in range(len(totals)):
                 height = y(lower[c]) - y(upper[c])
-                label = ""
-                if height >= MIN_SEGMENT_FOR_LABEL:
-                    label = (
-                        share_label(series.values[c], totals[c], fmt)
-                        if percent
-                        else format_value(series.values[c] or 0.0, fmt)
-                    )
+                label = (
+                    share_label(series.values[c], totals[c], fmt)
+                    if percent
+                    else format_value(series.values[c] or 0.0, fmt)
+                )
                 out.append(
                     Text(
                         plot_left + c * slot,
@@ -137,6 +135,8 @@ def layout_area(
                         "center",
                         "value",
                         fill=index,
+                        key=LabelKey("value", c, index),
+                        hidden=height < MIN_SEGMENT_FOR_LABEL,
                     )
                 )
         lower = upper

@@ -67,6 +67,8 @@ Use these terms consistently in code, UI strings and docs.
 | **Magnitude** | The power of ten values are divided by (thousands, millions, billions) with a localized suffix such as "Tsd." or "k" (ADR 0014). |
 | **Value line** | A dashed line across the plot at a target value or at the average of the column sums, with its label; a chart may have several (ADR 0014). |
 | **Width row** | Optional Mekko data sheet row named "Width"/"Breite" right below the category names; sets column widths. |
+| **Label key** | Names a movable label (a value label or a total) by its role and data sheet indices, independent of size and sort order (ADR 0023). |
+| **Label offset** | How far the user moved a label's centre from where the layout puts it, in 1/100 mm; stored in the chart state under its label key and applied after the layout (ADR 0023). |
 | **Annotation** | An arrow or axis break the user placed on a chart; stored in the chart state by category index (ADR 0010). |
 | **Difference arrow** | Annotation that shows the relative ("+25%") or absolute ("+5") difference between two columns, or two bars of one series. Drawn as a *bracket* (above columns, right of bars) or as a *level difference*. On a waterfall chart it measures the level a column ends at. |
 | **Level difference** | Difference arrow drawn right of the plot (below it on bar charts): dashed lines at the values of both columns, an arrow between them. |

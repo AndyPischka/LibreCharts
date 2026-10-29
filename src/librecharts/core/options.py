@@ -6,6 +6,8 @@ pie and doughnut. Area charts switch between stacked and 100 %. A Marimekko char
 percent and units. On a column chart, single series can be drawn as lines, optionally on a
 secondary axis.
 
+Switching the layout variant clears the labels the user moved; sorting and colours keep them.
+
 Every switch is one ``ChangeChart`` command with a single argument, so each click is one undo step.
 The two line switches ``line=<index>`` and ``secondary=<index>`` carry ``on=true`` or ``on=false``
 along with the series index.
@@ -137,20 +139,31 @@ def changed(state: ChartState, query: str) -> ChartState:
     else:
         raise ValueError(f"expected exactly one chart option, got {sorted(args)}")
     if key == "grouping":
-        return _grouping(state, value)
+        return _variant(state, _grouping(state, value))
     if key == "percent":
-        return _percent(state, value)
+        return _variant(state, _percent(state, value))
     if key == "doughnut":
-        return _doughnut(state, value)
+        return _variant(state, _doughnut(state, value))
     if key == "sort":
         return _sort(state, value)
     if key in ("line", "secondary"):
-        return _line(state, key, value, args.get("on", "true"))
+        return _variant(state, _line(state, key, value, args.get("on", "true")))
     if key == "color":
         if "palette" not in args:
             raise ValueError("a series colour needs a palette entry")
         return _color(state, value, args["palette"])
     raise ValueError(f"unknown chart option: {key!r}")
+
+
+def _variant(before: ChartState, after: ChartState) -> ChartState:
+    """``after``, without the moved labels if it is another layout variant than ``before``.
+
+    Places chosen in a stacked chart mean nothing in a clustered one (ADR 0023). Choosing the
+    variant the chart already has keeps them.
+    """
+    if replace(after, labels=before.labels) == before:
+        return after
+    return replace(after, labels=())
 
 
 def _grouping(state: ChartState, value: str) -> ChartState:

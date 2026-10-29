@@ -238,6 +238,32 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m2f" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Move labels</value>
+              <value xml:lang="de">Beschriftungen verschieben</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:MoveLabels</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="m2g" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Reset label positions</value>
+              <value xml:lang="de">Beschriftungen zurücksetzen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:ResetLabels</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
           <node oor:name="m3" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>

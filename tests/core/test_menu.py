@@ -2,13 +2,14 @@ from dataclasses import replace
 
 from librecharts.core import style
 from librecharts.core.datasheet import (
+    sample_gantt_state,
     sample_mekko_state,
     sample_state,
     sample_waterfall_state,
     state_from_table,
 )
 from librecharts.core.menu import PROTOCOL, SEPARATOR, MenuItem, chart_menu
-from librecharts.core.model import Annotation, Format, Link
+from librecharts.core.model import Annotation, Format, LabelKey, LabelOffset, Link
 
 FORMAT_STATE = Format(axis=True, gridlines=True, series_names="labels")
 
@@ -66,6 +67,7 @@ FORMAT_TOOLS = (
     SEPARATOR,
     MenuItem("Copy chart format", PROTOCOL + "CopyChartFormat"),
     MenuItem("Apply chart format", PROTOCOL + "ApplyChartFormat"),
+    MenuItem("Move labels", PROTOCOL + "MoveLabels"),
 )
 
 
@@ -381,3 +383,23 @@ def test_a_check_mark_menu_offers_the_other_symbols() -> None:
         PROTOCOL + "SetElement?check=cross",
         PROTOCOL + "SetElement?check=empty",
     ]
+
+
+def test_moved_labels_can_be_reset() -> None:
+    plain = chart_menu(sample_state(), "en")
+    assert "ResetLabels" not in [item.command.removeprefix(PROTOCOL) for item in plain.children]
+    moved = replace(sample_state(), labels=(LabelOffset(LabelKey("total", 0), 0.0, -500.0),))
+    commands = [item.command.removeprefix(PROTOCOL) for item in chart_menu(moved, "en").children]
+    assert commands.index("MoveLabels") + 1 == commands.index("ResetLabels")
+    german = {
+        item.command.removeprefix(PROTOCOL): item.title for item in chart_menu(moved, "de").children
+    }
+    assert german["MoveLabels"] == "Beschriftungen verschieben"
+    assert german["ResetLabels"] == "Beschriftungen zurücksetzen"
+
+
+def test_a_gantt_chart_has_no_movable_labels() -> None:
+    moved = replace(sample_gantt_state(), labels=(LabelOffset(LabelKey("total", 0), 0.0, 1.0),))
+    commands = [item.command.removeprefix(PROTOCOL) for item in chart_menu(moved, "en").children]
+    assert "MoveLabels" not in commands
+    assert "ResetLabels" not in commands

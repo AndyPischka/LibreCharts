@@ -52,7 +52,7 @@ from librecharts.core.layout.common import (
 from librecharts.core.layout.common import (
     MIN_ARROW_LABEL_WIDTH as MIN_ARROW_LABEL_WIDTH,
 )
-from librecharts.core.model import Annotation, Format, Grouping
+from librecharts.core.model import Annotation, Format, Grouping, LabelKey
 from librecharts.core.percent import column_total, share_label
 from librecharts.core.primitives import (
     BACKGROUND,
@@ -593,6 +593,7 @@ def _line_series(
                 format_value(value, fmt),
                 "center",
                 "value",
+                key=LabelKey("value", c, index),
             )
         )
     return out
@@ -830,10 +831,22 @@ def _stacked_column(
             top, bottom = y(fold(negative)), y(fold(negative + value))
             negative += value
         out.append(Rect(x, top, width, bottom - top, i))
-        # Always emit the label (empty if the segment is too flat): the primitive structure must
+        # Always emit the label (hidden if the segment is too flat): the primitive structure must
         # not depend on the size, so a resized chart can be re-laid out in place (lo/render.py).
-        label = format_value(value, fmt) if bottom - top >= MIN_SEGMENT_FOR_LABEL else ""
-        out.append(Text(x, top, width, bottom - top, label, "center", "value", fill=i))
+        out.append(
+            Text(
+                x,
+                top,
+                width,
+                bottom - top,
+                format_value(value, fmt),
+                "center",
+                "value",
+                fill=i,
+                key=LabelKey("value", c, i),
+                hidden=bottom - top < MIN_SEGMENT_FOR_LABEL,
+            )
+        )
     if segments >= 2:  # a single segment's total would just repeat its own label
         out.append(
             Text(
@@ -844,6 +857,7 @@ def _stacked_column(
                 format_value(positive + negative, fmt),
                 "center",
                 "total",
+                key=LabelKey("total", c),
             )
         )
     if cut and cut.cuts(column_top_value):
@@ -869,9 +883,21 @@ def _percent_column(
         top, bottom = y(level + height), y(level)
         level += height
         out.append(Rect(x, top, width, bottom - top, i))
-        # Always emit the label (empty if flat): the structure must not depend on the size.
-        label = percentage if bottom - top >= MIN_SEGMENT_FOR_LABEL else ""
-        out.append(Text(x, top, width, bottom - top, label, "center", "value", fill=i))
+        # Always emit the label (hidden if flat): the structure must not depend on the size.
+        out.append(
+            Text(
+                x,
+                top,
+                width,
+                bottom - top,
+                percentage,
+                "center",
+                "value",
+                fill=i,
+                key=LabelKey("value", c, i),
+                hidden=bottom - top < MIN_SEGMENT_FOR_LABEL,
+            )
+        )
     out.append(
         Text(
             x,
@@ -881,6 +907,7 @@ def _percent_column(
             format_value(total, fmt),
             "center",
             "total",
+            key=LabelKey("total", c),
         )
     )
     return out
@@ -920,6 +947,7 @@ def _clustered_column(
                 format_value(value, fmt),
                 "center",
                 "value",
+                key=LabelKey("value", c, i),
             )
         )
         if cut and cut.cuts(value):  # bars sit side by side: the mark stays on its bar

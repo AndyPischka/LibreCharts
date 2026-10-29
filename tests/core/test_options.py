@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from librecharts.core.datasheet import (
@@ -6,6 +8,7 @@ from librecharts.core.datasheet import (
     sample_waterfall_state,
     state_from_table,
 )
+from librecharts.core.model import LabelKey, LabelOffset
 from librecharts.core.options import (
     Switch,
     can_draw_lines,
@@ -244,3 +247,32 @@ def test_changing_a_series_colour_extends_the_override_list() -> None:
 def test_invalid_colour_queries_raise(query: str) -> None:
     with pytest.raises(ValueError, match=r"[A-Za-z]"):
         changed(sample_state(), query)
+
+
+MOVED = (LabelOffset(LabelKey("total", 0), 0.0, -500.0),)
+
+
+@pytest.mark.parametrize(
+    "query", ["grouping=clustered", "percent=true", "line=0&on=true", "secondary=0&on=true"]
+)
+def test_another_layout_variant_clears_the_moved_labels(query: str) -> None:
+    state = replace(sample_state(), labels=MOVED)
+    assert changed(state, query).labels == ()
+
+
+def test_the_doughnut_switch_clears_the_moved_labels() -> None:
+    from librecharts.core.datasheet import sample_pie_state
+
+    state = replace(sample_pie_state(), labels=MOVED)
+    assert changed(state, "doughnut=true").labels == ()
+
+
+def test_the_mekko_variant_clears_the_moved_labels() -> None:
+    state = replace(sample_mekko_state(), labels=MOVED)
+    assert changed(state, "percent=false").labels == ()
+
+
+@pytest.mark.parametrize("query", ["grouping=stacked", "sort=descending", "color=0&palette=2"])
+def test_the_current_variant_sort_and_colours_keep_the_moved_labels(query: str) -> None:
+    state = replace(sample_state(), labels=MOVED)
+    assert changed(state, query).labels == MOVED

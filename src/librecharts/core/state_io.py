@@ -16,6 +16,8 @@ from librecharts.core.model import (
     Annotation,
     ChartState,
     Format,
+    LabelKey,
+    LabelOffset,
     Link,
     Magnitude,
 )
@@ -101,6 +103,11 @@ def _v10_to_v11(raw: _Raw) -> _Raw:
     return {**raw, "link": None}
 
 
+def _v11_to_v12(raw: _Raw) -> _Raw:
+    """Version 12 added label offsets; no existing chart has moved labels."""
+    return {**raw, "labels": []}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -113,6 +120,7 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     8: _v8_to_v9,
     9: _v9_to_v10,
     10: _v10_to_v11,
+    11: _v11_to_v12,
 }
 
 
@@ -138,6 +146,7 @@ def to_json(state: ChartState) -> str:
             "scale_group": state.scale_group,
             "doughnut": state.doughnut,
             "link": None if state.link is None else _link_to_raw(state.link),
+            "labels": [_label_to_raw(offset) for offset in state.labels],
         },
         separators=(",", ":"),
         ensure_ascii=False,
@@ -168,6 +177,7 @@ def from_json(text: str) -> ChartState:
             scale_group=_as_optional_text(_get(raw, "scale_group")),
             doughnut=_as_flag(_get(raw, "doughnut"), "doughnut"),
             link=_as_link(_get(raw, "link")),
+            labels=tuple(_as_label(item) for item in _as_labels(_get(raw, "labels"))),
             version=raw["v"],
         )
     except ValueError as exc:
@@ -210,6 +220,16 @@ def _link_to_raw(link: Link) -> _Raw:
         "range": link.range,
         "updated": link.updated,
         "modified": link.modified,
+    }
+
+
+def _label_to_raw(offset: LabelOffset) -> _Raw:
+    return {
+        "role": offset.key.role,
+        "category": offset.key.category,
+        "series": offset.key.series,
+        "dx": offset.dx,
+        "dy": offset.dy,
     }
 
 
@@ -348,6 +368,29 @@ def _as_optional_text(value: object) -> str | None:
     if not isinstance(value, str):
         raise StateError("the scale group must be a string or null")
     return value
+
+
+def _as_labels(value: object) -> list[object]:
+    if not isinstance(value, list):
+        raise StateError("labels must be a list")
+    return cast("list[object]", value)
+
+
+def _as_label(value: object) -> LabelOffset:
+    raw = _as_object(value)
+    series = _get(raw, "series")
+    dx, dy = _as_number(_get(raw, "dx")), _as_number(_get(raw, "dy"))
+    if dx is None or dy is None:
+        raise StateError("label offsets must be numbers")
+    return LabelOffset(
+        LabelKey(
+            role=_get(raw, "role"),
+            category=_as_index(_get(raw, "category"), "label indices"),
+            series=None if series is None else _as_index(series, "label indices"),
+        ),
+        dx,
+        dy,
+    )
 
 
 def _as_link(value: object) -> Link | None:

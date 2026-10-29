@@ -5,7 +5,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Fixed
+- Undoing a resize after editing chart data brings the chart back to its old size; before, the undo
+  did nothing visible. Charts are now redrawn in place where their shapes allow it.
+- Dragging a shape out of a chart no longer counts as resizing the chart.
+- Editing chart data while the LibreCharts sidebar is open is fast again: a changed date in a
+  Gantt data sheet took 20 seconds and more, because the sidebar refreshed itself for every shape
+  of the redrawn chart.
+
 ### Added
+- **Moving labels** (*Move labels*, *Reset label positions* in the LibreCharts menu, the chart's
+  right-click menu and the sidebar): enter a chart and drag value labels and totals to another place,
+  for example out of a segment too flat to hold them. A moved label keeps its distance from its
+  segment through data edits, sorting, resizing, copying, data link updates and saving as ODP or
+  PPTX; dragging it back onto its place snaps it there; each drag can be undone. *Reset label
+  positions* puts all labels of a chart back in one undo step. Switching the chart variant (stacked,
+  clustered, 100 %, ...) resets them. Series names, axis and category labels, arrow labels and the
+  legend stay where they are.
+- The sidebar's Elements and Arrange sections show icons instead of text; the text is the tooltip.
+- The sidebar panel scrolls when the sidebar is lower than its content.
 - **Harvey balls and check marks** (*Insert Harvey ball*, *Insert check mark*, the sidebar's Elements
   section): small circles filled to 0, 25, 50, 75 or 100 %, and ticks, crosses or empty circles. The
   right-click menu of a selected element switches its state, *Next state* cycles it (also for several

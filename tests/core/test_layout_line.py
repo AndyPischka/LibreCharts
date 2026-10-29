@@ -14,7 +14,7 @@ from librecharts.core.layout.line import (
     TOP_BAND,
     layout_line,
 )
-from librecharts.core.model import Annotation, Format
+from librecharts.core.model import Annotation, Format, LabelKey
 from librecharts.core.primitives import Line, Marker, Polyline, Primitive, Rect, Text
 
 LABELS = Format(series_names="labels")
@@ -34,8 +34,26 @@ def test_line_golden_geometry() -> None:
         Polyline(((500, 4900), (1500, 800)), 0),
         Marker(500, 4900, 0),
         Marker(1500, 800, 0),
-        Text(0, 4900 - LABEL_HEIGHT - LABEL_GAP, 1000, LABEL_HEIGHT, "10", "center", "value"),
-        Text(1000, 800 - LABEL_HEIGHT - LABEL_GAP, 1000, LABEL_HEIGHT, "20", "center", "value"),
+        Text(
+            0,
+            4900 - LABEL_HEIGHT - LABEL_GAP,
+            1000,
+            LABEL_HEIGHT,
+            "10",
+            "center",
+            "value",
+            key=LabelKey("value", 0, 0),
+        ),
+        Text(
+            1000,
+            800 - LABEL_HEIGHT - LABEL_GAP,
+            1000,
+            LABEL_HEIGHT,
+            "20",
+            "center",
+            "value",
+            key=LabelKey("value", 1, 0),
+        ),
     )
 
 

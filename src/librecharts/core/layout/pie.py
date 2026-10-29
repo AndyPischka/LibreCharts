@@ -19,7 +19,7 @@ from librecharts.core.layout.common import (
     format_value,
     legend,
 )
-from librecharts.core.model import Format
+from librecharts.core.model import Format, LabelKey
 from librecharts.core.percent import column_total, share, share_label
 from librecharts.core.primitives import Polygon, Primitive, Rect, Text
 
@@ -82,6 +82,7 @@ def layout_pie(
                     "center",
                     "value",
                     fill=index if is_inside else None,
+                    key=LabelKey("value", c, index),
                 )
             )
             angle += sweep
@@ -95,6 +96,7 @@ def layout_pie(
                     format_value(total, fmt),
                     "center",
                     "total",
+                    key=LabelKey("total", c),
                 )
             )
         out.append(

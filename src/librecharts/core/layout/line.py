@@ -35,7 +35,7 @@ from librecharts.core.layout.common import (
     vertical_axis,
     vertical_grid,
 )
-from librecharts.core.model import Annotation, Format
+from librecharts.core.model import Annotation, Format, LabelKey
 from librecharts.core.primitives import Line, Marker, Polyline, Primitive, Text
 from librecharts.core.scale import Axis
 
@@ -142,6 +142,7 @@ def layout_line(
                     format_value(value, fmt),
                     "center",
                     "value",
+                    key=LabelKey("value", c, index),
                 )
             )
 

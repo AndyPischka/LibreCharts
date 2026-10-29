@@ -12,6 +12,7 @@ from urllib.parse import parse_qs
 from librecharts.core import annotations, elements, gantt, options, style
 from librecharts.core import arrange as core_arrange
 from librecharts.core import format as formats
+from librecharts.core import labels as core_labels
 from librecharts.core import links as core_links
 from librecharts.core import samescale as core_samescale
 from librecharts.core.messages import text
@@ -25,6 +26,7 @@ from librecharts.lo import (
     chart,
     datasheet,
     formatdialog,
+    labels,
     linkdialog,
     links,
     pick,
@@ -397,6 +399,28 @@ def change_format(ctx: Any, frame: Any, query: str) -> None:
         return
     if changed != state.format:
         chart.redraw(frame.getController().getModel(), group, replace(state, format=changed))
+
+
+def move_labels(ctx: Any, frame: Any) -> None:
+    """Enter the selected chart so that its value labels and totals can be dragged (ADR 0023)."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    if not core_labels.movable(state):
+        ui.show_info(ctx, frame, text("option_unsupported", ui.ui_locale(ctx)))
+        return
+    labels.start(ctx, frame, group)
+
+
+def reset_labels(ctx: Any, frame: Any) -> None:
+    """Put every label of the selected chart back where the layout puts it; one undo step."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    if state.labels:
+        chart.redraw(frame.getController().getModel(), group, replace(state, labels=()))
 
 
 def number_format(ctx: Any, frame: Any) -> None:

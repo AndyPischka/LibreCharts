@@ -31,4 +31,11 @@ them without hunting for the arrow. The sidebar is the place for that in Impress
 - Many buttons overflow a typical sidebar height, so the insert and annotation buttons are
   icon-only (title as tooltip) in a wrapping grid and the scheme buttons share rows. Chart options
   and format buttons keep full-width text because their titles are long.
+- The Elements and Arrange sections are icon-only too (`extension/images/`, 16 and 26 px).
+- The panel asks the sidebar for 150 px up to its content height. When the sidebar gives it less, the
+  content scrolls with a scrollbar the panel draws itself (controls are moved, not clipped).
+- Redrawing a chart fires thousands of document modify events. The panel coalesces them into one
+  asynchronous refresh (`AsyncCallback`); selection changes refresh at once.
+- *Move labels* and *Reset label positions* (ADR 0023) are buttons of the format section like the
+  other chart commands; the second only shows when the chart has moved labels.
 - Draw and Writer have no deck; only Impress, like the rest.

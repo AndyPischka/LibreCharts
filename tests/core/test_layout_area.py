@@ -10,7 +10,7 @@ from librecharts.core.layout.area import (
     TOP_BAND,
     layout_area,
 )
-from librecharts.core.model import Annotation, Format
+from librecharts.core.model import Annotation, Format, LabelKey
 from librecharts.core.primitives import Line, Polygon, Primitive, Text
 
 LABELS = Format(series_names="labels")
@@ -27,9 +27,29 @@ def test_area_golden_geometry() -> None:
         Line(0, 9000, 1000, 9000, "baseline"),
         Text(0, 9000, 1000, CATEGORY_BAND, "X", "center", "category"),
         Polygon(((500, 6950), (500, 9000)), 0),
-        Text(0, 7675, 1000, LABEL_HEIGHT, "10", "center", "value", fill=0),
+        Text(
+            0,
+            7675,
+            1000,
+            LABEL_HEIGHT,
+            "10",
+            "center",
+            "value",
+            fill=0,
+            key=LabelKey("value", 0, 0),
+        ),
         Polygon(((500, 800), (500, 6950)), 1),
-        Text(0, 3575, 1000, LABEL_HEIGHT, "30", "center", "value", fill=1),
+        Text(
+            0,
+            3575,
+            1000,
+            LABEL_HEIGHT,
+            "30",
+            "center",
+            "value",
+            fill=1,
+            key=LabelKey("value", 0, 1),
+        ),
     )
 
 
@@ -50,18 +70,17 @@ def test_negative_and_empty_values_count_as_zero() -> None:
     polygons = [p for p in primitives if isinstance(p, Polygon)]
     # series A has no height anywhere, so it draws no area; B fills Y
     assert [p.series for p in polygons] == [1]
-    labels = [p.text for p in primitives if isinstance(p, Text) and p.role == "value"]
+    labels = [p.shown for p in primitives if isinstance(p, Text) and p.role == "value"]
     assert labels == ["", "20"]
 
 
-def test_flat_areas_get_an_empty_inside_label() -> None:
+def test_flat_areas_hide_their_inside_label() -> None:
     chart = data(("A", (1.0,)), ("B", (1000.0,)), categories=("X",))
     labels = [
-        p.text
-        for p in layout_area(chart, "stacked", 1000, 10000)
-        if isinstance(p, Text) and p.role == "value"
+        p for p in layout_area(chart, "stacked", 1000, 10000) if isinstance(p, Text) and p.key
     ]
-    assert labels == ["", "1000"]
+    assert [p.shown for p in labels] == ["", "1000"]
+    assert [p.text for p in labels] == ["1", "1000"]  # the text stays: moving the label shows it
 
 
 def test_a_legend_sits_above_the_plot() -> None:

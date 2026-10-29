@@ -1,5 +1,5 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
-"""Small UI helpers: the user's UI locale and message boxes."""
+"""Small UI helpers: the user's UI locale, message boxes and LibreOffice commands."""
 
 from __future__ import annotations
 
@@ -29,6 +29,12 @@ def ui_locale(ctx: Any) -> str:
         return str(access.ooLocale or "")
     except Exception:
         return ""
+
+
+def uno_command(ctx: Any, frame: Any, command: str) -> None:
+    """Dispatch a LibreOffice command such as ``.uno:EnterGroup`` in ``frame``."""
+    helper = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.DispatchHelper", ctx)
+    helper.executeDispatch(frame, command, "", 0, ())
 
 
 def show_info(ctx: Any, frame: Any, message: str) -> None:

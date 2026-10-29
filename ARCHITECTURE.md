@@ -25,7 +25,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 
 | Module | Role |
 |---|---|
-| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, `format`, line series `lines`/`secondary`, series palette overrides `colors`, same-scale group `scale_group`, data `link`, schema version) |
+| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, `format`, line series `lines`/`secondary`, series palette overrides `colors`, same-scale group `scale_group`, data `link`, moved-label offsets `labels`, schema version) |
 | `format.py` | Chart format options: defaults for a new chart, `ChangeFormat` arguments, which chart kind supports what, number-format parsing and validation, locale rules, `apply` for "copy chart format" (ADR 0014) |
 | `style.py` | Colour schemes (palette, text, line, background, font), the built-ins, scheme JSON and the black/white text colour for a fill by WCAG relative luminance (ADRs 0014, 0016) |
 | `samescale.py` | Same-scale groups: orientation, joinability, the natural length per value unit of every layout and the smallest common one (ADR 0017) |
@@ -63,7 +63,8 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `mekko.py` | Mekko data sheet rules (optional "Width" row, negatives ignored) -> segments and column widths |
 | `layout/mekko.py` | Variable-width columns, 100 % high (percent) or scaled by their sums (units); value, total and width labels, series names |
 | `layout/common.py` | Number format, value axis and gridlines, series labels and legend, value-line lanes shared by the layouts |
-| `layout/chart.py` | `layout_chart(state, w, h, length_per_unit=None)`: applies sorting, picks the layout by chart kind and passes the shared scale of a same-scale group (ADR 0017) |
+| `layout/chart.py` | `layout_chart(state, w, h, length_per_unit=None)`: applies sorting, picks the layout by chart kind, passes the shared scale of a same-scale group (ADR 0017) and applies the label offsets |
+| `labels.py` | Label placement: `place` applies the offsets of moved value labels and totals to laid-out primitives, `moved` finds them again from the shapes' boxes (ADR 0023) |
 
 Data flow: Calc cells -> `ChartState` (stored in the document) -> `datasheet.parse` -> `ChartData`
 -> `layout_column` -> primitives -> `lo/` draws shapes. Stored state is part of the user's files,
@@ -88,9 +89,9 @@ so every released schema version must stay readable (`state_io.py`).
 | Module | Role |
 |---|---|
 | `store.py` | Chart id anchor (group name `librecharts:<id>`), state in a document custom property, the document-wide scheme and agenda properties, `claim` forks renamed copies; no `uno` import, unit-tested with fakes |
-| `render.py` | Primitives -> shapes in a group with a `Look` (scheme plus series colours); `rerender` replaces children in place, `sync_geometry` moves them for a resize (poly shapes through `PolyPolygon`) |
+| `render.py` | Primitives -> shapes in a group with a `Look` (scheme plus series colours); `layout_box` reads a chart's position and size from its frame; `rerender` updates the shapes in place when the structure is unchanged and replaces them otherwise; `sync_geometry` moves them for a resize or label move (poly shapes through `PolyPolygon`) |
 | `scheme.py` | Reads and writes the document's colour scheme; the configured default for new documents; builds the renderer's `Look` (ADR 0016) |
-| `samescale.py` | Collects a scale group's charts and sizes, redraws every affected chart in one lock (ADR 0017) |
+| `samescale.py` | Collects a scale group's charts and sizes, redraws every affected chart in one lock and marks the document busy meanwhile (ADRs 0017, 0023) |
 | `undo.py` | One explicit undo action per chart operation |
 | `elements.py` | Harvey balls and check marks: find, insert, change state (one undo step), re-lay out after a resize; the state is the group name (ADR 0021) |
 | `arrange.py` | The selected shapes and the undo action for same size, grid and swap; the geometry is `core/arrange.py` |
@@ -100,7 +101,8 @@ so every released schema version must stay readable (`state_io.py`).
 | `links.py` | Data links: find, open (hidden, read-only, no macros) and read the sources of linked charts, each once per update; the info bar when sources changed (ADR 0020) |
 | `linkdialog.py` | The link dialog (modal, built in code): file, sheet, range or name; reads the range before it links |
 | `commands.py` | Menu commands (selection handling, messages, same scale, copy format, scheme files, data links); called by `extension/entry.py` |
-| `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place, including their scale group (ADRs 0007, 0017) |
+| `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place, including their scale group (ADRs 0007, 0017); looks for moved labels where one can have moved (ADR 0023) |
+| `labels.py` | Moved labels: reads the shapes' boxes, stores the offsets `core/labels.moved` finds (no undo action) and puts other dragged shapes back; the *Move labels* session (ADR 0023) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
 | `axisdialog.py` | The axis break dialog (modal, built in code); asks, then adds or changes the break |
 | `formatdialog.py` | The number-format and value-line dialogs (modal, built in code); validation lives in `core/format.py` and `core/value_line.py` |
@@ -112,7 +114,9 @@ so every released schema version must stay readable (`state_io.py`).
 Further invariants of the adapter:
 
 6. **A chart group starts with an invisible frame rectangle** covering the full layout box, so the
-   group's size equals the layout size and re-rendering at the current size is stable.
+   group's size equals the layout size and re-rendering at the current size is stable. A label
+   moved out of the chart makes the group's bounding box grow, the frame stays: position and size of
+   a chart are always read from the frame (`render.layout_box`), never from the group (ADR 0023).
 7. **Every chart operation is exactly one undo step.** LibreOffice does not record API shape
    inserts, so `lo/undo.py` locks its recording and registers an explicit action.
 

@@ -85,7 +85,7 @@ def close_datasheets(ctx):
         calc.close(True)
 
 
-def uno_command(ctx, doc, command):
+def uno_command(ctx, doc, command, args=()):
     """Run a LibreOffice UI command such as ``.uno:Undo`` like the menu or keyboard does.
 
     Use this instead of ``doc.getUndoManager().undo()/redo()``: called from this test process,
@@ -93,7 +93,7 @@ def uno_command(ctx, doc, command):
     extension's resize watcher was active. Users trigger undo through the UI command.
     """
     helper = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.DispatchHelper", ctx)
-    helper.executeDispatch(doc.getCurrentController().getFrame(), command, "", 0, ())
+    helper.executeDispatch(doc.getCurrentController().getFrame(), command, "", 0, args)
 
 
 class Skip(Exception):

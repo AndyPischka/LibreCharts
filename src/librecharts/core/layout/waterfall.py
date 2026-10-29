@@ -43,7 +43,7 @@ from librecharts.core.layout.common import (
     format_value,
     visible_ticks,
 )
-from librecharts.core.model import Annotation, Format
+from librecharts.core.model import Annotation, Format, LabelKey
 from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
 from librecharts.core.scale import Axis, nice_axis
 from librecharts.core.waterfall import Step, WaterfallData, levels
@@ -114,7 +114,16 @@ def layout_waterfall(
         out.append(Rect(x, top, column_width, bottom - top, _series(step)))
         label_y = bottom if _label_below(step) else top - LABEL_HEIGHT
         out.append(
-            Text(x, label_y, column_width, LABEL_HEIGHT, _label(step, fmt), "center", "value")
+            Text(
+                x,
+                label_y,
+                column_width,
+                LABEL_HEIGHT,
+                _label(step, fmt),
+                "center",
+                "value",
+                key=LabelKey("value", i),
+            )
         )
         if i < len(data.steps) - 1:
             next_x = plot_left + (i + 1) * slot + (slot - column_width) / 2

@@ -15,7 +15,7 @@ from librecharts.core.layout.mekko import (
     layout_mekko,
 )
 from librecharts.core.mekko import MekkoData, has_width_row, parse_mekko
-from librecharts.core.model import ChartState, Format
+from librecharts.core.model import ChartState, Format, LabelKey
 from librecharts.core.primitives import Line, Rect, Text
 
 
@@ -82,16 +82,16 @@ def test_golden_geometry() -> None:
     assert layout_mekko(data, 10600, 10000) == (
         Line(0, 9000, 8100, 9000, "baseline"),
         Rect(0, 2850, 4000, 6150, 0),
-        Text(0, 2850, 4000, 6150, "75%", "center", "value", fill=0),
+        Text(0, 2850, 4000, 6150, "75%", "center", "value", fill=0, key=LabelKey("value", 0, 0)),
         Rect(0, 800, 4000, 2050, 1),
-        Text(0, 800, 4000, 2050, "25%", "center", "value", fill=1),
-        Text(0, 200, 4000, LABEL_HEIGHT, "40", "center", "total"),
+        Text(0, 800, 4000, 2050, "25%", "center", "value", fill=1, key=LabelKey("value", 0, 1)),
+        Text(0, 200, 4000, LABEL_HEIGHT, "40", "center", "total", key=LabelKey("total", 0)),
         Text(0, 9000, 4000, CATEGORY_BAND, "A", "center", "category"),
         Rect(4100, 6950, 4000, 2050, 0),
-        Text(4100, 6950, 4000, 2050, "25%", "center", "value", fill=0),
+        Text(4100, 6950, 4000, 2050, "25%", "center", "value", fill=0, key=LabelKey("value", 1, 0)),
         Rect(4100, 800, 4000, 6150, 1),
-        Text(4100, 800, 4000, 6150, "75%", "center", "value", fill=1),
-        Text(4100, 200, 4000, LABEL_HEIGHT, "40", "center", "total"),
+        Text(4100, 800, 4000, 6150, "75%", "center", "value", fill=1, key=LabelKey("value", 1, 1)),
+        Text(4100, 200, 4000, LABEL_HEIGHT, "40", "center", "total", key=LabelKey("total", 1)),
         Text(4100, 9000, 4000, CATEGORY_BAND, "B", "center", "category"),
         Text(8250, 7675, 2350, LABEL_HEIGHT, "S1", "left", "series"),
         Text(8250, 3575, 2350, LABEL_HEIGHT, "S2", "left", "series"),
@@ -118,7 +118,7 @@ def test_small_segments_and_narrow_columns_get_empty_labels() -> None:
         ("S1", (1.0, 5.0)), ("S2", (99.0, 5.0)), categories=("Wide", "Thin"), widths=(100, 1)
     )
     texts = [p for p in layout_mekko(data, 10600, 10000) if isinstance(p, Text)]
-    values = [t.text for t in texts if t.role == "value"]
+    values = [t.shown for t in texts if t.role == "value"]
     widths = [t.text for t in texts if t.role == "total"]
     assert values == ["", "99%", "", ""]
     assert widths == ["100", "1"]
@@ -141,7 +141,7 @@ def test_empty_cells_give_zero_height_segments_without_labels() -> None:
     primitives = layout_mekko(data, 10600, 10000)
     rects = [p for p in primitives if isinstance(p, Rect)]
     assert rects[0].height == 0
-    values = [p.text for p in primitives if isinstance(p, Text) and p.role == "value"]
+    values = [p.shown for p in primitives if isinstance(p, Text) and p.role == "value"]
     assert values == ["", "100%"]
 
 
@@ -208,17 +208,17 @@ def test_units_golden_geometry() -> None:
     assert layout_mekko(data, 10600, 10000, percent=False) == (
         Line(0, 8400, 8100, 8400, "baseline"),
         Rect(0, 2700, 4000, 5700, 0),
-        Text(0, 2700, 4000, 5700, "30", "center", "value", fill=0),
+        Text(0, 2700, 4000, 5700, "30", "center", "value", fill=0, key=LabelKey("value", 0, 0)),
         Rect(0, 800, 4000, 1900, 1),
-        Text(0, 800, 4000, 1900, "10", "center", "value", fill=1),
-        Text(0, 200, 4000, LABEL_HEIGHT, "40", "center", "total"),
+        Text(0, 800, 4000, 1900, "10", "center", "value", fill=1, key=LabelKey("value", 0, 1)),
+        Text(0, 200, 4000, LABEL_HEIGHT, "40", "center", "total", key=LabelKey("total", 0)),
         Text(0, 8400, 4000, CATEGORY_BAND, "A", "center", "category"),
         Text(0, 9400, 4000, LABEL_HEIGHT, "40", "center", "value"),
         Rect(4100, 6500, 4000, 1900, 0),
-        Text(4100, 6500, 4000, 1900, "10", "center", "value", fill=0),
+        Text(4100, 6500, 4000, 1900, "10", "center", "value", fill=0, key=LabelKey("value", 1, 0)),
         Rect(4100, 800, 4000, 5700, 1),
-        Text(4100, 800, 4000, 5700, "30", "center", "value", fill=1),
-        Text(4100, 200, 4000, LABEL_HEIGHT, "40", "center", "total"),
+        Text(4100, 800, 4000, 5700, "30", "center", "value", fill=1, key=LabelKey("value", 1, 1)),
+        Text(4100, 200, 4000, LABEL_HEIGHT, "40", "center", "total", key=LabelKey("total", 1)),
         Text(4100, 8400, 4000, CATEGORY_BAND, "B", "center", "category"),
         Text(4100, 9400, 4000, LABEL_HEIGHT, "40", "center", "value"),
         Text(8250, 7150, 2350, LABEL_HEIGHT, "S1", "left", "series"),
@@ -247,7 +247,10 @@ def test_units_labels_show_values_sums_and_widths() -> None:
     texts = [p for p in layout_mekko(data, 10600, 10000, percent=False) if isinstance(p, Text)]
     assert [t.text for t in texts if t.role == "total"] == ["12.5", "0"]
     assert [t.text for t in texts if t.role == "value" and t.height == LABEL_HEIGHT] == ["7", "9"]
-    assert [t.text for t in texts if t.role == "value" and t.height != LABEL_HEIGHT] == ["12.5", ""]
+    assert [t.shown for t in texts if t.role == "value" and t.height != LABEL_HEIGHT] == [
+        "12.5",
+        "",
+    ]
 
 
 def test_units_all_geometry_stays_inside_the_box() -> None:

@@ -3,7 +3,9 @@
 
 Every group starts with an invisible frame rectangle spanning the whole layout box. It keeps the
 group's bounding box equal to the layout size, so re-rendering at the group's current size is
-stable even when labels or bars do not reach the edges.
+stable even when labels or bars do not reach the edges. A label the user moved out of the chart
+makes the group's bounding box grow; the frame stays the layout box (:func:`layout_box`), so
+position and size of a chart are always read from it, never from the group (ADR 0023).
 """
 
 from __future__ import annotations
@@ -42,6 +44,7 @@ ELEMENT_LINE_WIDTH = 60  # 1/100 mm, tick and cross of check marks
 TICK_COLOR = 0x2E7D32
 CROSS_COLOR = 0xC62828
 BOLD = 150.0  # com.sun.star.awt.FontWeight.BOLD
+NORMAL = 100.0  # com.sun.star.awt.FontWeight.NORMAL
 
 _FILL_NONE = uno.Enum("com.sun.star.drawing.FillStyle", "NONE")
 _FILL_SOLID = uno.Enum("com.sun.star.drawing.FillStyle", "SOLID")
@@ -102,33 +105,78 @@ def render_group(
     return group
 
 
+def layout_box(group: Any) -> tuple[int, int, int, int]:
+    """The chart's layout box (x, y, width, height): the position and size of its invisible frame.
+
+    The group's own bounding box is the same unless a label was moved out of the chart.
+    """
+    frame = group.getByIndex(0) if group.getCount() else group
+    position, size = frame.Position, frame.Size
+    return position.X, position.Y, size.Width, size.Height
+
+
 def rerender(
     doc: Any, group: Any, primitives: tuple[Primitive, ...], look: Look = DEFAULT_LOOK
 ) -> None:
-    """Replace the group's children; position, size, name and z-order of the group are kept.
+    """Draw ``primitives`` in the group; position, size, name and z-order of the group are kept.
 
-    ``primitives`` must have been laid out for the group's current size.
+    ``primitives`` must have been laid out for the chart's current layout box. If their structure
+    (kinds and order) is the one already drawn, the existing shapes are updated in place: the undo
+    steps LibreOffice recorded for them (a resize, a label drag) keep working. Only a changed
+    structure replaces the children.
     """
+    x, y, width, height = layout_box(group)
+    specs = _specs(primitives, x, y, width, height)
     old = [group.getByIndex(i) for i in range(group.getCount())]
-    position, size = group.Position, group.Size
+    if _same_structure(old, specs):
+        for shape, spec in zip(old[1:], specs[1:], strict=True):  # the frame stays as it is
+            _style(shape, spec, look)
+        return
     # Add first, then remove: an emptied group may be dissolved by LibreOffice.
-    for spec in _specs(primitives, position.X, position.Y, size.Width, size.Height):
+    for spec in specs:
         _create(doc, group, spec, look)
     for shape in old:
         group.remove(shape)
 
 
+def _same_structure(children: list[Any], specs: list[_Spec]) -> bool:
+    """Whether the children correspond one to one to ``specs``: the same shape kinds, and lines
+    with the arrow they need (the one thing the renderer cannot take back from a shape)."""
+    return len(children) == len(specs) and all(
+        child.ShapeType == f"com.sun.star.drawing.{spec.kind}" and _arrow_fits(child, spec)
+        for child, spec in zip(children, specs, strict=True)
+    )
+
+
+def _arrow_fits(child: Any, spec: _Spec) -> bool:
+    p = spec.primitive
+    if not isinstance(p, Line):
+        return True
+    start, end = (ARROW_NAME, "") if _drawn_reversed(p) else ("", ARROW_NAME)
+    if not p.arrow:
+        start = end = ""
+    return child.LineStartName == start and child.LineEndName == end
+
+
+def _drawn_reversed(p: Line) -> bool:
+    """Whether a line runs against the direction of its bounding box: (x2, y2) is its start."""
+    return p.arrow and (p.x2 < p.x1 or p.y2 < p.y1)
+
+
 SyncResult = Literal["unchanged", "updated", "mismatch"]
 
 
-def sync_geometry(group: Any, primitives: tuple[Primitive, ...]) -> SyncResult:
-    """Move and resize the existing children to ``primitives`` laid out at the group's box.
+def sync_geometry(
+    group: Any, primitives: tuple[Primitive, ...], look: Look | None = None
+) -> SyncResult:
+    """Move and resize the existing children to ``primitives`` laid out at the chart's layout box.
 
-    Keeps the shapes themselves, so LibreOffice's own undo of a resize can restore them.
-    Returns ``"mismatch"`` (and changes nothing) if the children do not correspond one to one.
+    Keeps the shapes themselves, so LibreOffice's own undo of a resize can restore them. With a
+    ``look`` the text colour of labels is synced too (a label moved off its segment). Returns
+    ``"mismatch"`` (and changes nothing) if the children do not correspond one to one.
     """
-    position, size = group.Position, group.Size
-    specs = _specs(primitives, position.X, position.Y, size.Width, size.Height)
+    x, y, width, height = layout_box(group)
+    specs = _specs(primitives, x, y, width, height)
     children = [group.getByIndex(i) for i in range(group.getCount())]
     if len(children) != len(specs) or any(
         child.ShapeType != f"com.sun.star.drawing.{spec.kind}"
@@ -152,9 +200,14 @@ def sync_geometry(group: Any, primitives: tuple[Primitive, ...]) -> SyncResult:
             child.Position = Point(spec.x, spec.y)
             child.Size = Size(spec.width, spec.height)
             changed = True
-        if isinstance(spec.primitive, Text) and child.String != spec.primitive.text:
-            child.String = spec.primitive.text
-            changed = True
+        if isinstance(spec.primitive, Text):
+            label = spec.primitive
+            if child.String != label.shown:
+                child.String = label.shown
+                changed = True
+            if look is not None and child.CharColor != _text_color(label, look):
+                child.CharColor = _text_color(label, look)
+                changed = True
     return "updated" if changed else "unchanged"
 
 
@@ -250,9 +303,18 @@ def _dash() -> Any:
     return dash
 
 
+def _text_color(label: Text, look: Look) -> int:
+    return look.text_on(look.color(label.fill)) if label.fill is not None else look.scheme.text
+
+
 def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
     shape = doc.createInstance(f"com.sun.star.drawing.{spec.kind}")
     group.add(shape)
+    _style(shape, spec, look)
+
+
+def _style(shape: Any, spec: _Spec, look: Look) -> None:
+    """Set geometry, text and every property the renderer sets: for new and existing shapes."""
     p = spec.primitive
     if spec.points is not None:  # polyline or polygon: its points define the geometry
         shape.PolyPolygon = spec.points
@@ -287,8 +349,7 @@ def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
     elif isinstance(p, (Marker, Bubble)):
         shape.FillStyle, shape.FillColor = _FILL_SOLID, look.color(p.series)
         shape.LineStyle = _LINE_NONE
-        if isinstance(p, Bubble):
-            shape.FillTransparence = BUBBLE_TRANSPARENCY
+        shape.FillTransparence = BUBBLE_TRANSPARENCY if isinstance(p, Bubble) else 0
     elif isinstance(p, Line):
         shape.LineStyle, shape.LineColor, shape.LineWidth = (
             _LINE_SOLID,
@@ -301,7 +362,7 @@ def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
             shape.LineColor, shape.LineWidth = look.scheme.grid(), GRID_WIDTH
         elif p.role == "axis":
             shape.LineWidth = AXIS_WIDTH
-        if p.arrow and (p.x2 < p.x1 or p.y2 < p.y1):  # drawn reversed: (x2, y2) is its start
+        if _drawn_reversed(p):
             shape.LineStartName, shape.LineStartWidth = ARROW_NAME, ARROW_WIDTH
         elif p.arrow:
             shape.LineEndName, shape.LineEndWidth = ARROW_NAME, ARROW_WIDTH
@@ -314,14 +375,11 @@ def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
         shape.TextLeftDistance = shape.TextRightDistance = 0
         shape.TextUpperDistance = shape.TextLowerDistance = 0
         # Text and character properties only stick once the shape is in a group or on a page.
-        shape.String = label.text
+        shape.String = label.shown
         shape.CharFontName = look.scheme.font_name
         shape.CharHeight = (
             max(look.font_size * 0.8, 4.0) if label.role == "axis" else look.font_size
         )
-        shape.CharColor = (
-            look.text_on(look.color(label.fill)) if label.fill is not None else look.scheme.text
-        )
+        shape.CharColor = _text_color(label, look)
         shape.ParaAdjust = _PARA_ADJUST[label.align]
-        if label.role == "heading":
-            shape.CharWeight = BOLD
+        shape.CharWeight = BOLD if label.role == "heading" else NORMAL

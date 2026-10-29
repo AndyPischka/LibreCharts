@@ -4,7 +4,15 @@ from typing import Any
 import pytest
 
 from librecharts.core import state_io
-from librecharts.core.model import SCHEMA_VERSION, Annotation, ChartState, Format, Link
+from librecharts.core.model import (
+    SCHEMA_VERSION,
+    Annotation,
+    ChartState,
+    Format,
+    LabelKey,
+    LabelOffset,
+    Link,
+)
 from librecharts.core.state_io import StateError, from_json, to_json
 
 
@@ -32,6 +40,8 @@ ARROW = {
 
 
 BREAK = {**ARROW, "kind": "axis_break", "start": 0, "end": 0}
+
+LABEL = {"role": "value", "category": 1, "series": 0, "dx": 120.5, "dy": -300.0}
 
 LINK = {
     "url": "file:///x.ods",
@@ -292,6 +302,17 @@ def test_integers_in_values_become_floats() -> None:
         lambda r: r.update(doughnut="yes"),
         lambda r: r.pop("doughnut"),
         lambda r: r.pop("link"),
+        lambda r: r.pop("labels"),
+        lambda r: r.update(labels={}),
+        lambda r: r.update(labels=[5]),
+        lambda r: r.update(labels=[{**LABEL, "role": "name"}]),
+        lambda r: r.update(labels=[{**LABEL, "category": -1}]),
+        lambda r: r.update(labels=[{**LABEL, "category": "0"}]),
+        lambda r: r.update(labels=[{**LABEL, "series": 1.5}]),
+        lambda r: r.update(labels=[{**LABEL, "dx": None}]),
+        lambda r: r.update(labels=[{**LABEL, "dy": "1"}]),
+        lambda r: r.update(labels=[{k: v for k, v in LABEL.items() if k != "dx"}]),
+        lambda r: r.update(labels=[LABEL, {**LABEL, "dx": 5.0}]),
         lambda r: r.update(link="file:///x.ods"),
         lambda r: r.update(link={"url": "file:///x.ods", "sheet": "A", "range": "A1:B2"}),
         lambda r: r.update(link={**LINK, "url": ""}),
@@ -404,3 +425,22 @@ def test_older_state_is_migrated(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_the_model_rejects_a_non_finite_axis_break_range(bounds: tuple[float, float]) -> None:
     with pytest.raises(ValueError, match="finite"):
         Annotation("axis_break", 0, 0, lower=bounds[0], upper=bounds[1])
+
+
+def test_version_11_state_has_no_moved_labels() -> None:
+    raw = valid_raw()
+    del raw["labels"]
+    raw["v"] = 11
+    restored = from_json(json.dumps(raw))
+    assert restored.version == SCHEMA_VERSION
+    assert restored.labels == ()
+
+
+def test_round_trip_preserves_label_offsets() -> None:
+    state = make_state(
+        labels=(
+            LabelOffset(LabelKey("value", 1, 0), 120.5, -300.0),
+            LabelOffset(LabelKey("total", 0), 0.0, -450.0),
+        )
+    )
+    assert from_json(to_json(state)) == state

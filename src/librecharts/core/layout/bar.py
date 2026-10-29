@@ -40,7 +40,7 @@ from librecharts.core.layout.common import (
     value_axis,
     visible_ticks,
 )
-from librecharts.core.model import Annotation, Format, Grouping
+from librecharts.core.model import Annotation, Format, Grouping, LabelKey
 from librecharts.core.percent import column_total, share_label
 from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
 from librecharts.core.scale import Axis
@@ -505,10 +505,22 @@ def _stacked_bar(
             left, right = x(negative + value), x(negative)
             negative += value
         out.append(Rect(left, y, right - left, thickness, i))
-        # Always emit the label (empty if the segment is too narrow): the structure must not depend
+        # Always emit the label (hidden if the segment is too narrow): the structure must not depend
         # on the size, so a resized chart can be re-laid out in place (lo/render.py).
-        label = format_value(value, fmt) if right - left >= MIN_SEGMENT_FOR_LABEL else ""
-        out.append(Text(left, y, right - left, thickness, label, "center", "value", fill=i))
+        out.append(
+            Text(
+                left,
+                y,
+                right - left,
+                thickness,
+                format_value(value, fmt),
+                "center",
+                "value",
+                fill=i,
+                key=LabelKey("value", c, i),
+                hidden=right - left < MIN_SEGMENT_FOR_LABEL,
+            )
+        )
     if segments >= 2:  # a single segment's total would just repeat its own label
         out.append(
             Text(
@@ -519,6 +531,7 @@ def _stacked_bar(
                 format_value(positive + negative, fmt),
                 "left",
                 "total",
+                key=LabelKey("total", c),
             )
         )
     if cut and cut.cuts(column_tops(data, "stacked")[c]):
@@ -544,9 +557,21 @@ def _percent_bar(
         left, right = x(level), x(level + length)
         level += length
         out.append(Rect(left, y, right - left, thickness, i))
-        # Always emit the label (empty if narrow): the structure must not depend on the size.
-        label = percentage if right - left >= MIN_SEGMENT_FOR_LABEL else ""
-        out.append(Text(left, y, right - left, thickness, label, "center", "value", fill=i))
+        # Always emit the label (hidden if narrow): the structure must not depend on the size.
+        out.append(
+            Text(
+                left,
+                y,
+                right - left,
+                thickness,
+                percentage,
+                "center",
+                "value",
+                fill=i,
+                key=LabelKey("value", c, i),
+                hidden=right - left < MIN_SEGMENT_FOR_LABEL,
+            )
+        )
     out.append(
         Text(
             x(100.0) + LABEL_GAP,
@@ -556,6 +581,7 @@ def _percent_bar(
             format_value(total, fmt),
             "left",
             "total",
+            key=LabelKey("total", c),
         )
     )
     return out
@@ -579,6 +605,7 @@ def _clustered_bar(
         bar_y = y + i * bar_height
         label_y = bar_y + (bar_height - LABEL_HEIGHT) / 2
         text = format_value(value, fmt)
+        key = LabelKey("value", c, i)
         if value >= 0:
             left, right = x(0), x(value)
             label = Text(
@@ -589,6 +616,7 @@ def _clustered_bar(
                 text,
                 "left",
                 "value",
+                key=key,
             )
         else:
             left, right = x(value), x(0)
@@ -600,6 +628,7 @@ def _clustered_bar(
                 text,
                 "right",
                 "value",
+                key=key,
             )
         out.append(Rect(left, bar_y, right - left, bar_height, i))
         out.append(label)

@@ -23,7 +23,7 @@ from librecharts.core.layout.common import (
     TICK_HEIGHT,
     format_value,
 )
-from librecharts.core.model import Format
+from librecharts.core.model import Format, LabelKey
 from librecharts.core.primitives import Align, Line, Primitive, Rect, Text
 from librecharts.core.scale import Axis, nice_axis
 
@@ -106,6 +106,7 @@ def layout_butterfly(
                     format_value(value, fmt),
                     align,
                     "value",
+                    key=LabelKey("value", c, side),
                 )
             )
     return tuple(out)

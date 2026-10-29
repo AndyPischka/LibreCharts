@@ -169,7 +169,8 @@ def add_annotation(doc: Any, group: Any, annotation: Annotation) -> None:
 def fit_to_size(doc: Any, group: Any) -> bool:
     """Re-lay out the chart in ``group`` for the group's current size; ``True`` if anything moved.
 
-    Used after the user resized the group. Shapes are moved in place and no undo action is added:
+    Used after the user resized the chart (its frame). Shapes are moved in place and no undo action
+    is added:
     LibreOffice's own undo of the resize restores them. Charts without readable state are left
     as they are, and so are groups shrunk below the minimum layout size.
     """
@@ -180,15 +181,18 @@ def fit_to_size(doc: Any, group: Any) -> bool:
         state = store.read_state(doc, chart_id)
         if state is None:
             return False
-        size = group.Size
+        _, _, width, height = render.layout_box(group)
         length = samescale.group_length_per_unit(doc, chart_id, state)
-        primitives = layout_chart(state, size.Width, size.Height, length)
-        changed = render.sync_geometry(group, primitives) == "updated"
+        primitives = layout_chart(state, width, height, length)
+        look = scheme.look(doc, state)
+        changed = render.sync_geometry(group, primitives, look) == "updated"
         # The whole group shares one scale: a resize of one chart re-lays out the others too.
         for peer, peer_state in samescale.peers(doc, chart_id, state):
-            peer_size = peer.Size
-            peer_primitives = layout_chart(peer_state, peer_size.Width, peer_size.Height, length)
-            if render.sync_geometry(peer, peer_primitives) == "updated":
+            _, _, peer_width, peer_height = render.layout_box(peer)
+            peer_primitives = layout_chart(peer_state, peer_width, peer_height, length)
+            if render.sync_geometry(peer, peer_primitives, scheme.look(doc, peer_state)) == (
+                "updated"
+            ):
                 changed = True
     except ValueError:  # StateError, or the group is too small to lay out
         return False

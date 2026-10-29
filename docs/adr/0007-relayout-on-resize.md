@@ -20,7 +20,7 @@ Measured with LibreOffice 26.8:
 ## Decision
 
 - `layout_column` returns the same kinds of primitives in the same order for any size (a too flat
-  segment gets an empty label instead of none).
+  segment gets a hidden label instead of none; the label offsets of ADR 0023 keep this too).
 - `lo/resize.py` keeps one watcher per presentation, registered by a document-open job and by the
   insert command. Modify events are coalesced into one asynchronous callback (`AsyncCallback`), so the
   document is never changed inside its own notification.
@@ -29,6 +29,8 @@ Measured with LibreOffice 26.8:
   LibreOffice's own resize undo restores those very shapes.
 - Comparing shapes with the layout makes the check idempotent: after undo, redo or a reload the shapes
   already match and nothing changes. Groups shrunk below the minimum layout size stay stretched.
+- Since ADR 0023 the watcher compares the size of the chart's frame (the layout box), not of the
+  group, and redraws update shapes in place (`render.rerender`), so older undo steps keep working.
 
 ## Alternatives considered
 

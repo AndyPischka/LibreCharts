@@ -19,7 +19,7 @@ from librecharts.core.layout.bar import (
 from librecharts.core.layout.chart import layout_chart
 from librecharts.core.layout.column import BREAK_GAP, MIN_ARROW_LABEL_WIDTH
 from librecharts.core.layout.common import format_value
-from librecharts.core.model import Annotation, Grouping
+from librecharts.core.model import Annotation, Grouping, LabelKey
 from librecharts.core.primitives import BACKGROUND, Line, Rect, Text
 
 
@@ -33,10 +33,10 @@ def test_clustered_golden_geometry() -> None:
     assert layout_bar(chart, "clustered", 8200, 4000) == (
         Line(3000, 0, 3000, 4000, "baseline"),
         Rect(3000, 300, 2000, 1400, 0),
-        Text(5150, 700, 1050, LABEL_HEIGHT, "10", "left", "value"),
+        Text(5150, 700, 1050, LABEL_HEIGHT, "10", "left", "value", key=LabelKey("value", 0, 0)),
         Text(0, 0, 2850, 2000, "A", "right", "category"),
         Rect(3000, 2300, 4000, 1400, 0),
-        Text(7150, 2700, 1050, LABEL_HEIGHT, "20", "left", "value"),
+        Text(7150, 2700, 1050, LABEL_HEIGHT, "20", "left", "value", key=LabelKey("value", 1, 0)),
         Text(0, 2000, 2850, 2000, "B", "right", "category"),
     )
 
@@ -47,10 +47,10 @@ def test_stacked_golden_geometry() -> None:
     assert layout_bar(chart, "stacked", 8200, 2000) == (
         Line(3000, 0, 3000, 2000, "baseline"),
         Rect(3000, 300, 1000, 1400, 0),
-        Text(3000, 300, 1000, 1400, "10", "center", "value", fill=0),
+        Text(3000, 300, 1000, 1400, "10", "center", "value", fill=0, key=LabelKey("value", 0, 0)),
         Rect(4000, 300, 3000, 1400, 1),
-        Text(4000, 300, 3000, 1400, "30", "center", "value", fill=1),
-        Text(7150, 700, 1050, LABEL_HEIGHT, "40", "left", "total"),
+        Text(4000, 300, 3000, 1400, "30", "center", "value", fill=1, key=LabelKey("value", 0, 1)),
+        Text(7150, 700, 1050, LABEL_HEIGHT, "40", "left", "total", key=LabelKey("total", 0)),
         Text(0, 0, 2850, 2000, "X", "right", "category"),
     )
 
@@ -72,14 +72,15 @@ def test_single_segment_has_no_total_label() -> None:
     assert {t.role for t in texts} == {"value", "category"}
 
 
-def test_narrow_segments_get_an_empty_inside_label() -> None:
+def test_narrow_segments_hide_their_inside_label() -> None:
     chart = data(("A", (1.0,)), ("B", (1000.0,)), categories=("X",))
     values = [
-        p.text
+        p
         for p in layout_bar(chart, "stacked", 8200, 2000)
         if isinstance(p, Text) and p.role == "value"
     ]
-    assert values == ["", "1000"]
+    assert [p.shown for p in values] == ["", "1000"]
+    assert [p.text for p in values] == ["1", "1000"]
 
 
 def test_clustered_negative_label_clears_the_category_names() -> None:

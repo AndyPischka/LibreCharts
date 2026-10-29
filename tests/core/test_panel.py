@@ -1,4 +1,5 @@
 from dataclasses import replace
+from pathlib import Path
 
 from librecharts.core.datasheet import (
     sample_mekko_state,
@@ -188,6 +189,17 @@ def test_element_and_arrange_buttons_follow_the_selection() -> None:
     swap = [b for b in three.arrange if b.command.endswith("op=swap")]
     assert [b.enabled for b in swap] == [False]
     assert sum(b.enabled for b in three.arrange) == len(three.arrange) - 1
+
+
+def test_element_and_arrange_buttons_have_icons() -> None:
+    panel = content(None, False, "en-US")
+    images = Path(__file__).parents[2] / "extension" / "images"
+    icons = [b.icon for b in (*panel.elements, *panel.arrange)]
+    assert len(icons) == 3 + 7
+    assert len(set(icons)) == len(icons)
+    for icon in icons:
+        for size in (16, 26):
+            assert (images / f"{icon}_{size}.png").is_file(), icon
 
 
 def test_agenda_buttons_follow_the_agenda_and_the_current_slide() -> None:

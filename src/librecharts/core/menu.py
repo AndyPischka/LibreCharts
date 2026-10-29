@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from librecharts.core import annotations as notes
 from librecharts.core import elements, options, style
 from librecharts.core import format as formats
+from librecharts.core import labels as core_labels
 from librecharts.core.axis_break import describe
 from librecharts.core.datasheet import ChartData
 from librecharts.core.elements import Element
@@ -70,6 +71,10 @@ def chart_menu(
         _command("menu_copy_format", "CopyChartFormat", locale),
         _command("menu_apply_format", "ApplyChartFormat", locale),
     ]
+    if core_labels.movable(state):
+        items.append(_command("menu_move_labels", "MoveLabels", locale))
+        if state.labels:
+            items.append(_command("menu_reset_labels", "ResetLabels", locale))
     if state.scale_group is not None:
         items.append(_command("menu_remove_same_scale", "RemoveSameScale", locale))
     if supports(state, "difference"):

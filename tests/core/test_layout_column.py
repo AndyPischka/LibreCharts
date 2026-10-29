@@ -17,7 +17,7 @@ from librecharts.core.layout.column import (
     format_value,
     layout_column,
 )
-from librecharts.core.model import Annotation, Grouping
+from librecharts.core.model import Annotation, Grouping, LabelKey
 from librecharts.core.primitives import (
     BACKGROUND,
     Line,
@@ -39,10 +39,10 @@ def test_clustered_golden_geometry() -> None:
     assert layout_column(chart, "clustered", 2000, 10000) == (
         Line(0, 9000, 2000, 9000, "baseline"),
         Rect(150, 4900, 700, 4100, 0),
-        Text(150, 4300, 700, LABEL_HEIGHT, "10", "center", "value"),
+        Text(150, 4300, 700, LABEL_HEIGHT, "10", "center", "value", key=LabelKey("value", 0, 0)),
         Text(0, 9000, 1000, CATEGORY_BAND, "A", "center", "category"),
         Rect(1150, 800, 700, 8200, 0),
-        Text(1150, 200, 700, LABEL_HEIGHT, "20", "center", "value"),
+        Text(1150, 200, 700, LABEL_HEIGHT, "20", "center", "value", key=LabelKey("value", 1, 0)),
         Text(1000, 9000, 1000, CATEGORY_BAND, "B", "center", "category"),
     )
 
@@ -53,10 +53,10 @@ def test_stacked_golden_geometry() -> None:
     assert layout_column(chart, "stacked", 1000, 10000) == (
         Line(0, 9000, 1000, 9000, "baseline"),
         Rect(150, 6950, 700, 2050, 0),
-        Text(150, 6950, 700, 2050, "10", "center", "value", fill=0),
+        Text(150, 6950, 700, 2050, "10", "center", "value", fill=0, key=LabelKey("value", 0, 0)),
         Rect(150, 800, 700, 6150, 1),
-        Text(150, 800, 700, 6150, "30", "center", "value", fill=1),
-        Text(150, 200, 700, LABEL_HEIGHT, "40", "center", "total"),
+        Text(150, 800, 700, 6150, "30", "center", "value", fill=1, key=LabelKey("value", 0, 1)),
+        Text(150, 200, 700, LABEL_HEIGHT, "40", "center", "total", key=LabelKey("total", 0)),
         Text(0, 9000, 1000, CATEGORY_BAND, "X", "center", "category"),
     )
 
@@ -88,14 +88,13 @@ def test_single_segment_has_no_total_label() -> None:
     assert {t.role for t in texts} == {"value", "category"}
 
 
-def test_flat_segments_get_an_empty_inside_label() -> None:
+def test_flat_segments_hide_their_inside_label() -> None:
     chart = data(("A", (1.0,)), ("B", (1000.0,)), categories=("X",))
     values = [
-        p.text
-        for p in layout_column(chart, "stacked", 1000, 10000)
-        if isinstance(p, Text) and p.role == "value"
+        p for p in layout_column(chart, "stacked", 1000, 10000) if isinstance(p, Text) and p.key
     ]
-    assert values == ["", "1000"]
+    assert [p.shown for p in values if p.role == "value"] == ["", "1000"]
+    assert [p.text for p in values if p.role == "value"] == ["1", "1000"]
 
 
 @pytest.mark.parametrize("grouping", ["stacked", "clustered"])
@@ -472,16 +471,16 @@ def test_a_combination_chart_draws_one_series_as_a_line() -> None:
     assert primitives == (
         Line(0, 9000, 2000, 9000, "baseline"),
         Rect(150, 4900, 700, 4100, 0),
-        Text(150, 4300, 700, LABEL_HEIGHT, "10", "center", "value"),
+        Text(150, 4300, 700, LABEL_HEIGHT, "10", "center", "value", key=LabelKey("value", 0, 0)),
         Text(0, 9000, 1000, CATEGORY_BAND, "X", "center", "category"),
         Rect(1150, 800, 700, 8200, 0),
-        Text(1150, 200, 700, LABEL_HEIGHT, "20", "center", "value"),
+        Text(1150, 200, 700, LABEL_HEIGHT, "20", "center", "value", key=LabelKey("value", 1, 0)),
         Text(1000, 9000, 1000, CATEGORY_BAND, "Y", "center", "category"),
         Polyline(((500, 6950), (1500, 5720)), 1),
         Marker(500, 6950, 1),
         Marker(1500, 5720, 1),
-        Text(0, 6250, 1000, LABEL_HEIGHT, "5", "center", "value"),
-        Text(1000, 5020, 1000, LABEL_HEIGHT, "8", "center", "value"),
+        Text(0, 6250, 1000, LABEL_HEIGHT, "5", "center", "value", key=LabelKey("value", 0, 1)),
+        Text(1000, 5020, 1000, LABEL_HEIGHT, "8", "center", "value", key=LabelKey("value", 1, 1)),
     )
 
 

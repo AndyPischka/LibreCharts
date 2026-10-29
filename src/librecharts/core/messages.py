@@ -979,6 +979,18 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Swap positions",
         "de": "Positionen tauschen",
     },
+    "menu_move_labels": {
+        "en": "Move labels",
+        "de": "Beschriftungen verschieben",
+    },
+    "menu_reset_labels": {
+        "en": "Reset label positions",
+        "de": "Beschriftungen zurücksetzen",
+    },
+    "move_labels_hint": {
+        "en": "Drag values and totals to move them. Esc ends.",
+        "de": "Werte und Summen ziehen, um sie zu verschieben. Esc beendet.",
+    },
 }
 
 

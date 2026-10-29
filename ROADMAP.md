@@ -12,13 +12,13 @@ Single tasks live in the issue tracker, not here.
 | M2 | Waterfall | Bridge chart with subtotals (ADR 0008) | done |
 | M3 | Marimekko | Percent Mekko with variable column widths (ADR 0009); units Mekko and the per-chart option switch (ADR 0012) | done |
 | M4 | Annotations | Difference arrows (bracket and level), CAGR arrows, axis break, placed by clicking columns, on column, bar and waterfall charts (ADR 0010); total labels came with M1 | done |
-| 1.0 | First release | `SECURITY.md`, packaging for extensions.libreoffice.org, German/English UI review | open |
 
 Order is deliberate: M1 builds the shared foundation (layout, data sheet, persistence) that M2-M4 reuse.
+The first release (3.0) comes at the end of the 3.0 block, after M13.
 
 ## Later versions
 
-Features of think-cell and empower charts that 1.0 does not cover. Each milestone gets a plan in
+Features of think-cell and empower charts that M0-M4 do not cover. Each milestone gets a plan in
 `docs/plans/` before work starts.
 
 ### 2.0: complete the existing charts
@@ -41,7 +41,8 @@ that the later milestones use; M6 then gives every chart type the same axis and 
 | M10 | Gantt / timeline | Date-scaled timeline with bars, milestones, phases and labels per row; data in the Calc data sheet; date and today lines (ADR 0019) | done |
 | M11 | Data links | Link a chart to a range in an external Calc or Excel file (or CSV) and update it on demand; relative paths, read-only data sheet, info bar when sources changed (ADR 0020) | done |
 | M12 | Slide elements | Harvey balls, check marks, same size and arranging shapes into a grid (ADR 0021); an agenda with a divider slide before every chapter (ADR 0022) | done |
-| M13 | Label placement | Moving single labels by hand; the offsets survive data edits, sorting and resizing (deferred from M6). Plan: [label-placement](docs/plans/label-placement.md) | open |
+| M13 | Label placement | Moving single labels by hand; the offsets survive data edits, sorting and resizing (deferred from M6, ADR 0023) | done |
+| 3.0 | First release | `SECURITY.md`, packaging for extensions.libreoffice.org, German/English UI review | open |
 
 M9 comes first: its sector geometry is reused by the Harvey balls in M12, and its scatter data
 sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 follows.
@@ -64,7 +65,7 @@ sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 f
 | M20 | Accessibility and export | Alternative text generated from the chart data, patterns as well as colours for colour-blind readers, exporting chart data as CSV | open |
 | M21 | Languages and platforms | Further UI languages through a translation platform (Weblate); macOS tested and supported | open |
 
-Both versions are sketches. Priorities are set after 1.0 from user feedback in the issue tracker.
+Both versions are sketches. Priorities are set after the first release from user feedback in the issue tracker.
 M18 is cheap because `core/` is plain Python. M21 changes the convention that every UI string is
 German and English (AGENTS.md).
 

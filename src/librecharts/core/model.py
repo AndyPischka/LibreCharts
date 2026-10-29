@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 ChartKind = Literal[
     "column", "bar", "waterfall", "mekko", "line", "area", "pie", "scatter", "butterfly", "gantt"
@@ -19,6 +19,7 @@ LabelMode = Literal["percent", "absolute"]
 SeriesNames = Literal["none", "labels", "legend"]
 Magnitude = Literal[0, 3, 6, 9]
 Separator = Literal[".", ","]
+LabelRole = Literal["value", "total"]
 
 AXIS_ANNOTATIONS = frozenset({"axis_break", "value_line"})
 
@@ -119,6 +120,42 @@ class Annotation:
 
 
 @dataclass(frozen=True, slots=True)
+class LabelKey:
+    """Names a movable label by its role and data sheet indices, independently of size and order.
+
+    ``category`` and ``series`` are indices into ``ChartData`` (``series`` is ``None`` where a
+    label belongs to a category or row alone: a total, a waterfall step, a scatter point). The role
+    keeps a total apart from a value label that has the same indices.
+    """
+
+    role: LabelRole
+    category: int
+    series: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.role not in get_args(LabelRole):
+            raise ValueError(f"unknown label role: {self.role!r}")
+        if min(self.category, 0 if self.series is None else self.series) < 0:
+            raise ValueError("label indices must not be negative")
+
+
+@dataclass(frozen=True, slots=True)
+class LabelOffset:
+    """How far the user moved a label's centre from where the layout puts it, in 1/100 mm.
+
+    Absolute: not scaled when the chart is resized, like font sizes (ADR 0023).
+    """
+
+    key: LabelKey
+    dx: float
+    dy: float
+
+    def __post_init__(self) -> None:
+        if not (math.isfinite(self.dx) and math.isfinite(self.dy)):
+            raise ValueError("a label offset must be finite")
+
+
+@dataclass(frozen=True, slots=True)
 class Link:
     """Where a linked chart takes its data from: a range of an external spreadsheet (ADR 0020).
 
@@ -177,6 +214,10 @@ class ChartState:
     ``link`` takes the data from an external spreadsheet instead of the data sheet (ADR 0020). The
     fetched values are stored in ``cells`` and ``values`` like data sheet values, so the chart draws
     without its source.
+
+    ``labels`` holds the offsets of value labels and totals the user moved by hand, at most one per
+    label. Like annotation indices they refer to data sheet indices: sorting never touches them, and
+    an offset whose label is gone stays stored and unused.
     """
 
     kind: ChartKind
@@ -193,6 +234,7 @@ class ChartState:
     scale_group: str | None = None
     doughnut: bool = False
     link: Link | None = None
+    labels: tuple[LabelOffset, ...] = ()
     version: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -241,3 +283,5 @@ class ChartState:
             raise ValueError("cells and values must be rectangular and of equal width")
         if any(v is not None and not math.isfinite(v) for row in self.values for v in row):
             raise ValueError("values must be finite numbers or None")
+        if len({offset.key for offset in self.labels}) != len(self.labels):
+            raise ValueError("a label can only have one offset")

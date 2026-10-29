@@ -10,12 +10,21 @@ from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
 from librecharts.core import format as formats
+from librecharts.core import labels as core_labels
 from librecharts.core import links, options, style
-from librecharts.core.menu import PROTOCOL, annotation_title, arrange_items
+from librecharts.core.menu import GRID_COLUMNS, PROTOCOL, annotation_title, arrange_items
 from librecharts.core.messages import text
 from librecharts.core.model import AnnotationKind, ChartState
 from librecharts.core.picking import supports
 from librecharts.core.scatter import parse_scatter
+
+_ARRANGE_ICONS = {  # by the ``op`` of the Arrange command
+    "width": "arrange_width",
+    "height": "arrange_height",
+    "size": "arrange_size",
+    "swap": "arrange_swap",
+    **{f"grid&columns={columns}": f"arrange_grid_{columns}" for columns in GRID_COLUMNS},
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -202,15 +211,17 @@ def content(
         ),
         scheme=scheme_name,
         elements=(
-            _button("insert_harvey", "InsertElement?harvey=50", "", locale),
-            _button("insert_check", "InsertElement?check=tick", "", locale),
-            _button("menu_element_next", "SetElement?next=1", "", locale, element_selected),
+            _button("insert_harvey", "InsertElement?harvey=50", "insert_harvey", locale),
+            _button("insert_check", "InsertElement?check=tick", "insert_check", locale),
+            _button(
+                "menu_element_next", "SetElement?next=1", "element_next", locale, element_selected
+            ),
         ),
         arrange=tuple(
             Button(
                 item.title,
                 item.command,
-                "",
+                _ARRANGE_ICONS[item.command.removeprefix(PROTOCOL + "Arrange?op=")],
                 shapes_selected >= 2
                 and (shapes_selected == 2 or not item.command.endswith("op=swap")),
             )
@@ -268,6 +279,10 @@ def _format(state: ChartState | None, usable: bool, locale: str) -> tuple[Button
     )
     if state.scale_group is not None:
         buttons += (_button("menu_remove_same_scale", "RemoveSameScale", "", locale, usable),)
+    if core_labels.movable(state):
+        buttons += (_button("menu_move_labels", "MoveLabels", "", locale, usable),)
+        if state.labels:
+            buttons += (_button("menu_reset_labels", "ResetLabels", "", locale, usable),)
     if formats.supports(state, "number_format"):
         buttons += (_button("menu_number_format", "NumberFormat", "", locale, usable),)
     return buttons

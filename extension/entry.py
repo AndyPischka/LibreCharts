@@ -110,6 +110,10 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.change_chart(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ChangeFormat"):
                 commands.change_format(self.ctx, self.frame, _query(url))
+            elif url.Path == "MoveLabels":
+                commands.move_labels(self.ctx, self.frame)
+            elif url.Path == "ResetLabels":
+                commands.reset_labels(self.ctx, self.frame)
             elif url.Path == "NumberFormat":
                 commands.number_format(self.ctx, self.frame)
             elif url.Path == "SameScale":

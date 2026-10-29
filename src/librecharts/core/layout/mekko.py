@@ -29,7 +29,7 @@ from librecharts.core.layout.common import (
     visible_ticks,
 )
 from librecharts.core.mekko import MekkoData
-from librecharts.core.model import Format
+from librecharts.core.model import Format, LabelKey
 from librecharts.core.primitives import Line, Primitive, Rect, Text, TextRole
 from librecharts.core.scale import Axis, nice_axis
 
@@ -117,9 +117,19 @@ def layout_mekko(
             out.append(Rect(column_x, top, column_width, segment_height, i))
             fits = segment_height >= MIN_SEGMENT_HEIGHT and column_width >= MIN_LABEL_WIDTH
             shown = format_share(share * 100, fmt) if percent else format_value(value, fmt)
-            label = shown if fits and value > 0 else ""
             out.append(
-                Text(column_x, top, column_width, segment_height, label, "center", "value", fill=i)
+                Text(
+                    column_x,
+                    top,
+                    column_width,
+                    segment_height,
+                    shown,
+                    "center",
+                    "value",
+                    fill=i,
+                    key=LabelKey("value", c, i),
+                    hidden=not (fits and value > 0),
+                )
             )
             last_segments.append((top, level))
             level = top
@@ -135,10 +145,21 @@ def layout_mekko(
                     data.widths[c],
                     "total",
                     fmt,
+                    LabelKey("total", c),
                 )
             )
         else:
-            out.append(_label(box_x, level - LABEL_HEIGHT, box_width, column_sum, "total", fmt))
+            out.append(
+                _label(
+                    box_x,
+                    level - LABEL_HEIGHT,
+                    box_width,
+                    column_sum,
+                    "total",
+                    fmt,
+                    LabelKey("total", c),
+                )
+            )
         out.append(
             Text(box_x, plot_bottom, box_width, CATEGORY_BAND, category, "center", "category")
         )
@@ -271,8 +292,16 @@ def _spread(tops: list[float]) -> list[float]:
     return [top - min(overshoot, 0.0) for top in spread]
 
 
-def _label(x: float, y: float, width: float, value: float, role: TextRole, fmt: Format) -> Text:
-    return Text(x, y, width, LABEL_HEIGHT, format_value(value, fmt), "center", role)
+def _label(
+    x: float,
+    y: float,
+    width: float,
+    value: float,
+    role: TextRole,
+    fmt: Format,
+    key: LabelKey | None = None,
+) -> Text:
+    return Text(x, y, width, LABEL_HEIGHT, format_value(value, fmt), "center", role, key=key)
 
 
 def _outside_box(x: float, width: float, limit: float) -> tuple[float, float]:

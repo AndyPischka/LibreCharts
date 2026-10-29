@@ -2,6 +2,7 @@
 """Resizing a chart group re-lays it out for the new size instead of stretching it."""
 
 import time
+from dataclasses import replace
 
 import uno
 from helpers import (
@@ -10,6 +11,7 @@ from helpers import (
     new_impress,
     prop,
     save_and_reload,
+    set_chart_state,
     skip_on_headless_linux,
     uno_command,
 )
@@ -154,5 +156,41 @@ def test_too_small_chart_is_left_stretched_and_recovers(ctx):
         assert (group.Size.Width, group.Size.Height) == (2000, 1500)
         _resize(group, size.Width, size.Height)
         _wait_for(lambda: _laid_out(group))
+    finally:
+        doc.close(True)
+
+
+def test_undo_of_a_resize_still_works_after_a_value_edit(ctx):
+    """A redraw updates the shapes in place, so LibreOffice's older undo steps keep working."""
+    doc = new_impress(ctx)
+    try:
+        group = _chart(ctx, doc)
+        chart_id = store.chart_id_of(group)
+        original_size = (group.Size.Width, group.Size.Height)
+        doc.getCurrentController().select(group)
+        uno_command(
+            ctx,
+            doc,
+            ".uno:TransformDialog",
+            (
+                prop("TransformWidth", original_size[0]),
+                prop("TransformHeight", original_size[1] + 6000),
+            ),
+        )
+        _wait_for(lambda: group.Size.Height == original_size[1] + 6000 and _laid_out(group))
+
+        assert chart_id is not None
+        state = store.read_state(doc, chart_id)
+        assert state is not None
+        edited = replace(
+            state,
+            cells=(state.cells[0], ("Product A", "30", "10", "50"), *state.cells[2:]),
+            values=(state.values[0], (None, 30.0, 10.0, 50.0), *state.values[2:]),
+        )
+        set_chart_state(ctx, doc, chart_id, edited)
+
+        uno_command(ctx, doc, ".uno:Undo")  # the edit
+        uno_command(ctx, doc, ".uno:Undo")  # the resize
+        _wait_for(lambda: (group.Size.Width, group.Size.Height) == original_size)
     finally:
         doc.close(True)

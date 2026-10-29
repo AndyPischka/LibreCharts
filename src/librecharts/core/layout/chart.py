@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from librecharts.core import sorting
+from librecharts.core import labels, sorting
 from librecharts.core.datasheet import ChartData, parse
 from librecharts.core.gantt import parse_gantt
 from librecharts.core.layout.area import layout_area
@@ -31,8 +31,26 @@ def layout_chart(
     annotations with their indices moved along, so the stored state never changes. A chart in a
     same-scale group passes the group's ``length_per_unit`` (ADR 0017).
 
-    Raises ``ValueError`` if the box is too small for the chart.
+    The label keys of the result name data sheet indices, and the offsets of moved labels in
+    ``state.labels`` are applied (``core/labels.py``). Raises ``ValueError`` if the box is too small
+    for the chart.
     """
+    primitives = _layout(state, width, height, length_per_unit)
+    if state.kind == "gantt":  # its texts stay where the layout puts them
+        return primitives
+    return labels.place(labels.keyed(primitives, _order(state)), state.labels)
+
+
+def _order(state: ChartState) -> tuple[int, ...] | None:
+    """The sort permutation of the categories, ``None`` if the chart is not sorted."""
+    if state.sort == "none" or state.kind not in ("column", "bar", "butterfly"):
+        return None
+    return display_order(state)
+
+
+def _layout(
+    state: ChartState, width: float, height: float, length_per_unit: float | None
+) -> tuple[Primitive, ...]:
     if state.kind == "waterfall":
         return layout_waterfall(
             parse_waterfall(state),
@@ -95,12 +113,17 @@ def layout_chart(
     )
 
 
+def display_order(state: ChartState, data: ChartData | None = None) -> tuple[int, ...]:
+    """Display position -> data sheet index of the categories."""
+    # A butterfly chart sorts by its first series, like a clustered chart.
+    grouping = "clustered" if state.kind == "butterfly" else state.grouping
+    return sorting.order(data or parse(state), grouping, state.sort)
+
+
 def display_data(state: ChartState) -> tuple[ChartData, tuple[Annotation, ...]]:
     """The data in display order and the annotations moved along with it."""
     data = parse(state)
-    # A butterfly chart sorts by its first series, like a clustered chart.
-    grouping = "clustered" if state.kind == "butterfly" else state.grouping
-    order = sorting.order(data, grouping, state.sort)
+    order = display_order(state, data)
     if order == tuple(range(len(order))):
         return data, state.annotations
     return sorting.sorted_data(data, order), sorting.remap(state.annotations, order)

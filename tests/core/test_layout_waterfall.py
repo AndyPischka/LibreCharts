@@ -19,7 +19,7 @@ from librecharts.core.layout.waterfall import (
     layout_waterfall,
     step_at,
 )
-from librecharts.core.model import Annotation
+from librecharts.core.model import Annotation, LabelKey
 from librecharts.core.primitives import BACKGROUND, Line, Rect, Text
 from librecharts.core.waterfall import Step, WaterfallData, parse_waterfall
 
@@ -36,15 +36,15 @@ def test_golden_geometry() -> None:
     assert layout_waterfall(data, 3000, 10000) == (
         Line(0, 8400, 3000, 8400, "baseline"),
         Rect(150, 800, 700, 7600, 0),
-        Text(150, 200, 700, LABEL_HEIGHT, "100", "center", "value"),
+        Text(150, 200, 700, LABEL_HEIGHT, "100", "center", "value", key=LabelKey("value", 0)),
         Line(850, 800, 1150, 800, "connector"),
         Text(0, 9000, 1000, CATEGORY_BAND, "A", "center", "category"),
         Rect(1150, 800, 700, 3040, 2),
-        Text(1150, 3840, 700, LABEL_HEIGHT, "-40", "center", "value"),
+        Text(1150, 3840, 700, LABEL_HEIGHT, "-40", "center", "value", key=LabelKey("value", 1)),
         Line(1850, 3840, 2150, 3840, "connector"),
         Text(1000, 9000, 1000, CATEGORY_BAND, "B", "center", "category"),
         Rect(2150, 3840, 700, 4560, 0),
-        Text(2150, 3240, 700, LABEL_HEIGHT, "60", "center", "value"),
+        Text(2150, 3240, 700, LABEL_HEIGHT, "60", "center", "value", key=LabelKey("value", 2)),
         Text(2000, 9000, 1000, CATEGORY_BAND, "C", "center", "category"),
     )
 

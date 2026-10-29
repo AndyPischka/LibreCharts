@@ -14,16 +14,19 @@ from __future__ import annotations
 
 import contextlib
 import traceback
+from dataclasses import replace
 from typing import Any
 
 import unohelper
 from com.sun.star.awt import XCallback, XKeyHandler
 from com.sun.star.view import XSelectionChangeListener
 
+from librecharts.core.layout.chart import layout_chart
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, ChartState
 from librecharts.core.picking import PickSession, target_at
-from librecharts.lo import chart, store, ui
+from librecharts.core.primitives import Text
+from librecharts.lo import chart, render, store, ui
 
 INFOBAR = "org.librecharts.pick"
 _INFOBAR_INFO = 1  # com.sun.star.frame.InfobarType.INFO
@@ -61,7 +64,7 @@ class _Pick(unohelper.Base, XSelectionChangeListener, XKeyHandler, XCallback):
             "com.sun.star.awt.AsyncCallback", ctx
         )
         self.controller.select(group)
-        _uno_command(ctx, frame, ".uno:EnterGroup")  # before listening: entering deselects
+        ui.uno_command(ctx, frame, ".uno:EnterGroup")  # before listening: entering deselects
         self.controller.addSelectionChangeListener(self)
         self.controller.addKeyHandler(self)
         self._show_prompt()
@@ -84,15 +87,17 @@ class _Pick(unohelper.Base, XSelectionChangeListener, XKeyHandler, XCallback):
             if not self._in_chart(shape):
                 self.finish(None)
                 return
-            position, size, origin = shape.Position, shape.Size, self.group.Position
+            position, size = shape.Position, shape.Size
             if self._is_frame(position, size):
                 return
+            x, y, width, height = render.layout_box(self.group)
             target = target_at(
                 self.state,
-                self.group.Size.Width,
-                self.group.Size.Height,
-                position.X - origin.X + size.Width / 2,
-                position.Y - origin.Y + size.Height / 2,
+                width,
+                height,
+                *self._anchor(
+                    shape, position.X - x + size.Width / 2, position.Y - y + size.Height / 2
+                ),
             )
             if target is None:
                 return
@@ -132,7 +137,7 @@ class _Pick(unohelper.Base, XSelectionChangeListener, XKeyHandler, XCallback):
             with contextlib.suppress(Exception):
                 if self.controller.hasInfobar(INFOBAR):
                     self.controller.removeInfobar(INFOBAR)
-            _uno_command(self.ctx, self.frame, ".uno:LeaveGroup")
+            ui.uno_command(self.ctx, self.frame, ".uno:LeaveGroup")
             if self._result is not None:
                 chart.add_annotation(self.controller.getModel(), self.group, self._result)
             self.controller.select(self.group)
@@ -146,16 +151,34 @@ class _Pick(unohelper.Base, XSelectionChangeListener, XKeyHandler, XCallback):
             return False
 
     def _is_frame(self, position: Any, size: Any) -> bool:
-        origin, extent = self.group.Position, self.group.Size
+        x, y, width, height = render.layout_box(self.group)
         return all(
             abs(a - b) <= _TOLERANCE
             for a, b in (
-                (position.X, origin.X),
-                (position.Y, origin.Y),
-                (size.Width, extent.Width),
-                (size.Height, extent.Height),
+                (position.X, x),
+                (position.Y, y),
+                (size.Width, width),
+                (size.Height, height),
             )
         )
+
+    def _anchor(self, shape: Any, x: float, y: float) -> tuple[float, float]:
+        """Where ``shape`` belongs in the chart: its own centre (``x``, ``y``), or for a label the
+        user moved the place the layout gives it, so a click on it picks its own column."""
+        if not self.state.labels:
+            return x, y
+        children = [self.group.getByIndex(i) for i in range(self.group.getCount())]
+        index = next((i for i, child in enumerate(children) if child == shape), 0)
+        if index < 1:  # not found, or the frame
+            return x, y
+        _, _, width, height = render.layout_box(self.group)
+        primitives = layout_chart(replace(self.state, labels=()), width, height)
+        if index > len(primitives):
+            return x, y
+        label = primitives[index - 1]
+        if not isinstance(label, Text) or label.key is None:
+            return x, y
+        return label.x + label.width / 2, label.y + label.height / 2
 
     def _show_prompt(self) -> None:
         message = text(self.session.prompt, self.locale)
@@ -174,8 +197,3 @@ def _single(selection: Any) -> Any:
     if selection is None or not hasattr(selection, "getCount") or selection.getCount() != 1:
         return None
     return selection.getByIndex(0)
-
-
-def _uno_command(ctx: Any, frame: Any, command: str) -> None:
-    helper = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.DispatchHelper", ctx)
-    helper.executeDispatch(frame, command, "", 0, ())

@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from librecharts.core.model import LabelKey
+
 TextRole = Literal["value", "total", "category", "series", "annotation", "axis", "heading"]
 LineRole = Literal["baseline", "connector", "annotation", "helper", "axis", "grid"]
 Align = Literal["left", "center", "right"]
@@ -51,6 +53,10 @@ class Text:
 
     ``fill`` is the series index of the rectangle behind the text, if any. The renderer then picks
     black or white text for contrast (``core/style.py``).
+
+    ``key`` names a movable label (value labels and totals, ``core/labels.py``). A label too large
+    for its segment keeps its text and sets ``hidden``: the renderer shows it as empty, and moving
+    it by hand reveals it.
     """
 
     x: float
@@ -61,6 +67,13 @@ class Text:
     align: Align
     role: TextRole
     fill: int | None = None
+    key: LabelKey | None = None
+    hidden: bool = False
+
+    @property
+    def shown(self) -> str:
+        """The text the renderer draws: empty for a hidden label."""
+        return "" if self.hidden else self.text
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,3 +128,17 @@ class Bubble:
 
 
 Primitive = Rect | Line | Text | Polyline | Polygon | Marker | Bubble
+
+
+def bounds(p: Primitive) -> tuple[float, float, float, float]:
+    """The bounding box (x, y, width, height) of a primitive; lines and polygons by their extent."""
+    if isinstance(p, (Rect, Text)):
+        return p.x, p.y, p.width, p.height
+    if isinstance(p, Line):
+        return min(p.x1, p.x2), min(p.y1, p.y2), abs(p.x2 - p.x1), abs(p.y2 - p.y1)
+    if isinstance(p, (Polyline, Polygon)):
+        xs, ys = [x for x, _ in p.points], [y for _, y in p.points]
+        return min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)
+    if isinstance(p, Marker):
+        return p.x - MARKER_SIZE / 2, p.y - MARKER_SIZE / 2, MARKER_SIZE, MARKER_SIZE
+    return p.x - p.diameter / 2, p.y - p.diameter / 2, p.diameter, p.diameter
