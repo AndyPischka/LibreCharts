@@ -2,7 +2,8 @@
 
 Both axes are always drawn: a scatter chart is unreadable without them. They do not have to
 include zero. Points are markers, or bubbles when they have a size (the areas are proportional to
-the sizes, the largest bubble is ``MAX_BUBBLE`` of the shorter plot side). Points of one group share
+the sizes, the largest bubble is ``MAX_BUBBLE`` of the shorter plot side, but never reaches out of
+the box). Points of one group share
 a colour; a legend names the groups. The only annotation is a horizontal value line.
 
 The kinds and order of the primitives depend on the data only, never on the size (ADR 0007).
@@ -88,7 +89,10 @@ def layout_scatter(
     out.extend(_axes(x_axis, y_axis, x, y, plot_left, plot_bottom, fmt))
 
     biggest = max((p.size for p in data.points if p.size is not None), default=0.0)
-    largest = MAX_BUBBLE * min(plot_width, plot_height)
+    # A bubble on the edge of the plot must not reach out of the box: the group shape would grow,
+    # and every redraw at the group's size would widen the chart further.
+    edge = min(top, AXIS_BAND, X_AXIS_BAND, RIGHT_BAND)
+    largest = min(MAX_BUBBLE * min(plot_width, plot_height), 2 * edge)
 
     def diameter(size: float) -> float:
         return largest * math.sqrt(size / biggest)  # area proportional to the size
@@ -101,11 +105,12 @@ def layout_scatter(
         if not point.label:
             continue
         reach = (MARKER_SIZE if point.size is None else diameter(point.size)) / 2
+        left = x(point.x) + reach + LABEL_GAP
         out.append(
             Text(
-                x(point.x) + reach + LABEL_GAP,
+                left,
                 y(point.y) - LABEL_HEIGHT / 2,
-                LABEL_WIDTH,
+                min(LABEL_WIDTH, width - left),  # ends at the box, like the bubbles
                 LABEL_HEIGHT,
                 point.label,
                 "left",

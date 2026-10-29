@@ -110,7 +110,9 @@ def layout_gantt(
             out.append(Text(0, top, label_width - LABEL_PADDING, slot, row.label, "left", role))
         if row.start is None or row.end is None:
             continue
-        out.extend(_row(row, row.start, row.end, scale, x, day_width, top, slot, fmt, with_year))
+        out.extend(
+            _row(row, row.start, row.end, scale, x, day_width, top, slot, fmt, with_year, width)
+        )
 
     for day in marked:
         if day is None:
@@ -119,7 +121,7 @@ def layout_gantt(
         out.append(Line(centre, rows_top, centre, rows_bottom, "helper"))
         out.append(
             Text(
-                centre - DATE_LABEL_WIDTH / 2,
+                min(centre - DATE_LABEL_WIDTH / 2, width - DATE_LABEL_WIDTH),  # inside the box
                 rows_bottom + TICK_GAP,
                 DATE_LABEL_WIDTH,
                 LABEL_HEIGHT,
@@ -147,8 +149,13 @@ def _row(
     slot: float,
     fmt: Format,
     with_year: bool,
+    width: float,
 ) -> list[Primitive]:
-    """The mark of one dated row and its side text (remark, a milestone's date)."""
+    """The mark of one dated row and its side text (remark, a milestone's date).
+
+    A side text ends at the edge of the ``width`` wide box: a shape outside it would grow the group,
+    and every redraw at the group's size would widen the chart further.
+    """
     centre_y = top + slot / 2
     out: list[Primitive] = []
     side = row.remark
@@ -183,11 +190,14 @@ def _row(
     if not side:
         return out
     if scale.fraction(end + timedelta(days=1)) <= RIGHT_LIMIT:
-        out.append(Text(right + SIDE_GAP, top, SIDE_WIDTH, slot, side, "left", "value"))
-    elif scale.fraction(start) >= LEFT_LIMIT or row.kind != "bar":
+        box_left = right + SIDE_GAP
         out.append(
-            Text(left - SIDE_GAP - SIDE_WIDTH, top, SIDE_WIDTH, slot, side, "right", "value")
+            Text(box_left, top, min(SIDE_WIDTH, width - box_left), slot, side, "left", "value")
         )
+    elif scale.fraction(start) >= LEFT_LIMIT or row.kind != "bar":
+        box_right = left - SIDE_GAP
+        box_left = max(box_right - SIDE_WIDTH, 0.0)
+        out.append(Text(box_left, top, box_right - box_left, slot, side, "right", "value"))
     else:  # a bar across nearly the whole scale carries its remark inside
         thickness = slot * BAR_RATIO
         out.append(
