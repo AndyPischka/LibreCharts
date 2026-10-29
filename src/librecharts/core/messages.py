@@ -842,6 +842,82 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Update now",
         "de": "Jetzt aktualisieren",
     },
+    "insert_harvey": {
+        "en": "Harvey ball",
+        "de": "Harvey Ball",
+    },
+    "insert_check": {
+        "en": "Check mark",
+        "de": "Häkchen",
+    },
+    "panel_elements": {
+        "en": "Elements",
+        "de": "Elemente",
+    },
+    "panel_arrange": {
+        "en": "Arrange",
+        "de": "Anordnen",
+    },
+    "select_element": {
+        "en": "Please select a Harvey ball or check mark first.",
+        "de": "Bitte zuerst eine Harvey Ball oder ein Häkchen auswählen.",
+    },
+    "element_unsupported": {
+        "en": "This element state does not exist.",
+        "de": "Diesen Zustand des Elements gibt es nicht.",
+    },
+    "menu_element_next": {
+        "en": "Next state",
+        "de": "Nächster Zustand",
+    },
+    "menu_harvey": {
+        "en": "Filled {level} %",
+        "de": "{level} % gefüllt",
+    },
+    "menu_check_tick": {
+        "en": "Tick",
+        "de": "Häkchen",
+    },
+    "menu_check_cross": {
+        "en": "Cross",
+        "de": "Kreuz",
+    },
+    "menu_check_empty": {
+        "en": "Empty circle",
+        "de": "Leerer Kreis",
+    },
+    "arrange_need_two": {
+        "en": "Please select at least two shapes first.",
+        "de": "Bitte zuerst mindestens zwei Formen auswählen.",
+    },
+    "arrange_need_exactly_two": {
+        "en": "Please select exactly two shapes to swap.",
+        "de": "Zum Tauschen bitte genau zwei Formen auswählen.",
+    },
+    "arrange_unsupported": {
+        "en": "This arrangement does not exist.",
+        "de": "Diese Anordnung gibt es nicht.",
+    },
+    "menu_arrange_width": {
+        "en": "Same width",
+        "de": "Gleiche Breite",
+    },
+    "menu_arrange_height": {
+        "en": "Same height",
+        "de": "Gleiche Höhe",
+    },
+    "menu_arrange_size": {
+        "en": "Same size",
+        "de": "Gleiche Größe",
+    },
+    "menu_arrange_grid": {
+        "en": "Grid, {columns} columns",
+        "de": "Raster, {columns} Spalten",
+    },
+    "menu_arrange_swap": {
+        "en": "Swap positions",
+        "de": "Positionen tauschen",
+    },
 }
 
 

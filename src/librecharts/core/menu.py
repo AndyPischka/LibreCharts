@@ -9,10 +9,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
+from librecharts.core import elements, options, style
 from librecharts.core import format as formats
-from librecharts.core import options, style
 from librecharts.core.axis_break import describe
 from librecharts.core.datasheet import ChartData
+from librecharts.core.elements import Element
 from librecharts.core.gantt import parse_gantt, to_date
 from librecharts.core.layout.common import format_value
 from librecharts.core.messages import text
@@ -105,6 +106,49 @@ def chart_menu(
         ]
         items.append(_command("menu_remove_all", "RemoveAnnotations", locale))
     return MenuItem("LibreCharts", children=tuple(items))
+
+
+GRID_COLUMNS = (2, 3, 4)  # the "Grid" entries of the Arrange commands
+
+
+def element_menu(element: Element, locale: str) -> MenuItem:
+    """The "LibreCharts" submenu for a selected Harvey ball or check mark: the other states."""
+    if element.kind == "harvey":
+        states = [
+            MenuItem(
+                text("menu_harvey", locale, level=str(level)),
+                f"{PROTOCOL}SetElement?harvey={level}",
+            )
+            for level in elements.HARVEY_LEVELS
+            if str(level) != element.value
+        ]
+    else:
+        states = [
+            MenuItem(text(f"menu_check_{symbol}", locale), f"{PROTOCOL}SetElement?check={symbol}")
+            for symbol in elements.CHECK_SYMBOLS
+            if symbol != element.value
+        ]
+    return MenuItem(
+        "LibreCharts",
+        children=(_command("menu_element_next", "SetElement?next=1", locale), *states),
+    )
+
+
+def arrange_items(locale: str) -> tuple[MenuItem, ...]:
+    """The commands that arrange the selected shapes (same size, grid, swap)."""
+    return (
+        _command("menu_arrange_width", "Arrange?op=width", locale),
+        _command("menu_arrange_height", "Arrange?op=height", locale),
+        _command("menu_arrange_size", "Arrange?op=size", locale),
+        *(
+            MenuItem(
+                text("menu_arrange_grid", locale, columns=str(columns)),
+                f"{PROTOCOL}Arrange?op=grid&columns={columns}",
+            )
+            for columns in GRID_COLUMNS
+        ),
+        _command("menu_arrange_swap", "Arrange?op=swap", locale),
+    )
 
 
 def _command(key: str, command: str, locale: str) -> MenuItem:

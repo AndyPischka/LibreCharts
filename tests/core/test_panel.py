@@ -173,3 +173,18 @@ def test_update_all_links_is_always_offered() -> None:
     for panel in (content(None, False, "en-US"), content(sample_state(), True, "en-US")):
         assert panel.update_all.command == PROTOCOL + "UpdateAllLinks"
         assert panel.update_all.enabled
+
+
+def test_element_and_arrange_buttons_follow_the_selection() -> None:
+    none = content(None, False, "en-US")
+    assert [b.enabled for b in none.elements] == [True, True, False]
+    assert not any(b.enabled for b in none.arrange)
+
+    two = content(None, False, "en-US", element_selected=True, shapes_selected=2)
+    assert two.elements[2].enabled
+    assert all(b.enabled for b in two.arrange)
+
+    three = content(None, False, "en-US", shapes_selected=3)
+    swap = [b for b in three.arrange if b.command.endswith("op=swap")]
+    assert [b.enabled for b in swap] == [False]
+    assert sum(b.enabled for b in three.arrange) == len(three.arrange) - 1

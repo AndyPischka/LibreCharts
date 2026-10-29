@@ -25,6 +25,8 @@ class Rect:
 
 BACKGROUND = -1  # Rect.series of gaps cut into other shapes (axis breaks): slide background
 SHADE = -2  # Rect.series of a light band behind the data (Gantt time units)
+POSITIVE = -3  # Polyline.series of a check mark's tick: a fixed "good" colour (slide elements)
+NEGATIVE = -4  # Polyline.series of a check mark's cross: a fixed "bad" colour
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,10 +77,15 @@ class Polyline:
 
 @dataclass(frozen=True, slots=True)
 class Polygon:
-    """A closed, filled area through ``points``, in the series colour (stacked area charts)."""
+    """A closed, filled area through ``points``, in the series colour (stacked area charts).
+
+    ``outline`` draws it as an outline instead: filled with the slide background, edged in the
+    series colour (the circle of a Harvey ball).
+    """
 
     points: tuple[tuple[float, float], ...]
     series: int
+    outline: bool = False
 
 
 @dataclass(frozen=True, slots=True)

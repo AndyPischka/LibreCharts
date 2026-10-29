@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from librecharts.core import annotations as notes
 from librecharts.core import format as formats
 from librecharts.core import links, options, style
-from librecharts.core.menu import PROTOCOL, annotation_title
+from librecharts.core.menu import PROTOCOL, annotation_title, arrange_items
 from librecharts.core.messages import text
 from librecharts.core.model import AnnotationKind, ChartState
 from librecharts.core.picking import supports
@@ -56,6 +56,8 @@ class Panel:
     schemes: tuple[Button, ...] = ()
     scheme_files: tuple[Button, ...] = ()
     scheme: str = ""
+    elements: tuple[Button, ...] = ()
+    arrange: tuple[Button, ...] = ()
 
 
 def content(
@@ -63,11 +65,15 @@ def content(
     selected: bool,
     locale: str,
     scheme_name: str = style.DEFAULT.name,
+    element_selected: bool = False,
+    shapes_selected: int = 0,
 ) -> Panel:
     """The panel for a selection: ``selected`` is whether a LibreCharts chart is selected and
     ``state`` its stored state (``None`` if the chart is orphaned or nothing is selected).
 
     ``scheme_name`` is the document's current colour scheme, for the Document section.
+    ``element_selected`` is whether a Harvey ball or check mark is selected and ``shapes_selected``
+    how many shapes are, for the Elements and Arrange sections.
     """
     usable = selected and state is not None
     gantt = state is not None and state.kind == "gantt"
@@ -190,6 +196,21 @@ def content(
             _button("panel_scheme_save", "SaveScheme", "", locale),
         ),
         scheme=scheme_name,
+        elements=(
+            _button("insert_harvey", "InsertElement?harvey=50", "", locale),
+            _button("insert_check", "InsertElement?check=tick", "", locale),
+            _button("menu_element_next", "SetElement?next=1", "", locale, element_selected),
+        ),
+        arrange=tuple(
+            Button(
+                item.title,
+                item.command,
+                "",
+                shapes_selected >= 2
+                and (shapes_selected == 2 or not item.command.endswith("op=swap")),
+            )
+            for item in arrange_items(locale)
+        ),
     )
 
 

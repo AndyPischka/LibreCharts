@@ -356,3 +356,28 @@ def test_a_linked_chart_shows_its_data_and_offers_update_and_the_link_commands()
         ),
     )
     assert LINK not in items
+
+
+def test_a_harvey_ball_menu_offers_next_and_the_other_levels() -> None:
+    from librecharts.core.elements import Element
+    from librecharts.core.menu import element_menu
+
+    menu = element_menu(Element.harvey(50), "en-US")
+    assert [c.command for c in menu.children] == [
+        PROTOCOL + "SetElement?next=1",
+        PROTOCOL + "SetElement?harvey=0",
+        PROTOCOL + "SetElement?harvey=25",
+        PROTOCOL + "SetElement?harvey=75",
+        PROTOCOL + "SetElement?harvey=100",
+    ]
+
+
+def test_a_check_mark_menu_offers_the_other_symbols() -> None:
+    from librecharts.core.elements import Element
+    from librecharts.core.menu import element_menu
+
+    menu = element_menu(Element.check("tick"), "de-DE")
+    assert [c.command for c in menu.children[1:]] == [
+        PROTOCOL + "SetElement?check=cross",
+        PROTOCOL + "SetElement?check=empty",
+    ]
