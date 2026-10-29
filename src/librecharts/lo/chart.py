@@ -9,7 +9,13 @@ from dataclasses import replace
 from typing import Any
 
 from librecharts.core import annotations
-from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
+from librecharts.core.datasheet import (
+    sample_area_state,
+    sample_line_state,
+    sample_mekko_state,
+    sample_state,
+    sample_waterfall_state,
+)
 from librecharts.core.format import default_format
 from librecharts.core.layout.chart import layout_chart
 from librecharts.core.model import Annotation, ChartState
@@ -31,6 +37,16 @@ def insert_column_chart(
 def insert_bar_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a horizontal bar chart with sample data centred on ``page``."""
     return _insert(doc, page, replace(sample_state(), kind="bar"), locale)
+
+
+def insert_line_chart(doc: Any, page: Any, locale: str = "") -> Any:
+    """Insert a line chart with sample data centred on ``page``."""
+    return _insert(doc, page, sample_line_state(), locale)
+
+
+def insert_area_chart(doc: Any, page: Any, locale: str = "") -> Any:
+    """Insert a stacked area chart with sample data centred on ``page``."""
+    return _insert(doc, page, sample_area_state(), locale)
 
 
 def insert_waterfall_chart(doc: Any, page: Any, locale: str = "") -> Any:

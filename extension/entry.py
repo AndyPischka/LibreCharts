@@ -58,6 +58,10 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.insert_column_chart(self.ctx, self.frame)
             elif url.Path == "InsertBarChart":
                 commands.insert_bar_chart(self.ctx, self.frame)
+            elif url.Path == "InsertLineChart":
+                commands.insert_line_chart(self.ctx, self.frame)
+            elif url.Path == "InsertAreaChart":
+                commands.insert_area_chart(self.ctx, self.frame)
             elif url.Path == "InsertWaterfallChart":
                 commands.insert_waterfall_chart(self.ctx, self.frame)
             elif url.Path == "InsertMekkoChart":

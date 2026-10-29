@@ -20,7 +20,7 @@ from librecharts.lo import store
 
 INSERT = "org.librecharts:InsertColumnChart"
 TO_CLUSTERED = "org.librecharts:ChangeChart?grouping=clustered"
-TO_STACKED = "org.librecharts:ChangeChart?grouping=stacked&percent=false"
+TO_STACKED = "org.librecharts:ChangeChart?grouping=stacked"
 TO_PERCENT = "org.librecharts:ChangeChart?percent=true"
 SORT_DESCENDING = "org.librecharts:ChangeChart?sort=descending"
 

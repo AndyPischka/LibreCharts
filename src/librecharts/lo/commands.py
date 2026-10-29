@@ -25,6 +25,14 @@ def insert_bar_chart(ctx: Any, frame: Any) -> None:
     _insert(ctx, frame, chart.insert_bar_chart)
 
 
+def insert_line_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_line_chart)
+
+
+def insert_area_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_area_chart)
+
+
 def insert_waterfall_chart(ctx: Any, frame: Any) -> None:
     _insert(ctx, frame, chart.insert_waterfall_chart)
 

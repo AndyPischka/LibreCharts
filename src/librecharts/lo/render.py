@@ -9,13 +9,23 @@ stable even when labels or bars do not reach the edges.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import uno
 from com.sun.star.awt import Point, Size
 
 from librecharts.core import style
-from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
+from librecharts.core.primitives import (
+    BACKGROUND,
+    MARKER_SIZE,
+    Line,
+    Marker,
+    Polygon,
+    Polyline,
+    Primitive,
+    Rect,
+    Text,
+)
 
 PALETTE = style.PALETTE
 TEXT_COLOR = style.TEXT_COLOR
@@ -89,6 +99,11 @@ def sync_geometry(group: Any, primitives: tuple[Primitive, ...]) -> SyncResult:
         return "mismatch"
     changed = False
     for child, spec in zip(children, specs, strict=True):
+        if spec.points is not None:  # a poly shape: its points carry the geometry
+            if not _same_points(child.PolyPolygon, spec.points):
+                child.PolyPolygon = spec.points
+                changed = True
+            continue
         pos, sz = child.Position, child.Size
         if (
             abs(pos.X - spec.x) > _TOLERANCE
@@ -105,6 +120,20 @@ def sync_geometry(group: Any, primitives: tuple[Primitive, ...]) -> SyncResult:
     return "updated" if changed else "unchanged"
 
 
+def _same_points(current: Any, wanted: tuple[tuple[Point, ...], ...]) -> bool:
+    """Whether the shape's polygon already has ``wanted`` (within rounding)."""
+    current = tuple(current)
+    if len(current) != len(wanted) or any(
+        len(outer) != len(inner) for outer, inner in zip(current, wanted, strict=True)
+    ):
+        return False
+    return all(
+        abs(point.X - target.X) <= _TOLERANCE and abs(point.Y - target.Y) <= _TOLERANCE
+        for outer, inner in zip(current, wanted, strict=True)
+        for point, target in zip(outer, inner, strict=True)
+    )
+
+
 _TOLERANCE = 1  # 1/100 mm; LibreOffice rounds scaled geometry
 
 
@@ -116,10 +145,19 @@ class _Spec:
     width: int
     height: int
     primitive: Primitive | None  # None for the frame
+    points: tuple[tuple[Point, ...], ...] | None = None  # poly shapes: absolute page points
 
 
-def _spec(kind: str, p: Primitive | None, x: float, y: float, w: float, h: float) -> _Spec:
-    return _Spec(kind, round(x), round(y), max(round(w), 0), max(round(h), 0), p)
+def _spec(
+    kind: str,
+    p: Primitive | None,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    points: tuple[tuple[Point, ...], ...] | None = None,
+) -> _Spec:
+    return _Spec(kind, round(x), round(y), max(round(w), 0), max(round(h), 0), p, points)
 
 
 def _specs(
@@ -132,6 +170,25 @@ def _specs(
         elif isinstance(p, Line):  # by bounding box, see Line
             left, top = x + min(p.x1, p.x2), y + min(p.y1, p.y2)
             specs.append(_spec("LineShape", p, left, top, abs(p.x2 - p.x1), abs(p.y2 - p.y1)))
+        elif isinstance(p, (Polyline, Polygon)):
+            left = min(px for px, _ in p.points)
+            top = min(py for _, py in p.points)
+            right = max(px for px, _ in p.points)
+            bottom = max(py for _, py in p.points)
+            points = (tuple(Point(round(x + px), round(y + py)) for px, py in p.points),)
+            kind = "PolyLineShape" if isinstance(p, Polyline) else "PolyPolygonShape"
+            specs.append(_spec(kind, p, x + left, y + top, right - left, bottom - top, points))
+        elif isinstance(p, Marker):
+            specs.append(
+                _spec(
+                    "EllipseShape",
+                    p,
+                    x + p.x - MARKER_SIZE / 2,
+                    y + p.y - MARKER_SIZE / 2,
+                    MARKER_SIZE,
+                    MARKER_SIZE,
+                )
+            )
         else:
             specs.append(_spec("TextShape", p, x + p.x, y + p.y, p.width, p.height))
     return specs
@@ -147,14 +204,26 @@ def _dash() -> Any:
 def _create(doc: Any, group: Any, spec: _Spec) -> None:
     shape = doc.createInstance(f"com.sun.star.drawing.{spec.kind}")
     group.add(shape)
+    p = spec.primitive
+    if spec.points is not None:  # polyline or polygon: its points define the geometry
+        shape.PolyPolygon = spec.points
+        if isinstance(p, Polygon):
+            shape.FillStyle, shape.FillColor = _FILL_SOLID, style.series_color(p.series)
+            shape.LineStyle = _LINE_NONE
+        elif isinstance(p, Polyline):
+            shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_SOLID
+            shape.LineColor, shape.LineWidth = style.series_color(p.series), LINE_WIDTH
+        return
     shape.Position = Point(spec.x, spec.y)
     shape.Size = Size(spec.width, spec.height)
-    p = spec.primitive
     if p is None:  # the invisible frame
         shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_NONE
     elif isinstance(p, Rect):
         color = BACKGROUND_COLOR if p.series == BACKGROUND else style.series_color(p.series)
         shape.FillStyle, shape.FillColor = _FILL_SOLID, color
+        shape.LineStyle = _LINE_NONE
+    elif isinstance(p, Marker):
+        shape.FillStyle, shape.FillColor = _FILL_SOLID, style.series_color(p.series)
         shape.LineStyle = _LINE_NONE
     elif isinstance(p, Line):
         shape.LineStyle, shape.LineColor, shape.LineWidth = _LINE_SOLID, LINE_COLOR, LINE_WIDTH
@@ -169,6 +238,7 @@ def _create(doc: Any, group: Any, spec: _Spec) -> None:
         elif p.arrow:
             shape.LineEndName, shape.LineEndWidth = ARROW_NAME, ARROW_WIDTH
     else:
+        label = cast("Text", p)  # poly shapes return above; what is left is a label
         shape.TextAutoGrowHeight = False
         shape.TextAutoGrowWidth = False
         shape.TextVerticalAdjust = _V_CENTER
@@ -176,9 +246,11 @@ def _create(doc: Any, group: Any, spec: _Spec) -> None:
         shape.TextLeftDistance = shape.TextRightDistance = 0
         shape.TextUpperDistance = shape.TextLowerDistance = 0
         # Text and character properties only stick once the shape is in a group or on a page.
-        shape.String = p.text
-        shape.CharHeight = AXIS_FONT_HEIGHT_PT if p.role == "axis" else FONT_HEIGHT_PT
+        shape.String = label.text
+        shape.CharHeight = AXIS_FONT_HEIGHT_PT if label.role == "axis" else FONT_HEIGHT_PT
         shape.CharColor = (
-            style.text_color(style.series_color(p.fill)) if p.fill is not None else TEXT_COLOR
+            style.text_color(style.series_color(label.fill))
+            if label.fill is not None
+            else TEXT_COLOR
         )
-        shape.ParaAdjust = _PARA_ADJUST[p.align]
+        shape.ParaAdjust = _PARA_ADJUST[label.align]
