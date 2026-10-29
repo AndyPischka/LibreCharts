@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from typing import Any
 
-from librecharts.core import annotations
+from librecharts.core import annotations, options
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, AnnotationKind, ChartState
 from librecharts.core.picking import PickSession, supports
@@ -91,6 +91,21 @@ def axis_break(ctx: Any, frame: Any) -> None:
     if found is not None:
         group, state = found
         axisdialog.request(ctx, frame, group, state)
+
+
+def change_chart(ctx: Any, frame: Any, query: str) -> None:
+    """Change a chart option such as ``percent=false`` (see ``options.changed``); one undo step."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    try:
+        changed = options.changed(state, query)
+    except ValueError:
+        ui.show_info(ctx, frame, text("option_unsupported", ui.ui_locale(ctx)))
+        return
+    if changed != state:
+        chart.redraw(frame.getController().getModel(), group, changed)
 
 
 def change_annotation(ctx: Any, frame: Any, query: str) -> None:

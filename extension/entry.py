@@ -70,6 +70,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.axis_break(self.ctx, self.frame)
             elif url.Path.startswith("PickAnnotation"):
                 commands.pick_annotation(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("ChangeChart"):
+                commands.change_chart(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ChangeAnnotation"):
                 commands.change_annotation(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("RemoveAnnotations"):
