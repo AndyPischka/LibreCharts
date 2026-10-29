@@ -2,7 +2,8 @@
 
 Columns stand side by side with a narrow fixed gap; their widths are proportional to the column
 widths and their segments stack bottom-up in series order. The series names stand to the right of
-the last column, level with its segments.
+the last column, level with its segments and moved apart where thin segments would make
+them overlap.
 
 - Percent: every column is 100 % high. Segments show their share in percent, the width value
   stands above each column, the category name below.
@@ -96,12 +97,12 @@ def layout_mekko(
 
     plot_right = column_x - COLUMN_GAP
     out.insert(0, Line(0, plot_bottom, plot_right, plot_bottom, "baseline"))
-    for (top, bottom), s in zip(last_segments, series, strict=True):
-        middle = (top + bottom) / 2
+    name_tops = _spread([(top + bottom) / 2 - LABEL_HEIGHT / 2 for top, bottom in last_segments])
+    for name_top, s in zip(name_tops, series, strict=True):
         out.append(
             Text(
                 plot_right + LABEL_GAP,
-                middle - LABEL_HEIGHT / 2,
+                name_top,
                 RIGHT_BAND - LABEL_GAP,
                 LABEL_HEIGHT,
                 s.name,
@@ -110,6 +111,19 @@ def layout_mekko(
             )
         )
     return tuple(out)
+
+
+def _spread(tops: list[float]) -> list[float]:
+    """Move name boxes (listed bottom-up, like the series) apart so none overlaps the next.
+
+    Each box keeps its place if it can; a box that would touch the one below moves up. If the
+    stack then reaches above the chart, it moves down as a whole.
+    """
+    spread: list[float] = []
+    for top in tops:
+        spread.append(min(top, spread[-1] - LABEL_HEIGHT) if spread else top)
+    overshoot = min(spread, default=0.0)
+    return [top - min(overshoot, 0.0) for top in spread]
 
 
 def _label(x: float, y: float, width: float, value: float, role: TextRole) -> Text:

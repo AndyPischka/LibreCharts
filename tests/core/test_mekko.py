@@ -1,4 +1,5 @@
 from dataclasses import replace
+from itertools import pairwise
 
 import pytest
 
@@ -298,3 +299,44 @@ def test_a_new_mekko_is_a_percent_mekko() -> None:
 def test_only_a_mekko_can_be_a_percent_chart() -> None:
     with pytest.raises(ValueError, match="percent"):
         state_from_table("column", "stacked", [[None, "A"], ["S", 1]], percent=True)
+
+
+# --- series names -----------------------------------------------------------------------------
+
+
+def test_series_names_of_thin_segments_do_not_overlap() -> None:
+    for percent in (True, False):
+        data = mekko(
+            ("A", (50.0, 1.0)),
+            ("B", (50.0, 1.0)),
+            ("C", (50.0, 1.0)),
+            categories=("Big", "Thin"),
+            widths=(10, 1),
+        )
+        names = [
+            p
+            for p in layout_mekko(data, 10600, 10000, percent=percent)
+            if isinstance(p, Text) and p.role == "series"
+        ]
+        assert [n.text for n in names] == ["A", "B", "C"]
+        for lower, upper in pairwise(names):
+            assert upper.y + upper.height <= lower.y + 1e-9
+        assert min(n.y for n in names) >= 0
+
+
+def test_series_names_keep_their_place_when_there_is_room() -> None:
+    data = mekko(("A", (30.0, 10.0)), ("B", (10.0, 30.0)), categories=("X", "Y"), widths=(40, 40))
+    names = [
+        p for p in layout_mekko(data, 10600, 10000) if isinstance(p, Text) and p.role == "series"
+    ]
+    assert [n.y for n in names] == [7675, 3575]
+
+
+def test_a_stack_of_names_reaching_the_top_moves_down() -> None:
+    # 12 series in a plot only 2200 high: the names need more room than the plot has
+    series = tuple((f"S{i}", (1.0, 1.0)) for i in range(12))
+    data = mekko(*series, categories=("A", "B"), widths=(1, 1))
+    names = [
+        p for p in layout_mekko(data, 10600, 4000) if isinstance(p, Text) and p.role == "series"
+    ]
+    assert min(n.y for n in names) == 0

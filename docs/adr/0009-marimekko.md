@@ -39,5 +39,6 @@ Chosen by the maintainer from the proposed options:
 
 - A series named "Width" or "Breite" in the first series row is read as the width row.
 - Series names follow the segments of the last column; if that column has several very thin segments,
-  their names can crowd each other.
+  the names are moved apart (at least one label height) so they stay readable, and then no longer
+  sit exactly level with their segments.
 - Percent labels are rounded individually and need not add up to exactly 100.
