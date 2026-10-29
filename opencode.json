@@ -24,7 +24,7 @@
       "git push -f*": "deny",
       "git tag*": "deny",
       "gh release*": "deny",
-      "uv add*": "ask",
+      "uv add*": "allow",
       "uv remove*": "ask"
     }
   }
