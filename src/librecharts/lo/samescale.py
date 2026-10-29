@@ -68,6 +68,11 @@ def apply_states(doc: Any, updates: dict[str, ChartState]) -> None:
     affected |= {
         chart_id for chart_id, chart in charts.items() if chart.state.scale_group in group_ids
     }
+    # Store first, then draw: the resize watcher reacts to the shapes changing below and lays
+    # charts out from their stored states. A command dispatched over the UNO bridge (scripts,
+    # tests) runs beside it, and stale states made it move a redrawn peer back to the old scale.
+    for chart_id in sorted(affected):
+        store.write_state(doc, chart_id, charts[chart_id].state)
     with undo.recording_locked(doc):
         for chart_id in sorted(affected):
             chart = charts[chart_id]
@@ -83,8 +88,6 @@ def apply_states(doc: Any, updates: dict[str, ChartState]) -> None:
             except ValueError:
                 continue
             render.rerender(doc, chart.group, primitives, scheme.look(doc, chart.state))
-    for chart_id in sorted(affected):
-        store.write_state(doc, chart_id, charts[chart_id].state)
 
 
 def group_length_per_unit(doc: Any, chart_id: str, state: ChartState) -> float | None:
