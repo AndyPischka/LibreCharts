@@ -409,3 +409,48 @@ def test_arrows_meet_the_cut_column_where_it_ends() -> None:
     helper = [p for p in primitives if isinstance(p, Line) and p.role == "helper"][1]
     assert helper.y1 == pytest.approx(column_b.y)
     assert "+900%" in [p.text for p in primitives if isinstance(p, Text)]
+
+
+def test_100_percent_columns_are_full_and_show_their_shares() -> None:
+    # one column totalling 40: axis 0..100 over 8200 from 800
+    chart = data(("A", (10.0,)), ("B", (30.0,)), categories=("X",))
+    primitives = layout_column(chart, "stacked", 1000, 10000, percent=True)
+    rects_ = [p for p in primitives if isinstance(p, Rect)]
+    assert len(rects_) == 2
+    assert rects_[0].height == pytest.approx(25 / 100 * 8200)
+    assert rects_[1].height == pytest.approx(75 / 100 * 8200)
+    labels = [p.text for p in primitives if isinstance(p, Text) and p.role == "value"]
+    assert labels == ["25%", "75%"]
+    total = next(p for p in primitives if isinstance(p, Text) and p.role == "total")
+    assert total.text == "40"
+    assert total.y == pytest.approx(800 - LABEL_HEIGHT)
+
+
+def test_100_percent_charts_ignore_negative_values() -> None:
+    chart = data(("A", (10.0,)), ("B", (-5.0,)), categories=("X",))
+    primitives = layout_column(chart, "stacked", 1000, 10000, percent=True)
+    assert len([p for p in primitives if isinstance(p, Rect)]) == 1
+    labels = [p.text for p in primitives if isinstance(p, Text) and p.role == "value"]
+    assert labels == ["100%"]
+    total = next(p for p in primitives if isinstance(p, Text) and p.role == "total")
+    assert total.text == "10"
+
+
+def test_100_percent_charts_draw_no_annotations() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    arrows = (Annotation("difference", 0, 1), Annotation("axis_break", 0, 0))
+    assert layout_column(chart, "stacked", 2000, 10000, arrows, percent=True) == layout_column(
+        chart, "stacked", 2000, 10000, percent=True
+    )
+
+
+def test_100_percent_structure_does_not_depend_on_size() -> None:
+    chart = data(("A", (1.0, -2.0, None)), ("B", (300.0, 5.0, 0.0)), categories=("X", "Y", "Z"))
+
+    def shape(width: float, height: float) -> list[tuple[str, str]]:
+        return [
+            (type(p).__name__, getattr(p, "role", ""))
+            for p in layout_column(chart, "stacked", width, height, percent=True)
+        ]
+
+    assert shape(3000, 4000) == shape(30000, 20000) == shape(9000, 2500)

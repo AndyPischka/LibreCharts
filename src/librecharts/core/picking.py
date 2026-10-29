@@ -12,6 +12,7 @@ from typing import Literal, cast, get_args
 from urllib.parse import parse_qs
 
 from librecharts.core import annotations as notes
+from librecharts.core import sorting
 from librecharts.core.datasheet import parse
 from librecharts.core.layout.bar import bar_at
 from librecharts.core.layout.column import column_at
@@ -23,14 +24,34 @@ Target = tuple[int, int | None]  # category, series (None: the column as a whole
 
 
 def target_at(state: ChartState, width: float, height: float, x: float, y: float) -> Target | None:
-    """The column (or bar) at chart point (x, y), or ``None`` if there is none to annotate."""
+    """The column (or bar) at chart point (x, y), or ``None`` if there is none to annotate.
+
+    The returned category is the data sheet index, even when sorting drew the category elsewhere.
+    """
     if state.kind == "column":
-        return column_at(parse(state), state.grouping, width, state.annotations, x, y)
+        data = parse(state)
+        order = sorting.order(data, state.grouping, state.sort)
+        data = sorting.sorted_data(data, order)
+        annotations = sorting.remap(state.annotations, order)
+        target = column_at(data, state.grouping, width, annotations, x, y)
+        return _to_data_index(target, order)
     if state.kind == "bar":
-        return bar_at(parse(state), state.grouping, width, height, state.annotations, x, y)
+        data = parse(state)
+        order = sorting.order(data, state.grouping, state.sort)
+        data = sorting.sorted_data(data, order)
+        annotations = sorting.remap(state.annotations, order)
+        target = bar_at(data, state.grouping, width, height, annotations, x, y)
+        return _to_data_index(target, order)
     if state.kind == "waterfall":
         return step_at(parse_waterfall(state), width, state.annotations, x, y)
     return None
+
+
+def _to_data_index(target: Target | None, order: tuple[int, ...]) -> Target | None:
+    if target is None:
+        return None
+    category, series = target
+    return order[category], series
 
 
 @dataclass
@@ -77,4 +98,6 @@ class PickSession:
 
 
 def supports(state: ChartState, kind: AnnotationKind) -> bool:
+    if state.percent:  # a 100 % chart has no annotations: they stay stored but are not offered
+        return False
     return kind in notes.SUPPORTED.get(state.kind, frozenset())

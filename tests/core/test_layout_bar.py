@@ -327,6 +327,61 @@ def test_layout_chart_passes_the_annotations_to_the_bar_layout() -> None:
     )
 
 
+def test_100_percent_bars_are_full_and_show_their_shares() -> None:
+    chart = data(("A", (10.0,)), ("B", (30.0,)), categories=("X",))
+    primitives = layout_bar(chart, "stacked", 8200, 2000, percent=True)
+    rects_ = [p for p in primitives if isinstance(p, Rect)]
+    assert len(rects_) == 2
+    assert sum(r.width for r in rects_) == pytest.approx(4000)
+    labels = [p.text for p in primitives if isinstance(p, Text) and p.role == "value"]
+    assert labels == ["25%", "75%"]
+    total = next(p for p in primitives if isinstance(p, Text) and p.role == "total")
+    assert total.text == "40"
+    assert total.x == pytest.approx(7000 + LABEL_GAP)
+
+
+def test_100_percent_bars_ignore_negatives_and_draw_no_annotations() -> None:
+    chart = data(("A", (10.0,)), ("B", (-5.0,)), categories=("X",))
+    arrows = (Annotation("difference", 0, 1),)
+    assert layout_bar(chart, "stacked", 8200, 2000, arrows, percent=True) == layout_bar(
+        chart, "stacked", 8200, 2000, percent=True
+    )
+    assert [
+        p.text
+        for p in layout_bar(chart, "stacked", 8200, 2000, percent=True)
+        if isinstance(p, Text) and p.role == "value"
+    ] == ["100%"]
+
+
+def test_an_empty_100_percent_bar_draws_nothing() -> None:
+    chart = data(("A", (None,)), categories=("X",))
+    primitives = layout_bar(chart, "stacked", 8200, 2000, percent=True)
+    assert not any(isinstance(p, Rect) for p in primitives)
+
+
+def test_layout_chart_sorts_the_categories() -> None:
+    state = replace(sample_state(), sort="descending")
+    categories = [
+        p.text
+        for p in layout_chart(state, 24000, 12000)
+        if isinstance(p, Text) and p.role == "category"
+    ]
+    assert categories == ["2025", "2024", "2023"]  # column sums 45, 42, 35
+
+
+def test_layout_chart_moves_annotations_with_their_category() -> None:
+    state = replace(
+        sample_state(), sort="descending", annotations=(Annotation("difference", 0, 2),)
+    )
+    label = next(
+        p
+        for p in layout_chart(state, 24000, 12000)
+        if isinstance(p, Text) and p.role == "annotation"
+    )
+    # 2023 -> 2025 becomes the arrow from the last to the first display column
+    assert label.text == "+28.6%"
+
+
 def test_bar_at_finds_the_category_and_the_series() -> None:
     chart = data(("A", (10.0, 20.0)), ("B", (5.0, 8.0)), categories=("X", "Y"))
     # plot 3000..9000, slots of 2000, bars 1400 thick from 300, 700 each

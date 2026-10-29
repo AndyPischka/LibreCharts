@@ -22,7 +22,11 @@ from librecharts.core.axis_break import axis as shortened_axis
 from librecharts.core.datasheet import ChartData
 from librecharts.core.layout.common import GAP_RATIO, column_top, format_value, value_axis
 from librecharts.core.model import Annotation, Grouping
+from librecharts.core.percent import column_total, share_label
 from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
+from librecharts.core.scale import Axis
+
+PERCENT_AXIS = Axis(0.0, 100.0, 20.0)  # the fixed scale of a 100 % chart
 
 TOP_BAND = 800.0  # room above the plot for total / outside value labels
 LABEL_HEIGHT = 600.0  # height of a value or total label box
@@ -47,17 +51,26 @@ def layout_column(
     width: float,
     height: float,
     annotations: tuple[Annotation, ...] = (),
+    percent: bool = False,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
+    With ``percent`` the columns are 100 % high and the segments show their share; such a chart
+    has no annotations (they stay stored but are neither drawn nor offered).
+
     Raises ``ValueError`` if the box leaves no room for the plot.
     """
-    brackets, levels = notes.arrows(annotations, data, "column")
+    if percent:
+        brackets, levels = [], []
+    else:
+        brackets, levels = notes.arrows(annotations, data, "column")
     lanes = len(brackets) * LANE_HEIGHT
     top_band = lanes + TOP_BAND
     plot_width = width - len(levels) * LEVEL_LANE_WIDTH
     plot_height = height - top_band - CATEGORY_BAND
-    has_negative = any(v is not None and v < 0 for s in data.series for v in s.values)
+    has_negative = not percent and any(
+        v is not None and v < 0 for s in data.series for v in s.values
+    )
     # Labels of negative columns hang below them and must not run into the category names.
     scale_height = plot_height - (LABEL_HEIGHT if has_negative else 0.0)
     if plot_width <= 0 or scale_height <= 0:
@@ -65,8 +78,12 @@ def layout_column(
     if not data.categories or not data.series:
         return ()
 
-    cut = resolve(annotations, data, grouping)
-    axis = shortened_axis(data, grouping, cut) if cut else value_axis(data, grouping)
+    cut = None if percent else resolve(annotations, data, grouping)
+    axis = (
+        PERCENT_AXIS
+        if percent
+        else (shortened_axis(data, grouping, cut) if cut else value_axis(data, grouping))
+    )
     span = axis.maximum - axis.minimum
 
     def y(value: float) -> float:
@@ -80,7 +97,7 @@ def layout_column(
         slot_x = c * slot
         column_x = slot_x + (slot - column_width) / 2
         if grouping == "stacked":
-            out.extend(_stacked_column(data, c, column_x, column_width, y, cut))
+            out.extend(_stacked_column(data, c, column_x, column_width, y, cut, percent=percent))
         else:
             out.extend(_clustered_column(data, c, column_x, column_width, y, cut))
         out.append(
@@ -221,8 +238,17 @@ def level_arrow(
 
 
 def _stacked_column(
-    data: ChartData, c: int, x: float, width: float, y: _YScale, cut: Break | None
+    data: ChartData,
+    c: int,
+    x: float,
+    width: float,
+    y: _YScale,
+    cut: Break | None,
+    *,
+    percent: bool = False,
 ) -> list[Primitive]:
+    if percent:
+        return _percent_column(data, c, x, width, y)
     out: list[Primitive] = []
     column_top = column_tops(data, "stacked")[c]
     fold = cut.fold if cut else _same
@@ -258,6 +284,33 @@ def _stacked_column(
         )
     if cut and cut.cuts(column_top):
         out.extend(break_mark(x, width, y(cut.lower), BREAK_OVERHANG))
+    return out
+
+
+def _percent_column(data: ChartData, c: int, x: float, width: float, y: _YScale) -> list[Primitive]:
+    """A 100 % high column: shares inside, the absolute column sum above it."""
+    total = column_total(data, c)
+    if total <= 0:
+        return []
+    out: list[Primitive] = []
+    level = 0.0
+    for i, series in enumerate(data.series):
+        value = series.values[c]
+        percentage = share_label(value, total)
+        if not percentage:
+            continue
+        height = (value or 0.0) / total * 100
+        top, bottom = y(level + height), y(level)
+        level += height
+        out.append(Rect(x, top, width, bottom - top, i))
+        # Always emit the label (empty if flat): the structure must not depend on the size.
+        label = percentage if bottom - top >= MIN_SEGMENT_FOR_LABEL else ""
+        out.append(Text(x, top, width, bottom - top, label, "center", "value"))
+    out.append(
+        Text(
+            x, y(100.0) - LABEL_HEIGHT, width, LABEL_HEIGHT, format_value(total), "center", "total"
+        )
+    )
     return out
 
 

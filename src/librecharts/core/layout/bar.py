@@ -28,7 +28,11 @@ from librecharts.core.layout.column import (
 )
 from librecharts.core.layout.common import GAP_RATIO, column_top, format_value, value_axis
 from librecharts.core.model import Annotation, Grouping
+from librecharts.core.percent import column_total, share_label
 from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
+from librecharts.core.scale import Axis
+
+PERCENT_AXIS = Axis(0.0, 100.0, 20.0)  # the fixed scale of a 100 % chart
 
 LEFT_BAND = 3000.0  # room left of the plot for category names
 RIGHT_BAND = 1200.0  # room right of the plot for outside labels of positive values and totals
@@ -53,20 +57,33 @@ def layout_bar(
     width: float,
     height: float,
     annotations: tuple[Annotation, ...] = (),
+    percent: bool = False,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
+    With ``percent`` the bars are 100 % long and the segments show their share; such a chart has
+    no annotations (they stay stored but are neither drawn nor offered).
+
     Raises ``ValueError`` if the box leaves no room for the plot.
     """
-    brackets, levels = notes.arrows(annotations, data, "bar")
-    plot_left, plot_width, plot_height = _plot(data, width, height, len(brackets), len(levels))
+    if percent:
+        brackets, levels = [], []
+    else:
+        brackets, levels = notes.arrows(annotations, data, "bar")
+    plot_left, plot_width, plot_height = _plot(
+        data, width, height, len(brackets), len(levels), percent
+    )
     if plot_height <= 0 or plot_width <= 0:
         raise ValueError("chart area too small")
     if not data.categories or not data.series:
         return ()
 
-    cut = resolve(annotations, data, grouping)
-    axis = shortened_axis(data, grouping, cut) if cut else value_axis(data, grouping)
+    cut = None if percent else resolve(annotations, data, grouping)
+    axis = (
+        PERCENT_AXIS
+        if percent
+        else (shortened_axis(data, grouping, cut) if cut else value_axis(data, grouping))
+    )
     span = axis.maximum - axis.minimum
     fold = cut.fold if cut else _same
 
@@ -81,7 +98,7 @@ def layout_bar(
         slot_y = c * slot
         bar_y = slot_y + (slot - thickness) / 2
         if grouping == "stacked":
-            out.extend(_stacked_bar(data, c, bar_y, thickness, x, cut))
+            out.extend(_stacked_bar(data, c, bar_y, thickness, x, cut, percent=percent))
         else:
             out.extend(_clustered_bar(data, c, bar_y, thickness, x, cut))
         out.append(
@@ -134,10 +151,12 @@ def _same(value: float) -> float:
 
 
 def _plot(
-    data: ChartData, width: float, height: float, brackets: int, levels: int
+    data: ChartData, width: float, height: float, brackets: int, levels: int, percent: bool = False
 ) -> tuple[float, float, float]:
     """Left edge, width and height of the plot area."""
-    has_negative = any(v is not None and v < 0 for s in data.series for v in s.values)
+    has_negative = not percent and any(
+        v is not None and v < 0 for s in data.series for v in s.values
+    )
     # Labels of negative bars hang to the left of them and must not run into the category names.
     plot_left = LEFT_BAND + (LABEL_WIDTH if has_negative else 0.0)
     plot_width = width - plot_left - RIGHT_BAND - brackets * BRACKET_LANE_WIDTH
@@ -229,8 +248,17 @@ def _break_mark(x: float, y: float, thickness: float, overhang: float) -> list[P
 
 
 def _stacked_bar(
-    data: ChartData, c: int, y: float, thickness: float, x: _XScale, cut: Break | None
+    data: ChartData,
+    c: int,
+    y: float,
+    thickness: float,
+    x: _XScale,
+    cut: Break | None,
+    *,
+    percent: bool = False,
 ) -> list[Primitive]:
+    if percent:
+        return _percent_bar(data, c, y, thickness, x)
     out: list[Primitive] = []
     positive = negative = 0.0
     segments = 0
@@ -264,6 +292,41 @@ def _stacked_bar(
         )
     if cut and cut.cuts(column_tops(data, "stacked")[c]):
         out.extend(_break_mark(x(cut.lower), y, thickness, BREAK_OVERHANG))
+    return out
+
+
+def _percent_bar(
+    data: ChartData, c: int, y: float, thickness: float, x: _XScale
+) -> list[Primitive]:
+    """A 100 % long bar: shares inside, the absolute column sum right of it."""
+    total = column_total(data, c)
+    if total <= 0:
+        return []
+    out: list[Primitive] = []
+    level = 0.0
+    for i, series in enumerate(data.series):
+        value = series.values[c]
+        percentage = share_label(value, total)
+        if not percentage:
+            continue
+        length = (value or 0.0) / total * 100
+        left, right = x(level), x(level + length)
+        level += length
+        out.append(Rect(left, y, right - left, thickness, i))
+        # Always emit the label (empty if narrow): the structure must not depend on the size.
+        label = percentage if right - left >= MIN_SEGMENT_FOR_LABEL else ""
+        out.append(Text(left, y, right - left, thickness, label, "center", "value"))
+    out.append(
+        Text(
+            x(100.0) + LABEL_GAP,
+            y + (thickness - LABEL_HEIGHT) / 2,
+            LABEL_WIDTH - LABEL_GAP,
+            LABEL_HEIGHT,
+            format_value(total),
+            "left",
+            "total",
+        )
+    )
     return out
 
 

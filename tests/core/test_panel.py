@@ -15,6 +15,24 @@ def test_insert_buttons_are_always_enabled() -> None:
     assert all(b.enabled for b in panel.insert)
 
 
+def test_a_column_chart_offers_its_variants_and_the_sort_cycle() -> None:
+    panel = content(sample_state(), True, "en-US")
+    assert [b.command for b in panel.options] == [
+        PROTOCOL + "ChangeChart?grouping=stacked&percent=false",
+        PROTOCOL + "ChangeChart?grouping=clustered",
+        PROTOCOL + "ChangeChart?percent=true",
+        PROTOCOL + "ChangeChart?sort=descending",
+    ]
+    # the current variant is shown but disabled
+    assert [b.enabled for b in panel.options] == [False, True, True, True]
+
+
+def test_a_100_percent_chart_says_so_and_disables_the_100_percent_button() -> None:
+    panel = content(replace(sample_state(), percent=True), True, "en-US")
+    assert panel.status.startswith("Column chart (100 %), ")
+    assert [b.enabled for b in panel.options] == [True, True, False, True]
+
+
 def test_without_a_chart_everything_else_is_disabled() -> None:
     panel = content(None, False, "en-US")
     assert panel.status == "No chart selected."
@@ -59,7 +77,7 @@ def test_a_units_mekko_says_so_and_offers_percent() -> None:
 
 
 def test_only_charts_with_options_get_an_options_button() -> None:
-    assert content(sample_state(), True, "en-US").options == ()
+    assert content(sample_waterfall_state(), True, "en-US").options == ()
     assert content(None, True, "en-US").options == ()
     assert content(None, False, "en-US").options == ()
 

@@ -58,6 +58,8 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
     else:
         data = notes.measured(state)
         kind = "mekko_units" if state.kind == "mekko" and not state.percent else state.kind
+        if kind in ("column", "bar") and state.percent:
+            kind += "_percent"
         status = text(
             "status_chart",
             locale,
@@ -115,8 +117,19 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
 
 
 def _options(state: ChartState | None, usable: bool, locale: str) -> tuple[Button, ...]:
-    toggle = options.toggle(state) if state is not None else None
-    return (_button(toggle[0], toggle[1], "", locale, usable),) if toggle else ()
+    if state is None:
+        return ()
+    variants = options.variants(state)
+    if state.kind == "mekko":  # the Mekko keeps a single toggle button
+        variants = tuple(switch for switch in variants if not switch.current)
+    buttons = tuple(
+        _button(switch.title, switch.command, "", locale, usable and not switch.current)
+        for switch in variants
+    )
+    toggle = options.sort_toggle(state)
+    if toggle is not None:
+        buttons += (_button(toggle.title, toggle.command, "", locale, usable),)
+    return buttons
 
 
 def _can_annotate(state: ChartState | None, usable: bool, kind: AnnotationKind) -> bool:

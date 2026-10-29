@@ -160,6 +160,34 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Show as 100 %",
         "de": "Als 100 % anzeigen",
     },
+    "menu_stacked": {
+        "en": "Show stacked",
+        "de": "Gestapelt anzeigen",
+    },
+    "menu_clustered": {
+        "en": "Show clustered",
+        "de": "Gruppiert anzeigen",
+    },
+    "menu_percent": {
+        "en": "Show as 100 %",
+        "de": "Als 100 % anzeigen",
+    },
+    "menu_sort": {
+        "en": "Sort categories",
+        "de": "Kategorien sortieren",
+    },
+    "menu_sort_none": {
+        "en": "Data sheet order",
+        "de": "Reihenfolge der Daten",
+    },
+    "menu_sort_descending": {
+        "en": "Descending",
+        "de": "Absteigend",
+    },
+    "menu_sort_ascending": {
+        "en": "Ascending",
+        "de": "Aufsteigend",
+    },
     "option_unsupported": {
         "en": "This option is not available for this chart type.",
         "de": "Diese Option gibt es für diesen Diagrammtyp nicht.",
@@ -212,9 +240,17 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Column chart",
         "de": "Säulendiagramm",
     },
+    "kind_column_percent": {
+        "en": "Column chart (100 %)",
+        "de": "Säulendiagramm (100 %)",
+    },
     "kind_bar": {
         "en": "Bar chart",
         "de": "Balkendiagramm",
+    },
+    "kind_bar_percent": {
+        "en": "Bar chart (100 %)",
+        "de": "Balkendiagramm (100 %)",
     },
     "kind_waterfall": {
         "en": "Waterfall chart",

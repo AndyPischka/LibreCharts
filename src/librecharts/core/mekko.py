@@ -15,6 +15,7 @@ from dataclasses import dataclass, replace
 
 from librecharts.core.datasheet import ChartData, parse
 from librecharts.core.model import ChartState
+from librecharts.core.percent import positive_only
 
 WIDTH_ROW_NAMES = frozenset({"width", "breite"})
 
@@ -39,13 +40,7 @@ def parse_mekko(state: ChartState) -> MekkoData:
             values=state.values[:1] + state.values[2:],
         )
     data = parse(state)
-    data = ChartData(
-        data.categories,
-        tuple(
-            replace(s, values=tuple(v if v is not None and v > 0 else None for v in s.values))
-            for s in data.series
-        ),
-    )
+    data = positive_only(data)
     widths: list[float] = []
     for c in range(len(data.categories)):
         given = width_row[c + 1] if c + 1 < len(width_row) else None

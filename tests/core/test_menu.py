@@ -5,6 +5,17 @@ from librecharts.core.menu import PROTOCOL, SEPARATOR, MenuItem, chart_menu
 from librecharts.core.model import Annotation
 
 EDIT = MenuItem("Edit chart data", PROTOCOL + "EditData")
+VARIANTS = (
+    MenuItem("Show clustered", PROTOCOL + "ChangeChart?grouping=clustered"),
+    MenuItem("Show as 100 %", PROTOCOL + "ChangeChart?percent=true"),
+)
+SORT = MenuItem(
+    "Sort categories",
+    children=(
+        MenuItem("Descending", PROTOCOL + "ChangeChart?sort=descending"),
+        MenuItem("Ascending", PROTOCOL + "ChangeChart?sort=ascending"),
+    ),
+)
 ADD = (
     SEPARATOR,
     MenuItem("Add difference arrow", PROTOCOL + "PickAnnotation?kind=difference"),
@@ -18,12 +29,48 @@ def commands(item: MenuItem) -> list[str]:
     return [child.command for child in item.children]
 
 
-def test_column_chart_without_annotations_offers_data_and_arrows() -> None:
-    assert chart_menu(sample_state(), "en-US") == MenuItem("LibreCharts", children=(EDIT, *ADD))
+def test_column_chart_without_annotations_offers_data_variants_sort_and_arrows() -> None:
+    assert chart_menu(sample_state(), "en-US") == MenuItem(
+        "LibreCharts", children=(EDIT, *VARIANTS, SORT, *ADD)
+    )
 
 
-def test_bar_and_waterfall_charts_offer_the_same_annotations() -> None:
-    assert chart_menu(replace(sample_state(), kind="bar"), "en-US").children == (EDIT, *ADD)
+def test_bar_charts_offer_the_same_variants_and_annotations() -> None:
+    assert chart_menu(replace(sample_state(), kind="bar"), "en-US").children == (
+        EDIT,
+        *VARIANTS,
+        SORT,
+        *ADD,
+    )
+
+
+def test_clustered_charts_offer_the_other_variants() -> None:
+    state = replace(sample_state(), grouping="clustered")
+    titles = [item.title for item in chart_menu(state, "en-US").children]
+    assert "Show clustered" not in titles
+    assert "Show stacked" in titles
+    assert "Show as 100 %" in titles
+
+
+def test_a_100_percent_chart_offers_no_annotations() -> None:
+    state = replace(sample_state(), percent=True)
+    titles = [item.title for item in chart_menu(state, "en-US").children]
+    assert "Add difference arrow" not in titles
+    assert "Show stacked" in titles
+    assert "Show clustered" in titles
+
+
+def test_the_current_sort_order_is_not_offered_again() -> None:
+    state = replace(sample_state(), sort="descending")
+    sort = next(item for item in chart_menu(state, "en-US").children if item.children)
+    assert [item.title for item in sort.children] == ["Data sheet order", "Ascending"]
+    assert commands(sort) == [
+        PROTOCOL + "ChangeChart?sort=none",
+        PROTOCOL + "ChangeChart?sort=ascending",
+    ]
+
+
+def test_waterfall_charts_have_no_variants_or_sort() -> None:
     assert chart_menu(sample_waterfall_state(), "en-US").children == (EDIT, *ADD)
 
 
@@ -55,16 +102,15 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
             Annotation("axis_break", 0, 0, lower=10.0, upper=50.0),
         ),
     )
-    items = chart_menu(state, "en-US").children[len(ADD) + 1 :]
-    assert [item.title for item in items] == [
-        "",
+    items = chart_menu(state, "en-US").children
+    annotation_items = [item for item in items if item.children and item.title != "Sort categories"]
+    assert [item.title for item in annotation_items] == [
         "Difference 2023 → 2025",
         "CAGR 2023 → 2024 (Product B)",
         "Level difference 2025 → 2024",
         "Axis break (10-50)",
-        "Remove all annotations",
     ]
-    difference, cagr, level = items[1:4]
+    difference, cagr, level, axis_break = annotation_items
     assert commands(difference) == [
         PROTOCOL + "ChangeAnnotation?index=0&label=absolute",
         PROTOCOL + "ChangeAnnotation?index=0&style=level",
@@ -76,7 +122,7 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
         PROTOCOL + "ChangeAnnotation?index=2&style=bracket",
         PROTOCOL + "RemoveAnnotation?index=2",
     ]
-    assert commands(items[4]) == [
+    assert commands(axis_break) == [
         PROTOCOL + "EditAxisBreak",
         PROTOCOL + "RemoveAnnotation?index=3",
     ]
@@ -88,7 +134,11 @@ def test_hidden_annotations_are_not_listed_but_keep_their_index() -> None:
         sample_state(),
         annotations=(Annotation("difference", 0, 9), Annotation("difference", 0, 1)),
     )
-    listed = [item for item in chart_menu(state, "en-US").children if item.children]
+    listed = [
+        item
+        for item in chart_menu(state, "en-US").children
+        if item.children and item.title != "Sort categories"
+    ]
     assert len(listed) == 1
     assert commands(listed[0])[-1] == PROTOCOL + "RemoveAnnotation?index=1"
 
@@ -98,3 +148,4 @@ def test_menu_is_translated() -> None:
     titles = [item.title for item in chart_menu(state, "de-DE").children]
     assert "Diagrammdaten bearbeiten" in titles
     assert "Differenz 2023 → 2024" in titles
+    assert "Kategorien sortieren" in titles

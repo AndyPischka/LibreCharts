@@ -71,6 +71,18 @@ def test_round_trip_preserves_the_mekko_variant() -> None:
         assert from_json(to_json(state)).percent is percent
 
 
+def test_round_trip_preserves_the_sort_order() -> None:
+    for sort in ("none", "descending", "ascending"):
+        assert from_json(to_json(make_state(sort=sort))).sort == sort
+
+
+def test_version_4_state_starts_unsorted() -> None:
+    raw = valid_raw()
+    del raw["sort"]
+    raw["v"] = 4
+    assert from_json(json.dumps(raw)).sort == "none"
+
+
 @pytest.mark.parametrize(("kind", "percent"), [("mekko", True), ("column", False), ("bar", False)])
 def test_version_3_state_is_migrated_with_a_percent_mekko(kind: str, percent: bool) -> None:
     raw = {**valid_raw(), "kind": kind, "v": 3}
@@ -127,7 +139,10 @@ def test_integers_in_values_become_floats() -> None:
         lambda r: r.pop("percent"),
         lambda r: r.update(percent="yes"),
         lambda r: r.update(percent=1),
-        lambda r: r.update(percent=True),  # only a Mekko can be a percent chart
+        lambda r: r.update(kind="waterfall", percent=True),
+        lambda r: r.update(kind="waterfall", sort="descending"),
+        lambda r: r.update(sort="sideways"),
+        lambda r: r.pop("sort"),
         lambda r: r.pop("annotations"),
         lambda r: r.update(annotations={}),
         lambda r: r.update(annotations=[5]),

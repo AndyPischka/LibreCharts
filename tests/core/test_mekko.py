@@ -296,9 +296,12 @@ def test_a_new_mekko_is_a_percent_mekko() -> None:
     assert sample_mekko_state().percent
 
 
-def test_only_a_mekko_can_be_a_percent_chart() -> None:
+def test_only_a_mekko_or_a_stacked_column_or_bar_can_be_a_percent_chart() -> None:
     with pytest.raises(ValueError, match="percent"):
-        state_from_table("column", "stacked", [[None, "A"], ["S", 1]], percent=True)
+        state_from_table("waterfall", "stacked", [[None, "A"], ["S", 1]], percent=True)
+    with pytest.raises(ValueError, match="percent"):
+        state_from_table("column", "clustered", [[None, "A"], ["S", 1]], percent=True)
+    assert state_from_table("column", "stacked", [[None, "A"], ["S", 1]], percent=True).percent
 
 
 # --- series names -----------------------------------------------------------------------------

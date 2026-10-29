@@ -34,8 +34,18 @@ SEPARATOR = MenuItem()
 def chart_menu(state: ChartState, locale: str) -> MenuItem:
     """The "LibreCharts" submenu for a chart with ``state``."""
     items = [MenuItem(text("menu_edit_data", locale), PROTOCOL + "EditData")]
-    if toggle := options.toggle(state):
-        items.append(_command(toggle[0], toggle[1], locale))
+    items += [
+        _command(switch.title, switch.command, locale)
+        for switch in options.variants(state)
+        if not switch.current
+    ]
+    sorts = tuple(
+        _command(switch.title, switch.command, locale)
+        for switch in options.sort_options(state)
+        if not switch.current
+    )
+    if sorts:
+        items.append(MenuItem(text("menu_sort", locale), children=sorts))
     if supports(state, "difference"):
         items += [
             SEPARATOR,

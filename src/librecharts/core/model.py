@@ -6,10 +6,11 @@ import math
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 ChartKind = Literal["column", "bar", "waterfall", "mekko"]
 Grouping = Literal["stacked", "clustered"]
+SortOrder = Literal["none", "descending", "ascending"]
 AnnotationKind = Literal["difference", "cagr", "axis_break"]
 ArrowStyle = Literal["bracket", "level"]
 LabelMode = Literal["percent", "absolute"]
@@ -71,9 +72,10 @@ class ChartState:
     such as ``=B2*2``). ``values`` holds the evaluated numbers the chart is drawn from, ``None``
     where a cell is empty or not numeric. Both grids are rectangular and have the same shape.
 
-    ``percent`` is a Mekko option: ``True`` draws every column 100 % high (percent Mekko),
-    ``False`` scales column heights by their sums (units Mekko). It has no meaning for other
-    chart kinds and stays ``False`` there.
+    ``percent`` draws a 100 % chart: a Mekko with every column 100 % high, or a stacked column or
+    bar chart whose segments show shares of their column. ``sort`` reorders the categories of a
+    column or bar chart for display only, without touching the data sheet. Neither has a meaning
+    for the other chart kinds, where they keep their defaults.
     """
 
     kind: ChartKind
@@ -82,15 +84,24 @@ class ChartState:
     values: tuple[tuple[float | None, ...], ...]
     annotations: tuple[Annotation, ...] = ()
     percent: bool = False
+    sort: SortOrder = "none"
     version: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         if self.kind not in get_args(ChartKind):
             raise ValueError(f"unknown chart kind: {self.kind!r}")
-        if self.percent and self.kind != "mekko":
-            raise ValueError("only a Marimekko chart can be a percent chart")
         if self.grouping not in get_args(Grouping):
             raise ValueError(f"unknown grouping: {self.grouping!r}")
+        if self.sort not in get_args(SortOrder):
+            raise ValueError(f"unknown sort order: {self.sort!r}")
+        if self.percent and not (
+            self.kind == "mekko" or (self.kind in ("column", "bar") and self.grouping == "stacked")
+        ):
+            raise ValueError(
+                "only a Marimekko chart or a stacked column or bar chart can be a percent chart"
+            )
+        if self.sort != "none" and self.kind not in ("column", "bar"):
+            raise ValueError(f"a {self.kind} chart cannot be sorted")
         if len(self.cells) != len(self.values):
             raise ValueError("cells and values must have the same number of rows")
         widths = {len(row) for row in (*self.cells, *self.values)}

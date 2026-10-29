@@ -85,6 +85,20 @@ def test_supports_follows_the_chart_kind() -> None:
     assert not supports(sample_mekko_state(), "difference")
 
 
+def test_a_100_percent_chart_offers_no_annotations() -> None:
+    percent = replace(STACKED, percent=True)
+    assert not supports(percent, "difference")
+    assert not supports(percent, "axis_break")
+
+
+def test_a_sorted_chart_reports_the_data_sheet_index() -> None:
+    # descending: display order 2025, 2024, 2023 -> data indices 2, 1, 0
+    sorted_state = replace(STACKED, sort="descending")
+    assert target_at(sorted_state, WIDTH, HEIGHT, 500, 5000) == (2, None)
+    assert target_at(sorted_state, WIDTH, HEIGHT, 1500, 5000) == (1, None)
+    assert target_at(sorted_state, WIDTH, HEIGHT, 2500, 5000) == (0, None)
+
+
 def test_session_from_query() -> None:
     assert PickSession.from_query("kind=cagr") == PickSession("cagr")
     assert PickSession.from_query("kind=difference&style=level") == PickSession(
