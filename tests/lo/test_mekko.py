@@ -12,6 +12,7 @@ from helpers import (
     new_impress,
     save_and_reload,
     uno_command,
+    without_format,
 )
 
 from librecharts.core.datasheet import sample_mekko_state
@@ -54,7 +55,7 @@ def test_mekko_is_inserted_and_survives_odp_and_pptx(ctx):
     try:
         dispatch(ctx, doc, INSERT)
         ((group, chart_id),) = store.find_charts(first_page(doc))
-        assert store.read_state(doc, chart_id) == sample_mekko_state()
+        assert without_format(store.read_state(doc, chart_id)) == sample_mekko_state()
         texts = _texts(group)
         for expected in ("Europe", "Product A", "80", "50%"):  # Europe: A = 40 of 80
             assert expected in texts, (expected, texts)
@@ -62,7 +63,9 @@ def test_mekko_is_inserted_and_survives_odp_and_pptx(ctx):
             reloaded = save_and_reload(ctx, doc, fmt)
             try:
                 ((_, reloaded_id),) = store.find_charts(first_page(reloaded))
-                assert store.read_state(reloaded, reloaded_id) == sample_mekko_state(), fmt
+                assert (
+                    without_format(store.read_state(reloaded, reloaded_id)) == sample_mekko_state()
+                ), fmt
             finally:
                 reloaded.close(True)
     finally:

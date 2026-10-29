@@ -137,6 +137,10 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         layout.label(panel.status, lines=2)
         for button in (*panel.edit, *panel.options):
             layout.button(button)
+        if panel.format:
+            layout.heading("panel_format")
+            for button in panel.format:
+                layout.button(button)
         layout.heading("panel_annotations")
         for button in panel.add:
             layout.button(button)

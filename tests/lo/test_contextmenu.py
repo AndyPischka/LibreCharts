@@ -47,15 +47,15 @@ def test_context_menu_of_a_chart_opens_its_data_sheet(ctx):
         group, _ = store.find_charts(first_page(doc))[0]
         controller = doc.getCurrentController()
         window = controller.getFrame().getComponentWindow()
-        # Right-click on the selected chart; where exactly does not matter, the chart is large.
+        # Right-click on the first stacked column; the chart's centre may fall on a gap.
         size, area = window.getPosSize(), controller.VisibleArea
         click = uno.createUnoStruct("com.sun.star.awt.MouseEvent")
         click.Source, click.Buttons, click.ClickCount = window, VCL_RIGHT_BUTTON, 1
         click.X = round(
-            (group.Position.X + group.Size.Width / 2 - area.X) / area.Width * size.Width
+            (group.Position.X + group.Size.Width * 0.3 - area.X) / area.Width * size.Width
         )
         click.Y = round(
-            (group.Position.Y + group.Size.Height / 2 - area.Y) / area.Height * size.Height
+            (group.Position.Y + group.Size.Height * 0.55 - area.Y) / area.Height * size.Height
         )
         robot = ctx.ServiceManager.createInstanceWithContext("com.sun.star.awt.Toolkit", ctx)
         robot.mousePress(click)

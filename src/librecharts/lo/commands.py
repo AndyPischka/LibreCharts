@@ -5,36 +5,38 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import replace
 from typing import Any
+from urllib.parse import parse_qs
 
 from librecharts.core import annotations, options
+from librecharts.core import format as formats
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, AnnotationKind, ChartState
 from librecharts.core.picking import PickSession, supports
 from librecharts.core.state_io import StateError
-from librecharts.lo import axisdialog, chart, pick, resize, store, ui
+from librecharts.lo import axisdialog, chart, formatdialog, pick, resize, store, ui
 from librecharts.lo.datasheet import OrphanedChartError, open_datasheet
 
 
-def insert_column_chart(frame: Any) -> None:
-    _insert(frame, chart.insert_column_chart)
+def insert_column_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_column_chart)
 
 
-def insert_bar_chart(frame: Any) -> None:
-    _insert(frame, chart.insert_bar_chart)
+def insert_bar_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_bar_chart)
 
 
-def insert_waterfall_chart(frame: Any) -> None:
-    _insert(frame, chart.insert_waterfall_chart)
+def insert_waterfall_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_waterfall_chart)
 
 
-def insert_mekko_chart(frame: Any) -> None:
-    _insert(frame, chart.insert_mekko_chart)
+def insert_mekko_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_mekko_chart)
 
 
-def _insert(frame: Any, insert: Any) -> None:
+def _insert(ctx: Any, frame: Any, insert: Any) -> None:
     controller = frame.getController()
     doc = controller.getModel()
-    group = insert(doc, controller.getCurrentPage())
+    group = insert(doc, controller.getCurrentPage(), locale=ui.ui_locale(ctx))
     resize.watch(
         doc
     )  # normally done by the document-open job; covers a freshly installed extension
@@ -106,6 +108,59 @@ def change_chart(ctx: Any, frame: Any, query: str) -> None:
         return
     if changed != state:
         chart.redraw(frame.getController().getModel(), group, changed)
+
+
+def change_format(ctx: Any, frame: Any, query: str) -> None:
+    """Change a format option such as ``axis=true`` (see ``format.changed``); one undo step."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    try:
+        changed = formats.settled(state, state.format, query)
+    except ValueError:
+        ui.show_info(ctx, frame, text("option_unsupported", ui.ui_locale(ctx)))
+        return
+    if changed != state.format:
+        chart.redraw(frame.getController().getModel(), group, replace(state, format=changed))
+
+
+def number_format(ctx: Any, frame: Any) -> None:
+    """Ask for the number format of the selected chart (a dialog), then apply it."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is not None:
+        group, state = found
+        formatdialog.request_number(ctx, frame, group, state)
+
+
+def value_line(ctx: Any, frame: Any) -> None:
+    """Ask for a value line (a target or the average) and add it; one undo step."""
+    found = _annotatable_chart(ctx, frame, "value_line")
+    if found is not None:
+        group, state = found
+        formatdialog.request_value_line(ctx, frame, group, state, None)
+
+
+def edit_value_line(ctx: Any, frame: Any, query: str) -> None:
+    """Change the value line at ``index=...`` through the same dialog; one undo step."""
+    found = _annotatable_chart(ctx, frame, "value_line")
+    if found is None:
+        return
+    group, state = found
+    index = _index(query)
+    if index is None or not 0 <= index < len(state.annotations):
+        return
+    if state.annotations[index].kind != "value_line":
+        return
+    formatdialog.request_value_line(ctx, frame, group, state, index)
+
+
+def _index(query: str) -> int | None:
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    try:
+        return int(args["index"])
+    except (KeyError, ValueError):
+        return None
 
 
 def change_annotation(ctx: Any, frame: Any, query: str) -> None:

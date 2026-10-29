@@ -55,13 +55,13 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
             doubleclick.attach(self.ctx, self.frame)
             contextmenu.attach(self.ctx, self.frame)
             if url.Path == "InsertColumnChart":
-                commands.insert_column_chart(self.frame)
+                commands.insert_column_chart(self.ctx, self.frame)
             elif url.Path == "InsertBarChart":
-                commands.insert_bar_chart(self.frame)
+                commands.insert_bar_chart(self.ctx, self.frame)
             elif url.Path == "InsertWaterfallChart":
-                commands.insert_waterfall_chart(self.frame)
+                commands.insert_waterfall_chart(self.ctx, self.frame)
             elif url.Path == "InsertMekkoChart":
-                commands.insert_mekko_chart(self.frame)
+                commands.insert_mekko_chart(self.ctx, self.frame)
             elif url.Path == "EditData":
                 commands.edit_data(self.ctx, self.frame)
             elif url.Path.startswith("AddAnnotation"):
@@ -72,6 +72,14 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.pick_annotation(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ChangeChart"):
                 commands.change_chart(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("ChangeFormat"):
+                commands.change_format(self.ctx, self.frame, _query(url))
+            elif url.Path == "NumberFormat":
+                commands.number_format(self.ctx, self.frame)
+            elif url.Path == "ValueLine":
+                commands.value_line(self.ctx, self.frame)
+            elif url.Path.startswith("EditValueLine"):
+                commands.edit_value_line(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ChangeAnnotation"):
                 commands.change_annotation(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("RemoveAnnotations"):

@@ -3,7 +3,7 @@
 
 from dataclasses import replace
 
-from helpers import dispatch, first_page, new_impress, save_and_reload, uno_command
+from helpers import dispatch, first_page, new_impress, save_and_reload, uno_command, without_format
 
 from librecharts.core.datasheet import sample_state
 from librecharts.lo import chart, store
@@ -22,7 +22,7 @@ def test_insert_adds_one_anchored_group_with_stored_state(ctx):
         group, chart_id = charts[0]
         assert group.ShapeType == "com.sun.star.drawing.GroupShape"
         assert group.getCount() > 10
-        assert store.read_state(doc, chart_id) == sample_state()
+        assert without_format(store.read_state(doc, chart_id)) == sample_state()
     finally:
         doc.close(True)
 
@@ -56,7 +56,7 @@ def test_state_survives_odp_and_pptx(ctx):
                 charts = store.find_charts(first_page(reloaded))
                 assert len(charts) == 1, f"{fmt}: expected one chart, found {charts}"
                 _, chart_id = charts[0]
-                assert store.read_state(reloaded, chart_id) == sample_state(), fmt
+                assert without_format(store.read_state(reloaded, chart_id)) == sample_state(), fmt
             finally:
                 reloaded.close(True)
     finally:
@@ -71,7 +71,9 @@ def test_redraw_keeps_frame_and_replaces_children(ctx):
         position, size = group.Position, group.Size
         stacked_children = group.getCount()
 
-        clustered = replace(sample_state(), grouping="clustered")
+        inserted = store.read_state(doc, chart_id)
+        assert inserted is not None
+        clustered = replace(inserted, grouping="clustered")
         chart.redraw(doc, group, clustered)
 
         assert (group.Position.X, group.Position.Y) == (position.X, position.Y)
@@ -89,13 +91,15 @@ def test_redraw_is_one_undo_step(ctx):
         dispatch(ctx, doc, INSERT)
         group, chart_id = store.find_charts(first_page(doc))[0]
         stacked_children = group.getCount()
-        chart.redraw(doc, group, replace(sample_state(), grouping="clustered"))
+        inserted = store.read_state(doc, chart_id)
+        assert inserted is not None
+        chart.redraw(doc, group, replace(inserted, grouping="clustered"))
 
         manager = doc.getUndoManager()
         assert manager.getCurrentUndoActionTitle() == "Update LibreCharts chart"
         uno_command(ctx, doc, ".uno:Undo")
         assert group.getCount() == stacked_children
-        assert store.read_state(doc, chart_id) == sample_state()
+        assert store.read_state(doc, chart_id) == inserted
         assert manager.getCurrentUndoActionTitle() == "Insert LibreCharts chart"
     finally:
         doc.close(True)
@@ -123,12 +127,12 @@ def test_bar_chart_is_inserted_and_survives_odp_and_pptx(ctx):
         ((group, chart_id),) = store.find_charts(first_page(doc))
         assert group.getCount() > 10
         expected = replace(sample_state(), kind="bar")
-        assert store.read_state(doc, chart_id) == expected
+        assert without_format(store.read_state(doc, chart_id)) == expected
         for fmt in ("odp", "pptx"):
             reloaded = save_and_reload(ctx, doc, fmt)
             try:
                 ((_, reloaded_id),) = store.find_charts(first_page(reloaded))
-                assert store.read_state(reloaded, reloaded_id) == expected, fmt
+                assert without_format(store.read_state(reloaded, reloaded_id)) == expected, fmt
             finally:
                 reloaded.close(True)
     finally:

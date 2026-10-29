@@ -10,6 +10,7 @@ from typing import Any
 
 from librecharts.core import annotations
 from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
+from librecharts.core.format import default_format
 from librecharts.core.layout.chart import layout_chart
 from librecharts.core.model import Annotation, ChartState
 from librecharts.lo import render, store, undo
@@ -17,27 +18,33 @@ from librecharts.lo import render, store, undo
 NEW_CHART_SHARE = 0.6  # a new chart covers this share of the slide's width and height
 
 
-def insert_column_chart(doc: Any, page: Any, state: ChartState | None = None) -> Any:
-    """Insert a chart (sample data by default) centred on ``page``; returns its group shape."""
-    return _insert(doc, page, state or sample_state())
+def insert_column_chart(
+    doc: Any, page: Any, state: ChartState | None = None, locale: str = ""
+) -> Any:
+    """Insert a chart (sample data by default) centred on ``page``; returns its group shape.
+
+    ``locale`` (e.g. ``de-DE``) sets the decimal separator and the language of magnitude suffixes.
+    """
+    return _insert(doc, page, state or sample_state(), locale)
 
 
-def insert_bar_chart(doc: Any, page: Any) -> Any:
+def insert_bar_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a horizontal bar chart with sample data centred on ``page``."""
-    return _insert(doc, page, replace(sample_state(), kind="bar"))
+    return _insert(doc, page, replace(sample_state(), kind="bar"), locale)
 
 
-def insert_waterfall_chart(doc: Any, page: Any) -> Any:
+def insert_waterfall_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a waterfall chart with sample data centred on ``page``."""
-    return _insert(doc, page, sample_waterfall_state())
+    return _insert(doc, page, sample_waterfall_state(), locale)
 
 
-def insert_mekko_chart(doc: Any, page: Any) -> Any:
+def insert_mekko_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a percent Marimekko chart with sample data centred on ``page``."""
-    return _insert(doc, page, sample_mekko_state())
+    return _insert(doc, page, sample_mekko_state(), locale)
 
 
-def _insert(doc: Any, page: Any, state: ChartState) -> Any:
+def _insert(doc: Any, page: Any, state: ChartState, locale: str = "") -> Any:
+    state = replace(state, format=default_format(state.kind, state.grouping, locale))
     width = round(page.Width * NEW_CHART_SHARE)
     height = round(page.Height * NEW_CHART_SHARE)
     x, y = (page.Width - width) // 2, (page.Height - height) // 2

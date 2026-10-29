@@ -11,9 +11,11 @@ from helpers import (
     new_impress,
     save_and_reload,
     uno_command,
+    without_format,
 )
 
 from librecharts.core.datasheet import sample_state
+from librecharts.core.layout.common import format_share
 from librecharts.lo import store
 
 INSERT = "org.librecharts:InsertColumnChart"
@@ -61,7 +63,8 @@ def test_variants_are_one_undo_step_each(ctx):
         state = _state(doc, chart_id)
         assert state.percent
         assert state.grouping == "stacked"
-        assert "28.6%" in _texts(group), _texts(group)  # Product A in 2023: 10 of 35
+        share = format_share(10 / 35 * 100, state.format)  # Product A in 2023: 10 of 35
+        assert share in _texts(group), (share, _texts(group))
         assert "35" in _texts(group)  # the absolute column sum stays visible
 
         uno_command(ctx, doc, ".uno:Undo")
@@ -71,9 +74,9 @@ def test_variants_are_one_undo_step_each(ctx):
         uno_command(ctx, doc, ".uno:Undo")
         assert _state(doc, chart_id).grouping == "clustered"
         uno_command(ctx, doc, ".uno:Undo")
-        assert _state(doc, chart_id) == sample_state()
+        assert without_format(_state(doc, chart_id)) == sample_state()
         dispatch(ctx, doc, TO_STACKED)
-        assert _state(doc, chart_id) == sample_state()
+        assert without_format(_state(doc, chart_id)) == sample_state()
     finally:
         doc.close(True)
 

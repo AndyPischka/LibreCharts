@@ -105,6 +105,15 @@ def skip_on_headless_linux(reason):
         raise Skip(reason)
 
 
+def without_format(state):
+    """``state`` without the format a newly inserted chart gets (locale-dependent)."""
+    from dataclasses import replace
+
+    from librecharts.core.model import Format
+
+    return replace(state, format=Format())
+
+
 def set_chart_state(ctx, doc, chart_id, state):
     """Give the selected chart ``state`` (without annotations) and redraw it inside LibreOffice.
 

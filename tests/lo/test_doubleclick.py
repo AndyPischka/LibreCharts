@@ -49,6 +49,14 @@ def _centre(shape):
     )
 
 
+def _on_a_bar(shape):
+    """A point inside the first stacked column; the group's centre may fall on a gap."""
+    return (
+        round(shape.Position.X + shape.Size.Width * 0.3),
+        round(shape.Position.Y + shape.Size.Height * 0.55),
+    )
+
+
 def _settle():
     time.sleep(0.8)  # give a (wrongly) scheduled data sheet time to appear
 
@@ -63,7 +71,7 @@ def _wait_for(condition, timeout_s=5.0):
 def test_double_click_on_a_chart_opens_its_data_sheet(ctx):
     doc, group = _visible_presentation_with_a_chart(ctx)
     try:
-        click(ctx, doc, *_centre(group), clicks=2)
+        click(ctx, doc, *_on_a_bar(group), clicks=2)
         _wait_for(lambda: len(datasheets(ctx)) == 1)  # opened asynchronously
         # the event was swallowed: Impress did not enter the group, the chart is still selected
         assert commands.selected_chart(doc.getCurrentController()) is not None

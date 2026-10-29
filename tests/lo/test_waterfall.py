@@ -10,6 +10,7 @@ from helpers import (
     first_page,
     new_impress,
     save_and_reload,
+    without_format,
 )
 
 from librecharts.core.datasheet import sample_waterfall_state
@@ -42,12 +43,15 @@ def test_waterfall_is_inserted_and_survives_odp_and_pptx(ctx):
         dispatch(ctx, doc, INSERT)
         ((group, chart_id),) = store.find_charts(first_page(doc))
         assert group.getCount() > 20
-        assert store.read_state(doc, chart_id) == sample_waterfall_state()
+        assert without_format(store.read_state(doc, chart_id)) == sample_waterfall_state()
         for fmt in ("odp", "pptx"):
             reloaded = save_and_reload(ctx, doc, fmt)
             try:
                 ((_, reloaded_id),) = store.find_charts(first_page(reloaded))
-                assert store.read_state(reloaded, reloaded_id) == sample_waterfall_state(), fmt
+                assert (
+                    without_format(store.read_state(reloaded, reloaded_id))
+                    == sample_waterfall_state()
+                ), fmt
             finally:
                 reloaded.close(True)
     finally:

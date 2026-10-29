@@ -14,14 +14,19 @@ from typing import Any, Literal
 import uno
 from com.sun.star.awt import Point, Size
 
+from librecharts.core import style
 from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
 
-PALETTE = (0x8FB4E3, 0x5E8AC7, 0xC9D8EE, 0xA6A6A6, 0xF4B183, 0xD9D9D9)
-TEXT_COLOR = 0x000000
+PALETTE = style.PALETTE
+TEXT_COLOR = style.TEXT_COLOR
 BACKGROUND_COLOR = 0xFFFFFF  # gaps of axis breaks; assumes a white slide
 LINE_COLOR = 0x404040
+GRID_COLOR = 0xD9D9D9
 LINE_WIDTH = 25  # 1/100 mm
+AXIS_WIDTH = 20  # 1/100 mm
+GRID_WIDTH = 15  # 1/100 mm
 FONT_HEIGHT_PT = 10.0
+AXIS_FONT_HEIGHT_PT = 8.0
 ARROW_NAME = "Arrow"  # a line end from LibreOffice's standard arrow list
 ARROW_WIDTH = 250  # 1/100 mm
 DASH_LENGTH = 100  # 1/100 mm, dashes and gaps of helper lines
@@ -148,13 +153,17 @@ def _create(doc: Any, group: Any, spec: _Spec) -> None:
     if p is None:  # the invisible frame
         shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_NONE
     elif isinstance(p, Rect):
-        color = BACKGROUND_COLOR if p.series == BACKGROUND else PALETTE[p.series % len(PALETTE)]
+        color = BACKGROUND_COLOR if p.series == BACKGROUND else style.series_color(p.series)
         shape.FillStyle, shape.FillColor = _FILL_SOLID, color
         shape.LineStyle = _LINE_NONE
     elif isinstance(p, Line):
         shape.LineStyle, shape.LineColor, shape.LineWidth = _LINE_SOLID, LINE_COLOR, LINE_WIDTH
         if p.role == "helper":
             shape.LineStyle, shape.LineDash = _LINE_DASH, _dash()
+        elif p.role == "grid":
+            shape.LineColor, shape.LineWidth = GRID_COLOR, GRID_WIDTH
+        elif p.role == "axis":
+            shape.LineWidth = AXIS_WIDTH
         if p.arrow and (p.x2 < p.x1 or p.y2 < p.y1):  # drawn reversed: (x2, y2) is its start
             shape.LineStartName, shape.LineStartWidth = ARROW_NAME, ARROW_WIDTH
         elif p.arrow:
@@ -168,6 +177,8 @@ def _create(doc: Any, group: Any, spec: _Spec) -> None:
         shape.TextUpperDistance = shape.TextLowerDistance = 0
         # Text and character properties only stick once the shape is in a group or on a page.
         shape.String = p.text
-        shape.CharHeight = FONT_HEIGHT_PT
-        shape.CharColor = TEXT_COLOR
+        shape.CharHeight = AXIS_FONT_HEIGHT_PT if p.role == "axis" else FONT_HEIGHT_PT
+        shape.CharColor = (
+            style.text_color(style.series_color(p.fill)) if p.fill is not None else TEXT_COLOR
+        )
         shape.ParaAdjust = _PARA_ADJUST[p.align]
