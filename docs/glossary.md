@@ -27,6 +27,10 @@ Use these terms consistently in code, UI strings and docs.
 | **100 % chart** | A stacked column or bar chart whose columns are all 100 % high; segments show their share, the absolute column sum stays above (right of, for bars) the column. Negative values count as empty (ADR 0013). A percent Mekko is the same idea with variable column widths. |
 | **Line chart** | One line per series through the category centres, with a marker and a value label at every point and the series name right of the last point; an empty value splits the line (ADR 0015). |
 | **Area chart** | Stacked areas: every series is one filled area between its cumulative edges. The 100 % variant shows shares of the column sums. Negative values count as empty, empty values as zero (ADR 0015). |
+| **Pie chart / Doughnut** | One pie per category with one segment per series, clockwise from 12 o'clock; shares are labelled inside wide segments and outside narrow ones. A doughnut has a hole that shows the category sum (ADR 0018). |
+| **Scatter chart / Bubble chart** | Points on two numeric axes read from a data sheet with one row per point (label, x, y, size, group). A point with a size is a bubble whose area is proportional to it (ADR 0018). |
+| **Bubble** | The translucent circle of a bubble chart point; its diameter is layout output, unlike the fixed-size marker (ADR 0018). |
+| **Butterfly chart** | Two series as bars mirrored around a central band of category names, on one common scale; further series are ignored (ADR 0018). |
 | **Combination chart** | A column chart with single series drawn as lines (`ChartState.lines`), optionally on a secondary axis (`secondary`); line series are left out of stacking, clustering and picking (ADR 0015). |
 | **Secondary axis** | The right-hand value axis of a combination chart, scaled to its line series only. It is always drawn, even when the chart's value axis is off (ADR 0015). |
 | **Marker** | The fixed-size dot on a line point; switched on or off per chart in the format (ADR 0015). |

@@ -18,8 +18,8 @@ Order is deliberate: M1 builds the shared foundation (layout, data sheet, persis
 
 ## Later versions
 
-Features of think-cell and empower charts that 1.0 does not cover. Not yet planned in detail;
-each milestone gets a plan in `docs/plans/` before work starts.
+Features of think-cell and empower charts that 1.0 does not cover. Each milestone gets a plan in
+`docs/plans/` before work starts.
 
 ### 2.0: complete the existing charts
 
@@ -32,19 +32,49 @@ each milestone gets a plan in `docs/plans/` before work starts.
 
 M5 extends the option mechanism of ADR 0012 (per-chart switches in the context menu and sidebar)
 that the later milestones use; M6 then gives every chart type the same axis and label options.
-The plans are drafts until agreed.
 
 ### 3.0: new areas
 
 | | Milestone | Content | Status |
 |---|---|---|---|
-| M9 | Further chart types | Pie and doughnut, scatter and bubble charts, butterfly (mirrored bar) charts | open |
-| M10 | Gantt / timeline | Date-scaled timeline with bars, milestones, brackets and labels per row; data in the Calc data sheet | open |
-| M11 | Data links | Link a chart to a range in an external Calc or Excel file and update it on demand | open |
-| M12 | Slide elements | Harvey balls, check marks, agenda slides, aligning and distributing shapes into a grid | open |
+| M9 | Further chart types | Pie and doughnut, scatter and bubble charts, butterfly (mirrored bar) charts (ADR 0018) | done |
+| M10 | Gantt / timeline | Date-scaled timeline with bars, milestones, phases and labels per row; data in the Calc data sheet. Plan: [gantt](docs/plans/gantt.md) | open |
+| M11 | Data links | Link a chart to a range in an external Calc or Excel file and update it on demand. Plan: [data-links](docs/plans/data-links.md) | open |
+| M12 | Slide elements | Harvey balls, check marks, agenda slides, same size and arranging shapes into a grid. Plan: [slide-elements](docs/plans/slide-elements.md) | open |
+| M13 | Label placement | Moving single labels by hand; the offsets survive data edits, sorting and resizing (deferred from M6) | open |
+
+M9 comes first: its sector geometry is reused by the Harvey balls in M12, and its scatter data
+sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 follows.
+
+### 4.0: depth of analysis
+
+| | Milestone | Content | Status |
+|---|---|---|---|
+| M14 | Annotations everywhere | Difference and CAGR arrows on line, Mekko, pie and scatter charts; difference arrows between series, not only between categories; category gaps and brackets over groups of categories | open |
+| M15 | Range and waterfall variants | Floating (from/to) bars, error bars and intervals, stacked and horizontal waterfalls, sorting pie segments by size (deferred from M9) | open |
+| M16 | Consistent rounding and decluttering | Rounded labels that add up to the rounded total; labels that overlap move apart automatically (builds on M13) | open |
+| M17 | Gantt extensions | Several bars per row, working-day calendars and holidays, import from CSV and ProjectLibre (deferred from M10) | open |
+
+### 5.0: workflow and ecosystem
+
+| | Milestone | Content | Status |
+|---|---|---|---|
+| M18 | Automation | Python and macro API and a command line: build a deck from data and a template, update all data links of a presentation | open |
+| M19 | Corporate design check | Check a presentation against the corporate design file of M8 (colours, fonts, positions) and fix deviations in one step | open |
+| M20 | Accessibility and export | Alternative text generated from the chart data, patterns as well as colours for colour-blind readers, exporting chart data as CSV | open |
+| M21 | Languages and platforms | Further UI languages through a translation platform (Weblate); macOS tested and supported | open |
+
+Both versions are sketches. Priorities are set after 1.0 from user feedback in the issue tracker.
+M18 is cheap because `core/` is plain Python. M21 changes the convention that every UI string is
+German and English (AGENTS.md).
+
+Candidates without a milestone, feasibility open: map (choropleth) charts, which need bundled
+geodata of a suitable licence and size; chart templates or favourites.
 
 ## Non-goals
 
 - **think-cell file compatibility.** No import or export of think-cell objects; the format is proprietary.
 - **Writer, Calc or Draw support.** Impress only.
 - **A pixel-perfect think-cell clone.** Functional equivalence, not a copy of UI or look.
+- **Data from images or PDFs.** Needs OCR, a runtime dependency that ADR 0001 rules out.
+- **LibreOffice Online / Collabora Online.** Python extensions are barely supported there.

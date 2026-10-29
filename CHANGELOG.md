@@ -6,6 +6,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- **Pie and doughnut charts** (*Insert pie chart*): one pie per category column, one segment per
+  series, with the share inside or next to each segment; the context menu or the sidebar switches
+  to a doughnut that shows the category sum in its hole.
+- **Scatter and bubble charts** (*Insert scatter chart*): the data sheet has one row per point
+  (label, X, Y, Size, Group). A number in *Size* turns a point into a bubble, a *Group* gives its
+  points one colour and a legend entry. Both axes are drawn, gridlines and a value line are
+  optional.
+- **Butterfly charts** (*Insert butterfly chart*): the first two series as bars mirrored around the
+  category names on one scale; sorting, value axis, gridlines and the same scale as bar charts work
+  as for bar charts.
+- **Compact sidebar**: the insert-chart and add-annotation buttons are icon-only (tooltip with the
+  name) and sit side by side, as do the colour scheme buttons, so the whole panel fits without
+  scrolling. The value line has its own icon.
 - **Colour schemes** for the whole document: built-in *Default*, *Grey* and *High contrast* buttons
   in the sidebar's *Document* section, plus *Load scheme...* and *Save scheme...* for a corporate
   design file (JSON). The scheme sets the series palette, text, line and background colours and the
