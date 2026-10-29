@@ -132,3 +132,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Annotations follow data edits, resizing, undo, copies and ODP/PPTX files.
 - The chart's context menu has a "LibreCharts" submenu: edit data, add annotations, switch or
   remove existing ones.
+
+### Fixed
+- LibreOffice 25.8 could crash when a presentation with LibreCharts charts was closed.

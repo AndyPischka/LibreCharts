@@ -85,6 +85,11 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
   Keep test documents hidden; data sheets of hidden presentations open hidden too.
 - In `tests/lo`, trigger undo/redo with `helpers.uno_command(ctx, doc, ".uno:Undo")`, never
   `XUndoManager.undo()` (aborted LibreOffice; enforced by `tests/test_lo_conventions.py`).
+- A shape (UNO proxy) released after its document was torn down crashes LibreOffice 25.8 (dead
+  item pool). PyUNO frees Python objects that LibreOffice drops (undo actions, listeners) on a
+  thread of its own, too late: let them drop shapes on `OnUnload` (`lo/undo.py`). In `tests/lo`,
+  close documents with `helpers.close_doc(doc)`: the bridge delivers releases unordered with calls
+  (enforced by `tests/test_lo_conventions.py`).
 - Document-open jobs run for visible documents only; reload with `hidden=False` to test them.
   They run before the view is complete: `appendInfobar` raises "Could not create Infobar" for
   about a second. Add info bars asynchronously and retry (`lo/links.py`, `offer_update`).
