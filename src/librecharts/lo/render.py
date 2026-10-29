@@ -315,7 +315,6 @@ def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
         shape.TextUpperDistance = shape.TextLowerDistance = 0
         # Text and character properties only stick once the shape is in a group or on a page.
         shape.String = label.text
-        shape.CharFontName = look.scheme.font_name
         shape.CharHeight = (
             max(look.font_size * 0.8, 4.0) if label.role == "axis" else look.font_size
         )
