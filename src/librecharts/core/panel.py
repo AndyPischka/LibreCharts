@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
+from librecharts.core import options
 from librecharts.core.menu import PROTOCOL, annotation_title
 from librecharts.core.messages import text
 from librecharts.core.model import AnnotationKind, ChartState
@@ -35,11 +36,13 @@ class Row:
 
 @dataclass(frozen=True, slots=True)
 class Panel:
-    """Sections top to bottom: insert, selected chart (``status``, edit), annotations, list."""
+    """Sections top to bottom: insert, selected chart (``status``, edit, ``options``),
+    annotations, list."""
 
     insert: tuple[Button, ...]
     status: str
     edit: tuple[Button, ...]
+    options: tuple[Button, ...]
     add: tuple[Button, ...]
     rows: tuple[Row, ...]
     remove_all: Button
@@ -54,10 +57,11 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
         status = text("status_orphaned" if selected else "status_none", locale)
     else:
         data = notes.measured(state)
+        kind = "mekko_units" if state.kind == "mekko" and not state.percent else state.kind
         status = text(
             "status_chart",
             locale,
-            kind=text(f"kind_{state.kind}", locale),
+            kind=text(f"kind_{kind}", locale),
             count=str(len(data.categories)),
         )
         rows = tuple(
@@ -74,6 +78,7 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
         ),
         status=status,
         edit=(_button("menu_edit_data", "EditData", "edit", locale, usable),),
+        options=_options(state, usable, locale),
         add=(
             _button(
                 "menu_add_difference",
@@ -107,6 +112,11 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
         rows=rows,
         remove_all=_button("menu_remove_all", "RemoveAnnotations", "", locale, bool(rows)),
     )
+
+
+def _options(state: ChartState | None, usable: bool, locale: str) -> tuple[Button, ...]:
+    toggle = options.toggle(state) if state is not None else None
+    return (_button(toggle[0], toggle[1], "", locale, usable),) if toggle else ()
 
 
 def _can_annotate(state: ChartState | None, usable: bool, kind: AnnotationKind) -> bool:

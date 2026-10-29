@@ -43,10 +43,25 @@ def test_bar_and_waterfall_charts_can_be_annotated() -> None:
         assert all(b.enabled for b in (*panel.edit, *panel.add))
 
 
-def test_other_charts_can_only_be_edited() -> None:
+def test_a_mekko_can_only_be_edited_and_switched() -> None:
     panel = content(sample_mekko_state(), True, "en-US")
     assert panel.edit[0].enabled
+    assert [b.title for b in panel.options] == ["Show with units"]
+    assert panel.options[0].command == PROTOCOL + "ChangeChart?percent=false"
+    assert all(b.enabled for b in panel.options)
     assert not any(b.enabled for b in panel.add)
+
+
+def test_a_units_mekko_says_so_and_offers_percent() -> None:
+    panel = content(replace(sample_mekko_state(), percent=False), True, "en-US")
+    assert panel.status.startswith("Marimekko chart (units), ")
+    assert panel.options[0].command == PROTOCOL + "ChangeChart?percent=true"
+
+
+def test_only_charts_with_options_get_an_options_button() -> None:
+    assert content(sample_state(), True, "en-US").options == ()
+    assert content(None, True, "en-US").options == ()
+    assert content(None, False, "en-US").options == ()
 
 
 def test_annotations_are_listed_with_their_remove_command() -> None:

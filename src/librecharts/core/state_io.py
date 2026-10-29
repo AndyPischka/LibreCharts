@@ -32,8 +32,13 @@ def _v2_to_v3(raw: _Raw) -> _Raw:
     return {**raw, "annotations": annotations}
 
 
+def _v3_to_v4(raw: _Raw) -> _Raw:
+    """Version 4 added the Mekko option ``percent``; every existing Mekko is a percent Mekko."""
+    return {**raw, "percent": raw.get("kind") == "mekko"}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
-_MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {1: _v1_to_v2, 2: _v2_to_v3}
+_MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4}
 
 
 class StateError(ValueError):
@@ -49,6 +54,7 @@ def to_json(state: ChartState) -> str:
             "cells": [list(row) for row in state.cells],
             "values": [list(row) for row in state.values],
             "annotations": [_annotation_to_raw(a) for a in state.annotations],
+            "percent": state.percent,
         },
         separators=(",", ":"),
         ensure_ascii=False,
@@ -70,6 +76,7 @@ def from_json(text: str) -> ChartState:
                 tuple(_as_number(v) for v in row) for row in _as_rows(_get(raw, "values"))
             ),
             annotations=tuple(_as_annotation(a) for a in _as_list(_get(raw, "annotations"))),
+            percent=_as_bool(_get(raw, "percent")),
             version=raw["v"],
         )
     except ValueError as exc:
@@ -133,6 +140,12 @@ def _as_rows(value: object) -> list[list[object]]:
 def _as_str(value: object) -> str:
     if not isinstance(value, str):
         raise StateError("cell contents must be strings")
+    return value
+
+
+def _as_bool(value: object) -> bool:
+    if not isinstance(value, bool):
+        raise StateError("percent must be true or false")
     return value
 
 

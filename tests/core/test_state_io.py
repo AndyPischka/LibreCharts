@@ -65,6 +65,21 @@ def test_version_2_annotations_are_migrated_to_automatic_global_axis_breaks() ->
     assert restored.annotations == (Annotation("difference", 0, 1), Annotation("axis_break", 0, 0))
 
 
+def test_round_trip_preserves_the_mekko_variant() -> None:
+    for percent in (True, False):
+        state = make_state(kind="mekko", percent=percent)
+        assert from_json(to_json(state)).percent is percent
+
+
+@pytest.mark.parametrize(("kind", "percent"), [("mekko", True), ("column", False), ("bar", False)])
+def test_version_3_state_is_migrated_with_a_percent_mekko(kind: str, percent: bool) -> None:
+    raw = {**valid_raw(), "kind": kind, "v": 3}
+    del raw["percent"]
+    restored = from_json(json.dumps(raw))
+    assert restored.percent is percent
+    assert restored.version == SCHEMA_VERSION
+
+
 def test_version_1_state_gets_no_annotations() -> None:
     raw = valid_raw()
     del raw["annotations"]
@@ -109,6 +124,10 @@ def test_integers_in_values_become_floats() -> None:
         lambda r: r.update(values=[[None, None, None], [None, True, 20]]),
         lambda r: r.update(values=[[None, None, None]]),
         lambda r: r.update(values=[[None, None], [None, 1]]),
+        lambda r: r.pop("percent"),
+        lambda r: r.update(percent="yes"),
+        lambda r: r.update(percent=1),
+        lambda r: r.update(percent=True),  # only a Mekko can be a percent chart
         lambda r: r.pop("annotations"),
         lambda r: r.update(annotations={}),
         lambda r: r.update(annotations=[5]),

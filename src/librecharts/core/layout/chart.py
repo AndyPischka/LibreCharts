@@ -21,7 +21,7 @@ def layout_chart(state: ChartState, width: float, height: float) -> tuple[Primit
     if state.kind == "waterfall":
         return layout_waterfall(parse_waterfall(state), width, height, state.annotations)
     if state.kind == "mekko":
-        return layout_mekko(parse_mekko(state), width, height)
+        return layout_mekko(parse_mekko(state), width, height, state.percent)
     data = parse(state)
     if state.kind == "bar":
         return layout_bar(data, state.grouping, width, height, state.annotations)

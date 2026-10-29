@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
+from librecharts.core import options
 from librecharts.core.axis_break import describe
 from librecharts.core.datasheet import ChartData
 from librecharts.core.messages import text
@@ -33,6 +34,8 @@ SEPARATOR = MenuItem()
 def chart_menu(state: ChartState, locale: str) -> MenuItem:
     """The "LibreCharts" submenu for a chart with ``state``."""
     items = [MenuItem(text("menu_edit_data", locale), PROTOCOL + "EditData")]
+    if toggle := options.toggle(state):
+        items.append(_command(toggle[0], toggle[1], locale))
     if supports(state, "difference"):
         items += [
             SEPARATOR,

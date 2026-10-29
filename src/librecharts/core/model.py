@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 ChartKind = Literal["column", "bar", "waterfall", "mekko"]
 Grouping = Literal["stacked", "clustered"]
@@ -70,6 +70,10 @@ class ChartState:
     ``cells`` holds the raw data sheet contents as Calc returns them (numbers, text and formulas
     such as ``=B2*2``). ``values`` holds the evaluated numbers the chart is drawn from, ``None``
     where a cell is empty or not numeric. Both grids are rectangular and have the same shape.
+
+    ``percent`` is a Mekko option: ``True`` draws every column 100 % high (percent Mekko),
+    ``False`` scales column heights by their sums (units Mekko). It has no meaning for other
+    chart kinds and stays ``False`` there.
     """
 
     kind: ChartKind
@@ -77,11 +81,14 @@ class ChartState:
     cells: tuple[tuple[str, ...], ...]
     values: tuple[tuple[float | None, ...], ...]
     annotations: tuple[Annotation, ...] = ()
+    percent: bool = False
     version: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         if self.kind not in get_args(ChartKind):
             raise ValueError(f"unknown chart kind: {self.kind!r}")
+        if self.percent and self.kind != "mekko":
+            raise ValueError("only a Marimekko chart can be a percent chart")
         if self.grouping not in get_args(Grouping):
             raise ValueError(f"unknown grouping: {self.grouping!r}")
         if len(self.cells) != len(self.values):

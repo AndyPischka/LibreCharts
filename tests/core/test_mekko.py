@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from librecharts.core.datasheet import ChartData, Series, sample_mekko_state, state_from_table
@@ -8,6 +10,7 @@ from librecharts.core.layout.mekko import (
     MIN_OUTSIDE_LABEL_WIDTH,
     RIGHT_BAND,
     TOP_BAND,
+    WIDTH_BAND,
     layout_mekko,
 )
 from librecharts.core.mekko import MekkoData, has_width_row, parse_mekko
@@ -188,3 +191,110 @@ def test_too_small_area_is_rejected(width: float, height: float) -> None:
     data = mekko(("S", (1.0, 1.0)), categories=("A", "B"), widths=(1, 1))
     with pytest.raises(ValueError, match="too small"):
         layout_mekko(data, width, height)
+
+
+# --- units variant ----------------------------------------------------------------------------
+
+
+def units_state(*rows: list[str | float | None]) -> ChartState:
+    return replace(sheet(*rows), percent=False)
+
+
+def test_units_golden_geometry() -> None:
+    # plot 8000 x 7600 (bottom at 8400); sums 40 and 40 fill the scale 0..40
+    data = mekko(("S1", (30.0, 10.0)), ("S2", (10.0, 30.0)), categories=("A", "B"), widths=(40, 40))
+    assert layout_mekko(data, 10600, 10000, percent=False) == (
+        Line(0, 8400, 8100, 8400, "baseline"),
+        Rect(0, 2700, 4000, 5700, 0),
+        Text(0, 2700, 4000, 5700, "30", "center", "value"),
+        Rect(0, 800, 4000, 1900, 1),
+        Text(0, 800, 4000, 1900, "10", "center", "value"),
+        Text(0, 200, 4000, LABEL_HEIGHT, "40", "center", "total"),
+        Text(0, 8400, 4000, CATEGORY_BAND, "A", "center", "category"),
+        Text(0, 9400, 4000, LABEL_HEIGHT, "40", "center", "value"),
+        Rect(4100, 6500, 4000, 1900, 0),
+        Text(4100, 6500, 4000, 1900, "10", "center", "value"),
+        Rect(4100, 800, 4000, 5700, 1),
+        Text(4100, 800, 4000, 5700, "30", "center", "value"),
+        Text(4100, 200, 4000, LABEL_HEIGHT, "40", "center", "total"),
+        Text(4100, 8400, 4000, CATEGORY_BAND, "B", "center", "category"),
+        Text(4100, 9400, 4000, LABEL_HEIGHT, "40", "center", "value"),
+        Text(8250, 7150, 2350, LABEL_HEIGHT, "S1", "left", "series"),
+        Text(8250, 3350, 2350, LABEL_HEIGHT, "S2", "left", "series"),
+    )
+
+
+def test_units_column_heights_follow_the_sums() -> None:
+    data = mekko(("S1", (10.0, 20.0)), ("S2", (10.0, 20.0)), categories=("A", "B"), widths=(1, 1))
+    rects = [p for p in layout_mekko(data, 10600, 10000, percent=False) if isinstance(p, Rect)]
+    heights = [rects[0].height + rects[1].height, rects[2].height + rects[3].height]
+    assert heights[1] == pytest.approx(2 * heights[0])
+
+
+def test_units_scale_is_a_nice_value_above_the_tallest_column() -> None:
+    # tallest sum 43 -> scale 0..50: that column is 43/50 of the plot height
+    data = mekko(("S", (43.0, 10.0)), categories=("A", "B"), widths=(1, 1))
+    rects = [p for p in layout_mekko(data, 10600, 10000, percent=False) if isinstance(p, Rect)]
+    plot_height = 10000 - TOP_BAND - CATEGORY_BAND - WIDTH_BAND
+    assert rects[0].height == pytest.approx(plot_height * 43 / 50)
+    assert rects[1].height == pytest.approx(plot_height * 10 / 50)
+
+
+def test_units_labels_show_values_sums_and_widths() -> None:
+    data = mekko(("S", (12.5, 0.0)), categories=("A", "B"), widths=(7, 9))
+    texts = [p for p in layout_mekko(data, 10600, 10000, percent=False) if isinstance(p, Text)]
+    assert [t.text for t in texts if t.role == "total"] == ["12.5", "0"]
+    assert [t.text for t in texts if t.role == "value" and t.height == LABEL_HEIGHT] == ["7", "9"]
+    assert [t.text for t in texts if t.role == "value" and t.height != LABEL_HEIGHT] == ["12.5", ""]
+
+
+def test_units_all_geometry_stays_inside_the_box() -> None:
+    state = replace(sample_mekko_state(), percent=False)
+    for p in layout_chart(state, 24000, 12000):
+        if isinstance(p, Rect | Text):
+            assert p.x >= 0
+            assert p.x + p.width <= 24000 + 1e-9
+            assert p.y >= 0
+            assert p.y + p.height <= 12000 + 1e-9
+
+
+def test_units_structure_does_not_depend_on_size() -> None:
+    state = units_state(
+        [None, "A", "B", "C"], ["Width", 5, None, 1], ["S1", 1, -2, None], ["S2", 300, 5, 0]
+    )
+
+    def shape(width: float, height: float) -> list[tuple[str, str]]:
+        return [
+            (type(p).__name__, getattr(p, "role", "")) for p in layout_chart(state, width, height)
+        ]
+
+    assert shape(4000, 3000) == shape(30000, 20000) == shape(3200, 2500)
+
+
+def test_units_all_zero_data_still_lays_out() -> None:
+    data = mekko(("S", (None, None)), categories=("A", "B"), widths=(0, 0))
+    assert layout_mekko(data, 10600, 10000, percent=False)
+
+
+def test_units_needs_room_for_the_width_band() -> None:
+    data = mekko(("S", (1.0, 1.0)), categories=("A", "B"), widths=(1, 1))
+    assert layout_mekko(data, 10600, TOP_BAND + CATEGORY_BAND + 100)  # percent still fits
+    with pytest.raises(ValueError, match="too small"):
+        layout_mekko(data, 10600, TOP_BAND + CATEGORY_BAND + 100, percent=False)
+
+
+def test_the_state_selects_the_variant() -> None:
+    percent = layout_chart(sample_mekko_state(), 24000, 12000)
+    units = layout_chart(replace(sample_mekko_state(), percent=False), 24000, 12000)
+    assert percent != units
+    assert any(isinstance(p, Text) and p.text.endswith("%") for p in percent)
+    assert not any(isinstance(p, Text) and p.text.endswith("%") for p in units)
+
+
+def test_a_new_mekko_is_a_percent_mekko() -> None:
+    assert sample_mekko_state().percent
+
+
+def test_only_a_mekko_can_be_a_percent_chart() -> None:
+    with pytest.raises(ValueError, match="percent"):
+        state_from_table("column", "stacked", [[None, "A"], ["S", 1]], percent=True)

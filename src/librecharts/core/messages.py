@@ -152,6 +152,18 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Remove all annotations",
         "de": "Alle Annotationen entfernen",
     },
+    "menu_mekko_units": {
+        "en": "Show with units",
+        "de": "Mit Einheiten anzeigen",
+    },
+    "menu_mekko_percent": {
+        "en": "Show as 100 %",
+        "de": "Als 100 % anzeigen",
+    },
+    "option_unsupported": {
+        "en": "This option is not available for this chart type.",
+        "de": "Diese Option gibt es für diesen Diagrammtyp nicht.",
+    },
     "corrupt_chart": {
         "en": "The data of this chart cannot be read: {detail}",
         "de": "Die Daten dieses Diagramms können nicht gelesen werden: {detail}",
@@ -211,6 +223,10 @@ MESSAGES: dict[str, dict[str, str]] = {
     "kind_mekko": {
         "en": "Marimekko chart",
         "de": "Marimekko-Diagramm",
+    },
+    "kind_mekko_units": {
+        "en": "Marimekko chart (units)",
+        "de": "Marimekko-Diagramm (Einheiten)",
     },
     "status_none": {
         "en": "No chart selected.",

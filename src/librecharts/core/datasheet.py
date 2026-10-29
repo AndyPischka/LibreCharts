@@ -68,7 +68,7 @@ def _column_used(state: ChartState, c: int) -> bool:
 
 
 def state_from_table(
-    kind: ChartKind, grouping: Grouping, table: Sequence[Sequence[Cell]]
+    kind: ChartKind, grouping: Grouping, table: Sequence[Sequence[Cell]], percent: bool = False
 ) -> ChartState:
     """Build a state from plain Python cells (numbers, text, ``None``), without any formulas.
 
@@ -79,7 +79,7 @@ def state_from_table(
         tuple(None if isinstance(cell, str) or cell is None else float(cell) for cell in row)
         for row in table
     )
-    return ChartState(kind=kind, grouping=grouping, cells=cells, values=values)
+    return ChartState(kind=kind, grouping=grouping, cells=cells, values=values, percent=percent)
 
 
 def state_from_sheet(
@@ -124,7 +124,8 @@ def sample_waterfall_state() -> ChartState:
 
 
 def sample_mekko_state() -> ChartState:
-    """Market sizes by region and product: what a new Mekko chart shows (widths = column sums)."""
+    """Market sizes by region and product: what a new Mekko chart shows (a percent Mekko whose
+    widths are the column sums)."""
     return state_from_table(
         "mekko",
         "stacked",
@@ -134,6 +135,7 @@ def sample_mekko_state() -> ChartState:
             ["Product B", 25, 45, 40, 3],
             ["Product C", 15, 10, 30, 3],
         ],
+        percent=True,
     )
 
 

@@ -33,8 +33,16 @@ def test_waterfall_annotations_are_titled_with_the_step_names() -> None:
     assert "Difference Start → End" in titles
 
 
-def test_other_charts_offer_the_data_only() -> None:
-    assert chart_menu(sample_mekko_state(), "en-US").children == (EDIT,)
+def test_a_percent_mekko_offers_the_data_and_the_switch_to_units() -> None:
+    units = MenuItem("Show with units", PROTOCOL + "ChangeChart?percent=false")
+    assert chart_menu(sample_mekko_state(), "en-US").children == (EDIT, units)
+
+
+def test_a_units_mekko_offers_the_switch_back_to_percent() -> None:
+    state = replace(sample_mekko_state(), percent=False)
+    percent = MenuItem("Als 100 % anzeigen", PROTOCOL + "ChangeChart?percent=true")
+    edit = MenuItem("Diagrammdaten bearbeiten", EDIT.command)
+    assert chart_menu(state, "de-DE").children == (edit, percent)
 
 
 def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
