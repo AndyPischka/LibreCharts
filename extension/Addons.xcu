@@ -160,6 +160,32 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m2a" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Link data...</value>
+              <value xml:lang="de">Daten verknüpfen...</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:LinkData</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="m2aa" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Update all links</value>
+              <value xml:lang="de">Alle Verknüpfungen aktualisieren</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:UpdateAllLinks</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
           <node oor:name="m2b" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>

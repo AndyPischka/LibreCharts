@@ -135,7 +135,12 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         layout.icons(panel.insert)
         layout.heading("panel_chart")
         layout.label(panel.status, lines=2)
-        for button in (*panel.edit, *panel.options):
+        for button in panel.edit:
+            layout.button(button)
+        if panel.link_status:
+            layout.label(panel.link_status, lines=3)
+        layout.flow(panel.link)
+        for button in panel.options:
             layout.button(button)
         if panel.format:
             layout.heading("panel_format")
@@ -150,6 +155,7 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
             layout.row(row.title, row.remove)
         layout.button(panel.remove_all)
         layout.heading("panel_document")
+        layout.button(panel.update_all)
         layout.label(f"{text('panel_scheme', self.locale)}: {panel.scheme}")
         layout.flow(panel.schemes)
         layout.flow(panel.scheme_files)

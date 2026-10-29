@@ -17,7 +17,7 @@ from com.sun.star.lang import XInitialization, XServiceInfo
 from com.sun.star.task import XJob
 from com.sun.star.ui import XUIElementFactory
 
-from librecharts.lo import commands, contextmenu, doubleclick, resize, sidebar
+from librecharts.lo import commands, contextmenu, doubleclick, links, resize, sidebar
 
 IMPLEMENTATION_NAME = "org.librecharts.ProtocolHandler"
 SERVICE_NAME = "com.sun.star.frame.ProtocolHandler"
@@ -51,9 +51,11 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
         if self.frame is None:
             return
         try:
-            # also covers documents opened hidden, which the document job does not see
-            doubleclick.attach(self.ctx, self.frame)
-            contextmenu.attach(self.ctx, self.frame)
+            # also covers documents opened hidden, which the document job does not see; link
+            # commands also come from the info bar of a data sheet, a Calc frame
+            if _is_presentation(self.frame):
+                doubleclick.attach(self.ctx, self.frame)
+                contextmenu.attach(self.ctx, self.frame)
             if url.Path == "InsertColumnChart":
                 commands.insert_column_chart(self.ctx, self.frame)
             elif url.Path == "InsertBarChart":
@@ -76,6 +78,16 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.insert_gantt_chart(self.ctx, self.frame)
             elif url.Path == "EditData":
                 commands.edit_data(self.ctx, self.frame)
+            elif url.Path.startswith("LinkData"):
+                commands.link_data(self.ctx, self.frame, _query(url))
+            elif url.Path == "UpdateLink":
+                commands.update_link(self.ctx, self.frame)
+            elif url.Path == "UpdateAllLinks":
+                commands.update_all_links(self.ctx, self.frame)
+            elif url.Path == "OpenSource":
+                commands.open_source(self.ctx, self.frame)
+            elif url.Path == "RemoveLink":
+                commands.remove_link(self.ctx, self.frame)
             elif url.Path.startswith("AddAnnotation"):
                 commands.add_annotation(self.ctx, self.frame, _query(url))
             elif url.Path in ("AxisBreak", "EditAxisBreak"):
@@ -140,8 +152,14 @@ def _query(url):
     return url.Complete.partition("?")[2]
 
 
+def _is_presentation(frame):
+    controller = frame.getController()
+    return controller is not None and controller.getModel().supportsService(PRESENTATION_SERVICE)
+
+
 class DocumentJob(unohelper.Base, XJob, XServiceInfo):
-    """Runs for every opened document (Jobs.xcu): resize watcher and double-click handler.
+    """Runs for every opened document (Jobs.xcu): resize watcher, double-click handler, context
+    menu, and an info bar if the sources of linked charts changed (never an update by itself).
 
     LibreOffice runs document-event jobs for visible documents only; hidden ones are not watched.
     """
@@ -158,6 +176,7 @@ class DocumentJob(unohelper.Base, XJob, XServiceInfo):
                 frame = model.getCurrentController().getFrame()
                 doubleclick.attach(self.ctx, frame)
                 contextmenu.attach(self.ctx, frame)
+                links.offer_update(self.ctx, model)
         except Exception:
             traceback.print_exc()
         return None

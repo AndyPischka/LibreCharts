@@ -11,6 +11,7 @@ from urllib.parse import parse_qs
 
 from librecharts.core import annotations, gantt, options, style
 from librecharts.core import format as formats
+from librecharts.core import links as core_links
 from librecharts.core import samescale as core_samescale
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, AnnotationKind, ChartState
@@ -19,7 +20,10 @@ from librecharts.core.state_io import StateError
 from librecharts.lo import (
     axisdialog,
     chart,
+    datasheet,
     formatdialog,
+    linkdialog,
+    links,
     pick,
     resize,
     samescale,
@@ -99,13 +103,141 @@ def edit_data(ctx: Any, frame: Any) -> None:
     hidden = not frame.getContainerWindow().isVisible()
     load_args = (ui.prop("Hidden", True),) if hidden else ()
     try:
-        open_datasheet(
-            desktop, controller.getModel(), group, text("datasheet_title", locale), load_args
-        )
+        open_datasheet(desktop, controller.getModel(), group, locale, load_args)
     except OrphanedChartError:
         ui.show_info(ctx, frame, text("orphaned_chart", locale))
     except StateError as exc:
         ui.show_info(ctx, frame, text("corrupt_chart", locale, detail=str(exc)))
+
+
+def link_data(ctx: Any, frame: Any, query: str) -> None:
+    """Link the chart to a range of a spreadsheet file (ADR 0020); one undo step.
+
+    Asks with a dialog; scripts and tests pass ``url=...&sheet=...&range=...`` instead (``url``
+    may also be a system path, ``sheet`` is left out for a named range).
+    """
+    found = _link_chart(ctx, frame)
+    if found is None:
+        return
+    doc, frame, group, state = found
+    if not query:
+        linkdialog.request(ctx, frame, group, state)
+        return
+    locale = ui.ui_locale(ctx)
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    checked = core_links.target(args.get("sheet", ""), args.get("range", ""))
+    if isinstance(checked, str):
+        ui.show_info(ctx, frame, text(checked, locale, range=args.get("range", "")))
+        return
+    try:
+        linked = links.link(ctx, doc, state, links.as_url(args.get("url", "")), *checked)
+    except links.LinkError as exc:
+        ui.show_info(ctx, frame, exc.message(locale))
+        return
+    chart.redraw(doc, group, linked)
+    _refresh_datasheet(doc, group)
+
+
+def update_link(ctx: Any, frame: Any) -> None:
+    """Update the selected linked charts from their sources; one undo step."""
+    frame = _presentation_frame(frame)
+    doc = frame.getController().getModel()
+    locale = ui.ui_locale(ctx)
+    groups = selected_charts(frame.getController())
+    if not groups:
+        ui.show_info(ctx, frame, text("select_chart", locale))
+        return
+    states = _claimed_states(ctx, frame, doc, groups, locale)
+    if states is None:
+        return
+    ids = {
+        chart_id
+        for group, state in states
+        if state.link is not None and (chart_id := store.chart_id_of(group)) is not None
+    }
+    if not ids:
+        ui.show_info(ctx, frame, text("link_not_linked", locale))
+        return
+    _update_links(ctx, frame, doc, links.targets(doc, ids), single=len(ids) == 1)
+
+
+def update_all_links(ctx: Any, frame: Any) -> None:
+    """Update every linked chart of the presentation; one undo step, each source opened once."""
+    doc = frame.getController().getModel()
+    links.withdraw_offer(doc)
+    _update_links(ctx, frame, doc, links.targets(doc), single=False)
+
+
+def _update_links(ctx: Any, frame: Any, doc: Any, targets: list[Any], *, single: bool) -> None:
+    outcome = links.update(ctx, doc, targets)
+    chart.apply_changes(doc, dict(outcome.changed.values()))
+    # Same data: only the link's times are new. Not worth an undo step; nothing is redrawn.
+    for chart_id, state in outcome.unchanged.items():
+        store.write_state(doc, chart_id, state)
+    for chart_id in (*outcome.changed, *outcome.unchanged):
+        datasheet.refresh(doc, chart_id)
+    count = len(outcome.changed) + len(outcome.unchanged)
+    locale = ui.ui_locale(ctx)
+    message = core_links.report(
+        count, len(outcome.changed), outcome.problems, locale, single=single
+    )
+    if message:
+        ui.show_info(ctx, frame, message)
+
+
+def open_source(ctx: Any, frame: Any) -> None:
+    """Open the linked chart's source and select the linked range in it."""
+    found = _link_chart(ctx, frame)
+    if found is None:
+        return
+    doc, frame, _, state = found
+    locale = ui.ui_locale(ctx)
+    if state.link is None:
+        ui.show_info(ctx, frame, text("link_not_linked", locale))
+        return
+    hidden = not frame.getContainerWindow().isVisible()
+    try:
+        links.show_source(ctx, doc, state.link, hidden)
+    except links.LinkError as exc:
+        ui.show_info(ctx, frame, exc.message(locale))
+
+
+def remove_link(ctx: Any, frame: Any) -> None:
+    """Give the linked chart its own data again (the last fetched values); one undo step."""
+    found = _link_chart(ctx, frame)
+    if found is None:
+        return
+    doc, _, group, state = found
+    if state.link is not None:
+        chart.redraw(doc, group, replace(state, link=None))
+        _refresh_datasheet(doc, group)
+
+
+def _link_chart(ctx: Any, frame: Any) -> tuple[Any, Any, Any, ChartState] | None:
+    """The chart a link command is for, as (presentation, its frame, group, state)."""
+    frame = _presentation_frame(frame)
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return None
+    group, state = found
+    return frame.getController().getModel(), frame, group, state
+
+
+def _presentation_frame(frame: Any) -> Any:
+    """``frame``, or for a command from a data sheet's info bar the frame of its presentation,
+    with the sheet's chart selected there."""
+    owner = datasheet.owner(frame.getController().getModel())
+    if owner is None:
+        return frame
+    doc, group = owner
+    doc.getCurrentController().select(group)
+    return doc.getCurrentController().getFrame()
+
+
+def _refresh_datasheet(doc: Any, group: Any) -> None:
+    chart_id = store.chart_id_of(group)
+    if chart_id is not None:
+        datasheet.refresh(doc, chart_id)
 
 
 def add_annotation(ctx: Any, frame: Any, query: str) -> None:

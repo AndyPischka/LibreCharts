@@ -60,12 +60,15 @@ def test_panel_follows_the_selected_chart(ctx):
         assert labels[say("status_none")]
         assert labels[say("menu_edit_data")] is False
         assert labels[say("menu_add_break")] is False
+        assert labels[say("menu_link_data")] is False
+        assert labels[say("menu_update_all_links")] is True
 
         dispatch(ctx, doc, "org.librecharts:InsertColumnChart")  # selects the new chart
         labels = dict(_controls(element))
         assert any(label.startswith(say("kind_column") + ", ") for label in labels)
         assert labels[say("menu_edit_data")] is True
         assert labels[say("menu_add_break")] is True
+        assert labels[say("menu_link_data")] is True
         assert labels[say("menu_remove_all")] is False
 
         group, _ = store.find_charts(first_page(doc))[0]
