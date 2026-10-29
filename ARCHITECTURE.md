@@ -25,10 +25,12 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 
 | Module | Role |
 |---|---|
-| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko option `percent`, schema version) |
+| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, schema version) |
 | `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows, command arguments (ADR 0010) |
 | `axis_break.py` | The axis break: automatic or manual value range to remove from the scale, `fold`, validation of the dialog's input |
-| `options.py` | Chart options the user can switch after inserting (Mekko percent/units): the switch offered for a chart and the `ChangeChart` command's arguments (ADR 0012) |
+| `options.py` | Chart options the user can switch after inserting (variants, 100 %, sorting, Mekko percent/units): the switches offered for a chart and the `ChangeChart` command's arguments (ADRs 0012, 0013) |
+| `percent.py` | Shares and the "negatives count as empty" rule for 100 % charts and the Mekko |
+| `sorting.py` | Display permutation of the categories, reordered data and annotation indices (ADR 0013) |
 | `picking.py` | Pick mode: chart point -> column, `PickSession` collects the picks for one annotation |
 | `menu.py` | Contents of the chart's context menu as plain data |
 | `panel.py` | Contents of the sidebar panel (buttons, status, annotation list) as plain data |
@@ -37,13 +39,13 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series); sample data |
 | `scale.py` | "Nice" value axis ranges |
 | `primitives.py` | `Rect`, `Line`, `Text`: layout output in 1/100 mm, styling left to the renderer |
-| `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked and clustered columns / horizontal bars; columns also draw annotations |
+| `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked, clustered and 100 % columns / horizontal bars; columns also draw annotations |
 | `waterfall.py` | Waterfall data sheet rules (value row, "Total" marker row) -> steps with running totals |
 | `layout/waterfall.py` | Steps -> floating bars, totals, connectors and signed labels |
 | `mekko.py` | Mekko data sheet rules (optional "Width" row, negatives ignored) -> segments and column widths |
 | `layout/mekko.py` | Variable-width columns, 100 % high (percent) or scaled by their sums (units); value, total and width labels, series names |
 | `layout/common.py` | Value axis and number format shared by both layouts |
-| `layout/chart.py` | `layout_chart(state, w, h)`: picks the layout by chart kind |
+| `layout/chart.py` | `layout_chart(state, w, h)`: applies sorting and picks the layout by chart kind |
 
 Data flow: Calc cells -> `ChartState` (stored in the document) -> `datasheet.parse` -> `ChartData`
 -> `layout_column` -> primitives -> `lo/` draws shapes. Stored state is part of the user's files,

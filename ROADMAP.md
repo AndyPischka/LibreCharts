@@ -25,7 +25,7 @@ each milestone gets a plan in `docs/plans/` before work starts.
 
 | | Milestone | Content | Status |
 |---|---|---|---|
-| M5 | Chart options | Switching column and bar charts between stacked, clustered and 100 % after inserting; sorting categories by value. Plan: [chart-options](docs/plans/chart-options.md) | open |
+| M5 | Chart options | Switching column and bar charts between stacked, clustered and 100 % after inserting; sorting categories by value (ADR 0013) | done |
 | M6 | Axes, labels and legend | Value axis and gridlines, number formats (decimals, thousands/millions, unit suffix), series labels or legend, value lines (target, average), label colour contrast. Plan: [axes-labels-legend](docs/plans/axes-labels-legend.md) | open |
 | M7 | Line, area and combination | Line charts, stacked and 100 % area charts, column + line combination with a secondary axis. Plan: [line-area-combination](docs/plans/line-area-combination.md) | open |
 | M8 | Consistency and styling | Same scale across charts, colour schemes and corporate design files, series colours, copying the format of one chart to others. Plan: [consistency-styling](docs/plans/consistency-styling.md) | open |

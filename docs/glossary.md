@@ -23,6 +23,9 @@ Use these terms consistently in code, UI strings and docs.
 | **Marimekko (Mekko)** | Stacked chart whose column width is also data (e.g. market size); segments show percent shares (ADR 0009). |
 | **Percent Mekko / Units Mekko** | The two Mekko variants: every column 100 % high with percent labels, or column heights by their sums with absolute labels (ADR 0012). |
 | **Chart option** | A per-chart switch the user can change after inserting, via the context menu or the sidebar (`ChangeChart` command, `core/options.py`). |
+| **Stacked / Clustered** | The two ways to place the segments of one category: on top of each other in one column, or side by side as one bar per series. |
+| **100 % chart** | A stacked column or bar chart whose columns are all 100 % high; segments show their share, the absolute column sum stays above (right of, for bars) the column. Negative values count as empty (ADR 0013). A percent Mekko is the same idea with variable column widths. |
+| **Sort order** | Display order of the categories of a column or bar chart by value: data sheet order, descending or ascending. It never changes the data sheet or the stored annotation indices (ADR 0013). |
 | **Width row** | Optional Mekko data sheet row named "Width"/"Breite" right below the category names; sets column widths. |
 | **Annotation** | An arrow or axis break the user placed on a chart; stored in the chart state by category index (ADR 0010). |
 | **Difference arrow** | Annotation that shows the relative ("+25%") or absolute ("+5") difference between two columns, or two bars of one series. Drawn as a *bracket* (above columns, right of bars) or as a *level difference*. On a waterfall chart it measures the level a column ends at. |

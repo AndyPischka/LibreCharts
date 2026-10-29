@@ -6,6 +6,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- Column and bar charts switch between stacked, clustered and 100 % after inserting, from the
+  context menu or the sidebar (one undo step each). A 100 % chart shows shares inside the
+  segments and the absolute column sum outside.
+- Column and bar charts can sort their categories by value (descending or ascending) without
+  reordering the data sheet. Annotations stay with their category; the sort order survives data
+  edits, undo, copies and ODP/PPTX files.
 - Marimekko charts can be switched between percent and units: *Show with units* / *Show as 100 %*
   in the chart's context menu and the sidebar (one undo step). The units variant scales column
   heights by their sums, shows absolute values, the column sum above and the width below each column.
