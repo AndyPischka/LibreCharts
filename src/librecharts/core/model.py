@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 ChartKind = Literal[
     "column", "bar", "waterfall", "mekko", "line", "area", "pie", "scatter", "butterfly", "gantt"
@@ -119,6 +119,32 @@ class Annotation:
 
 
 @dataclass(frozen=True, slots=True)
+class Link:
+    """Where a linked chart takes its data from: a range of an external spreadsheet (ADR 0020).
+
+    ``url`` is the source's absolute URL; ``relative`` the same file relative to the presentation
+    (empty if the two have no common root or the presentation was never saved), so a folder with
+    deck and workbook can be moved. ``sheet`` and ``range`` name an address such as ``B2:F6``;
+    an empty ``sheet`` makes ``range`` the name of a named range. ``updated`` is the local time of
+    the last update (display only) and ``modified`` the source's modification time read then,
+    which tells whether the source changed since. Neither is ever used by the layout.
+    """
+
+    url: str
+    sheet: str
+    range: str
+    relative: str = ""
+    updated: str = ""
+    modified: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.url.strip():
+            raise ValueError("a data link needs the URL of its source")
+        if not self.range.strip():
+            raise ValueError("a data link needs a range or a name")
+
+
+@dataclass(frozen=True, slots=True)
 class ChartState:
     """Everything needed to redraw and re-edit a chart.
 
@@ -147,6 +173,10 @@ class ChartState:
     by column position too (``core/gantt.py``); its only sort order besides ``"none"`` is
     ``"ascending"``, by start date. ``grouping`` has no meaning for these four and stays
     ``"stacked"``.
+
+    ``link`` takes the data from an external spreadsheet instead of the data sheet (ADR 0020). The
+    fetched values are stored in ``cells`` and ``values`` like data sheet values, so the chart draws
+    without its source.
     """
 
     kind: ChartKind
@@ -162,6 +192,7 @@ class ChartState:
     colors: tuple[int | None, ...] = ()
     scale_group: str | None = None
     doughnut: bool = False
+    link: Link | None = None
     version: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:

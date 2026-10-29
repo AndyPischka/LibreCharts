@@ -11,7 +11,14 @@ import json
 from collections.abc import Callable
 from typing import Any, cast
 
-from librecharts.core.model import SCHEMA_VERSION, Annotation, ChartState, Format, Magnitude
+from librecharts.core.model import (
+    SCHEMA_VERSION,
+    Annotation,
+    ChartState,
+    Format,
+    Link,
+    Magnitude,
+)
 
 _Raw = dict[str, Any]
 
@@ -89,6 +96,11 @@ def _v9_to_v10(raw: _Raw) -> _Raw:
     return raw
 
 
+def _v10_to_v11(raw: _Raw) -> _Raw:
+    """Version 11 added data links; existing charts take their data from the data sheet."""
+    return {**raw, "link": None}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -100,6 +112,7 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     7: _v7_to_v8,
     8: _v8_to_v9,
     9: _v9_to_v10,
+    10: _v10_to_v11,
 }
 
 
@@ -124,6 +137,7 @@ def to_json(state: ChartState) -> str:
             "colors": list(state.colors),
             "scale_group": state.scale_group,
             "doughnut": state.doughnut,
+            "link": None if state.link is None else _link_to_raw(state.link),
         },
         separators=(",", ":"),
         ensure_ascii=False,
@@ -153,6 +167,7 @@ def from_json(text: str) -> ChartState:
             colors=_as_colors(_get(raw, "colors")),
             scale_group=_as_optional_text(_get(raw, "scale_group")),
             doughnut=_as_flag(_get(raw, "doughnut"), "doughnut"),
+            link=_as_link(_get(raw, "link")),
             version=raw["v"],
         )
     except ValueError as exc:
@@ -184,6 +199,17 @@ def _format_to_raw(fmt: Format) -> _Raw:
         "separator": fmt.separator,
         "language": fmt.language,
         "markers": fmt.markers,
+    }
+
+
+def _link_to_raw(link: Link) -> _Raw:
+    return {
+        "url": link.url,
+        "relative": link.relative,
+        "sheet": link.sheet,
+        "range": link.range,
+        "updated": link.updated,
+        "modified": link.modified,
     }
 
 
@@ -321,4 +347,24 @@ def _as_optional_text(value: object) -> str | None:
         return None
     if not isinstance(value, str):
         raise StateError("the scale group must be a string or null")
+    return value
+
+
+def _as_link(value: object) -> Link | None:
+    if value is None:
+        return None
+    raw = _as_object(value)
+    return Link(
+        url=_as_text(_get(raw, "url"), "the link URL"),
+        relative=_as_text(_get(raw, "relative"), "the relative link URL"),
+        sheet=_as_text(_get(raw, "sheet"), "the linked sheet"),
+        range=_as_text(_get(raw, "range"), "the linked range"),
+        updated=_as_text(_get(raw, "updated"), "the update time"),
+        modified=_as_text(_get(raw, "modified"), "the modification time"),
+    )
+
+
+def _as_text(value: object, name: str) -> str:
+    if not isinstance(value, str):
+        raise StateError(f"{name} must be a string")
     return value

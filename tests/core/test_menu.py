@@ -8,11 +8,12 @@ from librecharts.core.datasheet import (
     state_from_table,
 )
 from librecharts.core.menu import PROTOCOL, SEPARATOR, MenuItem, chart_menu
-from librecharts.core.model import Annotation, Format
+from librecharts.core.model import Annotation, Format, Link
 
 FORMAT_STATE = Format(axis=True, gridlines=True, series_names="labels")
 
 EDIT = MenuItem("Edit chart data", PROTOCOL + "EditData")
+LINK = MenuItem("Link data...", PROTOCOL + "LinkData")
 VARIANTS = (
     MenuItem("Show clustered", PROTOCOL + "ChangeChart?grouping=clustered"),
     MenuItem("Show as 100 %", PROTOCOL + "ChangeChart?percent=true"),
@@ -97,6 +98,7 @@ def test_column_chart_without_annotations_offers_data_variants_sort_format_and_a
         "LibreCharts",
         children=(
             EDIT,
+            LINK,
             *VARIANTS,
             LINES,
             colour_menu("Product A", "Product B", "Product C"),
@@ -111,6 +113,7 @@ def test_column_chart_without_annotations_offers_data_variants_sort_format_and_a
 def test_bar_charts_offer_the_same_variants_and_annotations() -> None:
     assert chart_menu(replace(sample_state(), kind="bar"), "en-US").children == (
         EDIT,
+        LINK,
         *VARIANTS,
         colour_menu("Product A", "Product B", "Product C"),
         SORT,
@@ -151,6 +154,7 @@ def test_the_current_sort_order_is_not_offered_again() -> None:
 def test_waterfall_charts_have_no_variants_or_sort() -> None:
     assert chart_menu(sample_waterfall_state(), "en-US").children == (
         EDIT,
+        LINK,
         FORMAT_WATERFALL,
         *FORMAT_TOOLS,
         *ADD,
@@ -167,6 +171,7 @@ def test_a_percent_mekko_offers_the_data_the_switch_to_units_and_the_format() ->
     units = MenuItem("Show with units", PROTOCOL + "ChangeChart?percent=false")
     assert chart_menu(sample_mekko_state(), "en-US").children == (
         EDIT,
+        LINK,
         units,
         colour_menu("Product A", "Product B", "Product C"),
         FORMAT_MEKKO,
@@ -178,9 +183,10 @@ def test_a_units_mekko_offers_the_switch_back_to_percent_and_an_axis() -> None:
     state = replace(sample_mekko_state(), percent=False)
     percent = MenuItem("Als 100 % anzeigen", PROTOCOL + "ChangeChart?percent=true")
     edit = MenuItem("Diagrammdaten bearbeiten", EDIT.command)
+    link = MenuItem("Daten verknüpfen...", LINK.command)
     items = chart_menu(state, "de-DE").children
     format_menu = next(item for item in items if item.title == "Format")
-    assert items[:2] == (edit, percent)
+    assert items[:3] == (edit, link, percent)
     assert format_menu.title == "Format"
     assert "Wertachse anzeigen" in [child.title for child in format_menu.children]
 
@@ -332,3 +338,21 @@ def test_line_and_area_charts_offer_their_own_annotations() -> None:
         item for item in chart_menu(line, "en-US").children if item.title == "Format"
     )
     assert "Hide point markers" in [item.title for item in line_format.children]
+
+
+def test_a_linked_chart_shows_its_data_and_offers_update_and_the_link_commands() -> None:
+    state = replace(sample_state(), link=Link("file:///C:/x.xlsx", "Sheet1", "A1:D4"))
+    items = chart_menu(state, "en-US").children
+    assert items[:3] == (
+        MenuItem("Show chart data", PROTOCOL + "EditData"),
+        MenuItem("Update link", PROTOCOL + "UpdateLink"),
+        MenuItem(
+            "Data link",
+            children=(
+                MenuItem("Change link...", PROTOCOL + "LinkData"),
+                MenuItem("Open source", PROTOCOL + "OpenSource"),
+                MenuItem("Remove link", PROTOCOL + "RemoveLink"),
+            ),
+        ),
+    )
+    assert LINK not in items

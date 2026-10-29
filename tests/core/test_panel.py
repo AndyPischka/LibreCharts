@@ -7,7 +7,7 @@ from librecharts.core.datasheet import (
     state_from_table,
 )
 from librecharts.core.menu import PROTOCOL
-from librecharts.core.model import Annotation
+from librecharts.core.model import Annotation, Link
 from librecharts.core.panel import content
 
 
@@ -145,3 +145,31 @@ def test_line_and_area_charts_offer_only_their_annotation_buttons() -> None:
     assert not enabled["Add axis break"]
     line = state_from_table("line", "stacked", [[None, "2024"], ["Sales", 1]])
     assert all(b.enabled for b in content(line, True, "en-US").add)
+
+
+def test_a_chart_with_its_own_data_offers_a_link() -> None:
+    panel = content(sample_state(), True, "en-US")
+    assert panel.link_status == ""
+    assert [(b.title, b.command, b.enabled) for b in panel.link] == [
+        ("Link data...", PROTOCOL + "LinkData", True)
+    ]
+    assert not content(None, False, "en-US").link[0].enabled
+
+
+def test_a_linked_chart_shows_its_source_and_the_link_commands() -> None:
+    link = Link("file:///C:/Reports/Sales.xlsx", "Sheet1", "A1:D4", updated="2026-10-29T14:03")
+    panel = content(replace(sample_state(), link=link), True, "de-DE")
+    assert panel.edit[0].title == "Diagrammdaten anzeigen"
+    assert panel.link_status == (
+        "Verknüpft mit Sales.xlsx, Sheet1!A1:D4, aktualisiert 29.10.2026 14:03."
+    )
+    assert [b.command for b in panel.link] == [
+        PROTOCOL + c for c in ("UpdateLink", "LinkData", "OpenSource", "RemoveLink")
+    ]
+    assert all(b.enabled for b in panel.link)
+
+
+def test_update_all_links_is_always_offered() -> None:
+    for panel in (content(None, False, "en-US"), content(sample_state(), True, "en-US")):
+        assert panel.update_all.command == PROTOCOL + "UpdateAllLinks"
+        assert panel.update_all.enabled

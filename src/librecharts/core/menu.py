@@ -41,7 +41,8 @@ def chart_menu(
 ) -> MenuItem:
     """The "LibreCharts" submenu for a chart with ``state`` and the document's scheme palette."""
     data = notes.measured(state)
-    items = [MenuItem(text("menu_edit_data", locale), PROTOCOL + "EditData")]
+    items = [_command("menu_show_data" if state.link else "menu_edit_data", "EditData", locale)]
+    items += _link_items(state, locale)
     items += [
         _command(switch.title, switch.command, locale)
         for switch in options.variants(state)
@@ -108,6 +109,24 @@ def chart_menu(
 
 def _command(key: str, command: str, locale: str) -> MenuItem:
     return MenuItem(text(key, locale), PROTOCOL + command)
+
+
+def _link_items(state: ChartState, locale: str) -> list[MenuItem]:
+    """ "Link data..." for a chart with its own data; "Update link" and a "Data link" submenu for
+    a linked one (ADR 0020)."""
+    if state.link is None:
+        return [_command("menu_link_data", "LinkData", locale)]
+    return [
+        _command("menu_update_link", "UpdateLink", locale),
+        MenuItem(
+            text("menu_data_link", locale),
+            children=(
+                _command("menu_change_link", "LinkData", locale),
+                _command("menu_open_source", "OpenSource", locale),
+                _command("menu_remove_link", "RemoveLink", locale),
+            ),
+        ),
+    ]
 
 
 def _line_menu(state: ChartState, data: ChartData, locale: str) -> MenuItem:

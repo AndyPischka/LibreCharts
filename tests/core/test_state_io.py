@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 
 from librecharts.core import state_io
-from librecharts.core.model import SCHEMA_VERSION, Annotation, ChartState, Format
+from librecharts.core.model import SCHEMA_VERSION, Annotation, ChartState, Format, Link
 from librecharts.core.state_io import StateError, from_json, to_json
 
 
@@ -32,6 +32,15 @@ ARROW = {
 
 
 BREAK = {**ARROW, "kind": "axis_break", "start": 0, "end": 0}
+
+LINK = {
+    "url": "file:///x.ods",
+    "relative": "",
+    "sheet": "Sheet1",
+    "range": "A1:B2",
+    "updated": "",
+    "modified": "",
+}
 
 
 def valid_raw() -> dict[str, Any]:
@@ -164,6 +173,30 @@ def test_version_8_state_is_no_doughnut() -> None:
     assert restored.doughnut is False
 
 
+def test_version_10_state_has_no_link() -> None:
+    raw = valid_raw()
+    del raw["link"]
+    raw["v"] = 10
+    restored = from_json(json.dumps(raw))
+    assert restored.version == SCHEMA_VERSION
+    assert restored.link is None
+
+
+def test_round_trip_preserves_the_data_link() -> None:
+    link = Link(
+        url="file:///C:/Reports/Sales%202026.xlsx",
+        relative="Sales%202026.xlsx",
+        sheet="Sheet1",
+        range="B2:F6",
+        updated="2026-10-29T14:03",
+        modified="2026-10-28T09:12:44.000000000",
+    )
+    state = make_state(link=link)
+    assert from_json(to_json(state)) == state
+    named = make_state(link=Link("file:///tmp/x.ods", "", "Revenue"))
+    assert from_json(to_json(named)) == named
+
+
 def test_round_trip_preserves_the_doughnut_flag() -> None:
     state = make_state(kind="pie", doughnut=True)
     assert from_json(to_json(state)) == state
@@ -258,6 +291,13 @@ def test_integers_in_values_become_floats() -> None:
         lambda r: r.update(doughnut=True),
         lambda r: r.update(doughnut="yes"),
         lambda r: r.pop("doughnut"),
+        lambda r: r.pop("link"),
+        lambda r: r.update(link="file:///x.ods"),
+        lambda r: r.update(link={"url": "file:///x.ods", "sheet": "A", "range": "A1:B2"}),
+        lambda r: r.update(link={**LINK, "url": ""}),
+        lambda r: r.update(link={**LINK, "range": " "}),
+        lambda r: r.update(link={**LINK, "sheet": None}),
+        lambda r: r.update(link={**LINK, "modified": 5}),
         lambda r: r.update(grouping="diagonal"),
         lambda r: r.update(cells="abc"),
         lambda r: r.update(cells=[["a"], 5]),

@@ -680,6 +680,168 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Colour scheme saved to {path}.",
         "de": "Farbschema gespeichert unter {path}.",
     },
+    "menu_link_data": {
+        "en": "Link data...",
+        "de": "Daten verknüpfen...",
+    },
+    "menu_data_link": {
+        "en": "Data link",
+        "de": "Datenverknüpfung",
+    },
+    "menu_update_link": {
+        "en": "Update link",
+        "de": "Verknüpfung aktualisieren",
+    },
+    "menu_change_link": {
+        "en": "Change link...",
+        "de": "Verknüpfung ändern...",
+    },
+    "menu_open_source": {
+        "en": "Open source",
+        "de": "Quelle öffnen",
+    },
+    "menu_remove_link": {
+        "en": "Remove link",
+        "de": "Verknüpfung entfernen",
+    },
+    "menu_update_all_links": {
+        "en": "Update all links",
+        "de": "Alle Verknüpfungen aktualisieren",
+    },
+    "menu_show_data": {
+        "en": "Show chart data",
+        "de": "Diagrammdaten anzeigen",
+    },
+    "status_linked": {
+        "en": "Linked to {source}.",
+        "de": "Verknüpft mit {source}.",
+    },
+    "status_linked_updated": {
+        "en": "Linked to {source}, updated {time}.",
+        "de": "Verknüpft mit {source}, aktualisiert {time}.",
+    },
+    "datasheet_title_linked": {
+        "en": "LibreCharts data (read-only): {source}",
+        "de": "LibreCharts-Daten (schreibgeschützt): {source}",
+    },
+    "datasheet_linked": {
+        "en": "This chart takes its data from {source}.",
+        "de": "Dieses Diagramm bezieht seine Daten aus {source}.",
+    },
+    "datasheet_linked_hint": {
+        "en": "Change the data there, then update the link.",
+        "de": "Die Daten dort ändern, dann die Verknüpfung aktualisieren.",
+    },
+    "link_title": {
+        "en": "Link data",
+        "de": "Daten verknüpfen",
+    },
+    "link_file": {
+        "en": "File:",
+        "de": "Datei:",
+    },
+    "link_browse": {
+        "en": "Browse...",
+        "de": "Durchsuchen...",
+    },
+    "link_sheet": {
+        "en": "Sheet:",
+        "de": "Tabelle:",
+    },
+    "link_range": {
+        "en": "Range or name:",
+        "de": "Bereich oder Name:",
+    },
+    "link_hint": {
+        "en": (
+            "The first row and column hold the names, as in the data sheet. A named range "
+            "follows the source when it grows."
+        ),
+        "de": (
+            "Die erste Zeile und Spalte enthalten die Namen, wie im Datenblatt. Ein benannter "
+            "Bereich wächst mit der Quelle mit."
+        ),
+    },
+    "link_filter": {
+        "en": "Spreadsheets (*.ods, *.xlsx, *.xls, *.csv)",
+        "de": "Tabellendokumente (*.ods, *.xlsx, *.xls, *.csv)",
+    },
+    "link_no_file": {
+        "en": "Please choose a file.",
+        "de": "Bitte eine Datei auswählen.",
+    },
+    "link_no_range_given": {
+        "en": "Please enter a range such as B2:F6 or the name of a named range.",
+        "de": "Bitte einen Bereich wie B2:F6 oder den Namen eines benannten Bereichs eingeben.",
+    },
+    "link_no_sheet_given": {
+        "en": "Please choose a sheet.",
+        "de": "Bitte eine Tabelle auswählen.",
+    },
+    "link_bad_range": {
+        "en": "'{range}' is neither a range such as B2:F6 nor the name of a named range.",
+        "de": "'{range}' ist weder ein Bereich wie B2:F6 noch der Name eines benannten Bereichs.",
+    },
+    "link_missing": {
+        "en": "The file {file} was not found.",
+        "de": "Die Datei {file} wurde nicht gefunden.",
+    },
+    "link_open_failed": {
+        "en": "The file {file} cannot be opened as a spreadsheet.",
+        "de": "Die Datei {file} lässt sich nicht als Tabellendokument öffnen.",
+    },
+    "link_no_sheet": {
+        "en": "There is no sheet '{sheet}' in {file}.",
+        "de": "In {file} gibt es keine Tabelle '{sheet}'.",
+    },
+    "link_no_range": {
+        "en": "There is no range '{range}' in {file}.",
+        "de": "In {file} gibt es keinen Bereich '{range}'.",
+    },
+    "link_too_small": {
+        "en": "The range needs at least two rows and two columns.",
+        "de": "Der Bereich braucht mindestens zwei Zeilen und zwei Spalten.",
+    },
+    "link_too_large": {
+        "en": "The range is too large: at most {cells} cells.",
+        "de": "Der Bereich ist zu groß: höchstens {cells} Zellen.",
+    },
+    "link_unchanged": {
+        "en": "The linked data has not changed.",
+        "de": "Die verknüpften Daten haben sich nicht geändert.",
+    },
+    "link_not_linked": {
+        "en": "This chart is not linked to a file.",
+        "de": "Dieses Diagramm ist nicht mit einer Datei verknüpft.",
+    },
+    "links_none": {
+        "en": "This presentation has no linked charts.",
+        "de": "Diese Präsentation hat keine verknüpften Diagramme.",
+    },
+    "links_summary": {
+        "en": "{changed} of {count} linked charts changed.",
+        "de": "{changed} von {count} verknüpften Diagrammen geändert.",
+    },
+    "links_problems": {
+        "en": "Not updated:",
+        "de": "Nicht aktualisiert:",
+    },
+    "link_problem": {
+        "en": "Slide {slide}: {reason}",
+        "de": "Folie {slide}: {reason}",
+    },
+    "infobar_links_changed": {
+        "en": "Linked data of this presentation has changed.",
+        "de": "Verknüpfte Daten dieser Präsentation wurden geändert.",
+    },
+    "infobar_links_question": {
+        "en": "Update the linked charts now?",
+        "de": "Die verknüpften Diagramme jetzt aktualisieren?",
+    },
+    "infobar_update_now": {
+        "en": "Update now",
+        "de": "Jetzt aktualisieren",
+    },
 }
 
 

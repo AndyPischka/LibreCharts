@@ -98,11 +98,12 @@ def state_from_sheet(
         kind=kind,
         grouping=grouping,
         cells=tuple(tuple(str(cell) for cell in row) for row in formulas),
-        values=tuple(tuple(_number(result) for result in row) for row in results),
+        values=tuple(tuple(as_number(result) for result in row) for row in results),
     )
 
 
-def _number(result: object) -> float | None:
+def as_number(result: object) -> float | None:
+    """A cell result from ``getDataArray`` as a finite number, else ``None``."""
     if isinstance(result, bool) or not isinstance(result, (int, float)):
         return None
     return float(result) if math.isfinite(result) else None
@@ -255,5 +256,9 @@ def _raw(cell: Cell) -> str:
         return ""
     if isinstance(cell, str):
         return cell
-    number = float(cell)
+    return number_text(float(cell))
+
+
+def number_text(number: float) -> str:
+    """A number as cell content: ``12`` for whole numbers, else Python's shortest exact form."""
     return str(int(number)) if number.is_integer() else repr(number)

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
 from librecharts.core import format as formats
-from librecharts.core import options, style
+from librecharts.core import links, options, style
 from librecharts.core.menu import PROTOCOL, annotation_title
 from librecharts.core.messages import text
 from librecharts.core.model import AnnotationKind, ChartState
@@ -38,17 +38,21 @@ class Row:
 
 @dataclass(frozen=True, slots=True)
 class Panel:
-    """Sections top to bottom: insert, selected chart (``status``, edit, ``options``, ``format``),
-    annotations, list, document (``scheme``)."""
+    """Sections top to bottom: insert, selected chart (``status``, edit, data link with
+    ``link_status``, ``options``, ``format``), annotations, list, document (``update_all``,
+    ``scheme``)."""
 
     insert: tuple[Button, ...]
     status: str
     edit: tuple[Button, ...]
+    link_status: str
+    link: tuple[Button, ...]
     options: tuple[Button, ...]
     format: tuple[Button, ...]
     add: tuple[Button, ...]
     rows: tuple[Row, ...]
     remove_all: Button
+    update_all: Button
     schemes: tuple[Button, ...] = ()
     scheme_files: tuple[Button, ...] = ()
     scheme: str = ""
@@ -67,6 +71,7 @@ def content(
     """
     usable = selected and state is not None
     gantt = state is not None and state.kind == "gantt"
+    linked = state is not None and state.link is not None
     rows: tuple[Row, ...] = ()
     if state is None:
         status = text("status_orphaned" if selected else "status_none", locale)
@@ -115,7 +120,13 @@ def content(
             _button("insert_gantt", "InsertGanttChart", "insert_gantt", locale),
         ),
         status=status,
-        edit=(_button("menu_edit_data", "EditData", "edit", locale, usable),),
+        edit=(
+            _button(
+                "menu_show_data" if linked else "menu_edit_data", "EditData", "edit", locale, usable
+            ),
+        ),
+        link_status=links.status(state.link, locale) if state and state.link else "",
+        link=_link(linked, usable, locale),
         options=_options(state, usable, locale),
         format=_format(state, usable, locale),
         add=(
@@ -162,6 +173,7 @@ def content(
         ),
         rows=rows,
         remove_all=_button("menu_remove_all", "RemoveAnnotations", "", locale, bool(rows)),
+        update_all=_button("menu_update_all_links", "UpdateAllLinks", "", locale),
         schemes=tuple(
             _button(
                 "",
@@ -178,6 +190,17 @@ def content(
             _button("panel_scheme_save", "SaveScheme", "", locale),
         ),
         scheme=scheme_name,
+    )
+
+
+def _link(linked: bool, usable: bool, locale: str) -> tuple[Button, ...]:
+    if not linked:
+        return (_button("menu_link_data", "LinkData", "", locale, usable),)
+    return (
+        _button("menu_update_link", "UpdateLink", "", locale, usable),
+        _button("menu_change_link", "LinkData", "", locale, usable),
+        _button("menu_open_source", "OpenSource", "", locale, usable),
+        _button("menu_remove_link", "RemoveLink", "", locale, usable),
     )
 
 
