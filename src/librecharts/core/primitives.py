@@ -91,4 +91,19 @@ class Marker:
 
 MARKER_SIZE = 250.0  # diameter of a point marker, 1/100 mm; the renderer keeps it fixed on resize
 
-Primitive = Rect | Line | Text | Polyline | Polygon | Marker
+
+@dataclass(frozen=True, slots=True)
+class Bubble:
+    """A translucent circle of ``diameter`` centred at (``x``, ``y``) in the series colour.
+
+    Unlike a :class:`Marker`, whose size stays fixed, a bubble's size is layout output: it follows
+    the chart on resize (bubble charts).
+    """
+
+    x: float
+    y: float
+    diameter: float
+    series: int
+
+
+Primitive = Rect | Line | Text | Polyline | Polygon | Marker | Bubble

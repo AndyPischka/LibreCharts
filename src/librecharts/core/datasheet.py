@@ -163,6 +163,55 @@ def sample_area_state() -> ChartState:
     return _sample_years("area")
 
 
+def sample_pie_state() -> ChartState:
+    """Revenue shares by product in two years: what a new pie chart shows (one pie per year)."""
+    return state_from_table(
+        "pie",
+        "stacked",
+        [
+            [None, "2024", "2025"],
+            ["Product A", 40, 35],
+            ["Product B", 35, 38],
+            ["Product C", 25, 27],
+        ],
+    )
+
+
+def sample_scatter_state() -> ChartState:
+    """Eight points in two groups: what a new scatter chart shows.
+
+    The size column stays empty; any number in it turns a point into a bubble.
+    """
+    return state_from_table(
+        "scatter",
+        "stacked",
+        [
+            ["Label", "X", "Y", "Size", "Group"],
+            ["Alpha", 12, 30, None, "Group 1"],
+            ["Beta", 18, 42, None, "Group 1"],
+            ["Gamma", 25, 38, None, "Group 1"],
+            ["Delta", 31, 55, None, "Group 1"],
+            ["Epsilon", 14, 18, None, "Group 2"],
+            ["Zeta", 22, 25, None, "Group 2"],
+            ["Eta", 35, 33, None, "Group 2"],
+            ["Theta", 40, 48, None, "Group 2"],
+        ],
+    )
+
+
+def sample_butterfly_state() -> ChartState:
+    """Population by age group: what a new butterfly chart shows (men left, women right)."""
+    return state_from_table(
+        "butterfly",
+        "stacked",
+        [
+            [None, "0-14", "15-29", "30-44", "45-59", "60+"],
+            ["Men", 6.5, 8.1, 9.4, 8.7, 8.2],
+            ["Women", 6.2, 7.8, 9.3, 8.9, 10.1],
+        ],
+    )
+
+
 def _sample_years(kind: ChartKind) -> ChartState:
     return state_from_table(
         kind,

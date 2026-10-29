@@ -416,6 +416,50 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Area chart",
         "de": "Fl\u00e4chendiagramm",
     },
+    "insert_pie": {
+        "en": "Pie chart",
+        "de": "Kreisdiagramm",
+    },
+    "insert_scatter": {
+        "en": "Scatter chart",
+        "de": "Streudiagramm",
+    },
+    "insert_butterfly": {
+        "en": "Butterfly chart",
+        "de": "Schmetterlingsdiagramm",
+    },
+    "kind_pie": {
+        "en": "Pie chart",
+        "de": "Kreisdiagramm",
+    },
+    "kind_doughnut": {
+        "en": "Doughnut chart",
+        "de": "Ringdiagramm",
+    },
+    "kind_scatter": {
+        "en": "Scatter chart",
+        "de": "Streudiagramm",
+    },
+    "kind_bubble": {
+        "en": "Bubble chart",
+        "de": "Blasendiagramm",
+    },
+    "kind_butterfly": {
+        "en": "Butterfly chart",
+        "de": "Schmetterlingsdiagramm",
+    },
+    "status_butterfly_extra": {
+        "en": "Only the first two series are drawn.",
+        "de": "Nur die ersten beiden Reihen werden gezeichnet.",
+    },
+    "menu_pie": {
+        "en": "Pie chart",
+        "de": "Kreisdiagramm",
+    },
+    "menu_doughnut": {
+        "en": "Doughnut chart",
+        "de": "Ringdiagramm",
+    },
     "kind_column": {
         "en": "Column chart",
         "de": "Säulendiagramm",

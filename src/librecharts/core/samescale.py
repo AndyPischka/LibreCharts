@@ -5,8 +5,8 @@ length per value unit: the smallest natural scale of the group, so the tightest 
 Pure Python, no UNO: the adapter passes the current size of every chart.
 
 Only charts with a comparable value axis can join: vertical charts (column, line, area, waterfall
-and a units Mekko) with each other, bar charts (horizontal) with each other. Percent charts have a
-fixed 0..100 scale of their own and never join.
+and a units Mekko) with each other, bar and butterfly charts (horizontal) with each other.
+Percent charts have a fixed 0..100 scale of their own and never join.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Literal
 
-from librecharts.core.layout import area, bar, column, line, mekko, waterfall
+from librecharts.core.layout import area, bar, butterfly, column, line, mekko, waterfall
 from librecharts.core.layout.chart import display_data
 from librecharts.core.mekko import parse_mekko
 from librecharts.core.model import ChartState
@@ -33,7 +33,7 @@ def orientation(state: ChartState) -> Orientation | None:
         return None
     if state.kind == "mekko":
         return "vertical"
-    if state.kind == "bar":
+    if state.kind in ("bar", "butterfly"):
         return "horizontal"
     if state.kind in VERTICAL_KINDS:
         return "vertical"
@@ -68,6 +68,8 @@ def natural_length_per_unit(state: ChartState, width: float, height: float) -> f
     data, annotations = display_data(state)
     if not data.categories or not data.series:
         return None
+    if state.kind == "butterfly":
+        return butterfly.natural_length_per_unit(data, width, height, state.format)
     if state.kind == "line":
         return line.natural_length_per_unit(data, width, height, annotations, state.format)
     if state.kind == "area":

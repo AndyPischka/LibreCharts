@@ -1,8 +1,9 @@
 """Chart options: switches the user can change after inserting a chart (ADRs 0012, 0013).
 
 Column and bar charts switch between stacked, clustered and 100 %, and sort their categories by
-value. Area charts switch between stacked and 100 %. A Marimekko chart switches between percent and
-units. On a column chart, single series can be drawn as lines, optionally on a secondary axis.
+value (a butterfly chart sorts too). A pie chart switches between pie and doughnut. Area charts
+switch between stacked and 100 %. A Marimekko chart switches between percent and units. On a
+column chart, single series can be drawn as lines, optionally on a secondary axis.
 
 Every switch is one ``ChangeChart`` command with a single argument, so each click is one undo step.
 The two line switches ``line=<index>`` and ``secondary=<index>`` carry ``on=true`` or ``on=false``
@@ -15,6 +16,8 @@ from dataclasses import dataclass, replace
 from urllib.parse import parse_qs
 
 from librecharts.core.model import ChartState, Grouping, SortOrder
+
+SORTABLE = frozenset({"column", "bar", "butterfly"})  # chart kinds that sort their categories
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +36,11 @@ def variants(state: ChartState) -> tuple[Switch, ...]:
             Switch("menu_mekko_percent", "ChangeChart?percent=true", state.percent),
             Switch("menu_mekko_units", "ChangeChart?percent=false", not state.percent),
         )
+    if state.kind == "pie":
+        return (
+            Switch("menu_pie", "ChangeChart?doughnut=false", not state.doughnut),
+            Switch("menu_doughnut", "ChangeChart?doughnut=true", state.doughnut),
+        )
     if state.kind == "area":
         return (
             Switch("menu_stacked", "ChangeChart?grouping=stacked", not state.percent),
@@ -50,7 +58,7 @@ def variants(state: ChartState) -> tuple[Switch, ...]:
 
 def sort_options(state: ChartState) -> tuple[Switch, ...]:
     """The sort orders of a column or bar chart, the current one included."""
-    if state.kind not in ("column", "bar"):
+    if state.kind not in SORTABLE:
         return ()
     return (
         Switch("menu_sort_none", "ChangeChart?sort=none", state.sort == "none"),
@@ -65,7 +73,7 @@ def sort_options(state: ChartState) -> tuple[Switch, ...]:
 
 def sort_toggle(state: ChartState) -> Switch | None:
     """The next sort order in the cycle none -> descending -> ascending -> none."""
-    if state.kind not in ("column", "bar"):
+    if state.kind not in SORTABLE:
         return None
     following: dict[SortOrder, SortOrder] = {
         "none": "descending",
@@ -119,6 +127,8 @@ def changed(state: ChartState, query: str) -> ChartState:
         return _grouping(state, value)
     if key == "percent":
         return _percent(state, value)
+    if key == "doughnut":
+        return _doughnut(state, value)
     if key == "sort":
         return _sort(state, value)
     if key in ("line", "secondary"):
@@ -157,8 +167,17 @@ def _percent(state: ChartState, value: str) -> ChartState:
     return replace(state, grouping="stacked", percent=True, lines=(), secondary=())
 
 
+def _doughnut(state: ChartState, value: str) -> ChartState:
+    enabled = {"true": True, "false": False}.get(value)
+    if enabled is None:
+        raise ValueError(f"doughnut must be true or false, not {value!r}")
+    if state.kind != "pie":
+        raise ValueError(f"a {state.kind} chart has no doughnut option")
+    return replace(state, doughnut=enabled)
+
+
 def _sort(state: ChartState, value: str) -> ChartState:
-    if state.kind not in ("column", "bar"):
+    if state.kind not in SORTABLE:
         raise ValueError(f"a {state.kind} chart cannot be sorted")
     if value not in ("none", "descending", "ascending"):
         raise ValueError(f"sort must be none, descending or ascending, not {value!r}")

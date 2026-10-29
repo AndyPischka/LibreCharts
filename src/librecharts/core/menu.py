@@ -17,6 +17,7 @@ from librecharts.core.layout.common import format_value
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, ChartState, Format
 from librecharts.core.picking import supports
+from librecharts.core.scatter import parse_scatter
 
 PROTOCOL = "org.librecharts:"
 
@@ -141,7 +142,7 @@ def _colour_menu(
     if state.kind == "waterfall":  # its colours mean increase, decrease and total, not series
         return MenuItem(text("menu_series_color", locale))
     series_items: list[MenuItem] = []
-    for index, series in enumerate(data.series):
+    for index, name in enumerate(_series_names(state, data)):
         current = state.colors[index] if index < len(state.colors) else None
         entries: list[MenuItem] = []
         if current is not None:
@@ -160,8 +161,15 @@ def _colour_menu(
             if entry != current
         ]
         if entries:
-            series_items.append(MenuItem(series.name, children=tuple(entries)))
+            series_items.append(MenuItem(name, children=tuple(entries)))
     return MenuItem(text("menu_series_color", locale), children=tuple(series_items))
+
+
+def _series_names(state: ChartState, data: ChartData) -> list[str]:
+    """What gets its own colour: the series, on a scatter chart the groups."""
+    if state.kind == "scatter":
+        return [name or f"{index + 1}" for index, name in enumerate(parse_scatter(state).groups)]
+    return [series.name for series in data.series]
 
 
 def _format_menu(state: ChartState, locale: str) -> MenuItem:

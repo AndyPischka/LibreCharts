@@ -79,6 +79,11 @@ def _v7_to_v8(raw: _Raw) -> _Raw:
     return {**raw, "colors": [], "scale_group": None}
 
 
+def _v8_to_v9(raw: _Raw) -> _Raw:
+    """Version 9 added pie (and doughnut), scatter and butterfly charts."""
+    return {**raw, "doughnut": False}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -88,6 +93,7 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     5: _v5_to_v6,
     6: _v6_to_v7,
     7: _v7_to_v8,
+    8: _v8_to_v9,
 }
 
 
@@ -111,6 +117,7 @@ def to_json(state: ChartState) -> str:
             "secondary": list(state.secondary),
             "colors": list(state.colors),
             "scale_group": state.scale_group,
+            "doughnut": state.doughnut,
         },
         separators=(",", ":"),
         ensure_ascii=False,
@@ -139,6 +146,7 @@ def from_json(text: str) -> ChartState:
             secondary=_as_indices(_get(raw, "secondary"), "secondary series"),
             colors=_as_colors(_get(raw, "colors")),
             scale_group=_as_optional_text(_get(raw, "scale_group")),
+            doughnut=_as_flag(_get(raw, "doughnut"), "doughnut"),
             version=raw["v"],
         )
     except ValueError as exc:

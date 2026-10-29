@@ -6,13 +6,17 @@ from librecharts.core import sorting
 from librecharts.core.datasheet import ChartData, parse
 from librecharts.core.layout.area import layout_area
 from librecharts.core.layout.bar import layout_bar
+from librecharts.core.layout.butterfly import layout_butterfly
 from librecharts.core.layout.column import layout_column
 from librecharts.core.layout.line import layout_line
 from librecharts.core.layout.mekko import layout_mekko
+from librecharts.core.layout.pie import layout_pie
+from librecharts.core.layout.scatter import layout_scatter
 from librecharts.core.layout.waterfall import layout_waterfall
 from librecharts.core.mekko import parse_mekko
 from librecharts.core.model import Annotation, ChartState
 from librecharts.core.primitives import Primitive
+from librecharts.core.scatter import parse_scatter
 from librecharts.core.waterfall import parse_waterfall
 
 
@@ -40,7 +44,13 @@ def layout_chart(
         return layout_mekko(
             parse_mekko(state), width, height, state.percent, state.format, length_per_unit
         )
+    if state.kind == "scatter":
+        return layout_scatter(parse_scatter(state), width, height, state.annotations, state.format)
     data, annotations = display_data(state)
+    if state.kind == "pie":
+        return layout_pie(data, state.doughnut, width, height, state.format)
+    if state.kind == "butterfly":
+        return layout_butterfly(data, width, height, state.format, length_per_unit)
     if state.kind == "line":
         return layout_line(data, width, height, annotations, state.format, length_per_unit)
     if state.kind == "area":
@@ -82,7 +92,9 @@ def layout_chart(
 def display_data(state: ChartState) -> tuple[ChartData, tuple[Annotation, ...]]:
     """The data in display order and the annotations moved along with it."""
     data = parse(state)
-    order = sorting.order(data, state.grouping, state.sort)
+    # A butterfly chart sorts by its first series, like a clustered chart.
+    grouping = "clustered" if state.kind == "butterfly" else state.grouping
+    order = sorting.order(data, grouping, state.sort)
     if order == tuple(range(len(order))):
         return data, state.annotations
     return sorting.sorted_data(data, order), sorting.remap(state.annotations, order)

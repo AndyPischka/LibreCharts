@@ -15,6 +15,7 @@ from librecharts.core.menu import PROTOCOL, annotation_title
 from librecharts.core.messages import text
 from librecharts.core.model import AnnotationKind, ChartState
 from librecharts.core.picking import supports
+from librecharts.core.scatter import parse_scatter
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,12 +78,18 @@ def content(
             kind += "_percent"
         elif kind == "column" and state.lines:
             kind = "column_lines"
+        elif kind == "pie" and state.doughnut:
+            kind = "doughnut"
+        elif kind == "scatter" and parse_scatter(state).bubbles:
+            kind = "bubble"
         status = text(
             "status_chart",
             locale,
             kind=text(f"kind_{kind}", locale),
             count=str(len(data.categories)),
         )
+        if kind == "butterfly" and len(data.series) > 2:
+            status += " " + text("status_butterfly_extra", locale)
         rows = tuple(
             Row(
                 annotation_title(annotation, data, locale, state.format),
@@ -99,6 +106,9 @@ def content(
             _button("insert_area", "InsertAreaChart", "insert_area", locale),
             _button("insert_waterfall", "InsertWaterfallChart", "insert_waterfall", locale),
             _button("insert_mekko", "InsertMekkoChart", "insert_mekko", locale),
+            _button("insert_pie", "InsertPieChart", "insert_pie", locale),
+            _button("insert_scatter", "InsertScatterChart", "insert_scatter", locale),
+            _button("insert_butterfly", "InsertButterflyChart", "insert_butterfly", locale),
         ),
         status=status,
         edit=(_button("menu_edit_data", "EditData", "edit", locale, usable),),
@@ -136,7 +146,7 @@ def content(
             _button(
                 "menu_add_value_line",
                 "ValueLine",
-                "",
+                "value_line",
                 locale,
                 _can_annotate(state, usable, "value_line"),
             ),

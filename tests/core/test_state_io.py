@@ -155,6 +155,20 @@ def test_version_7_state_gets_no_colours_and_its_own_scale() -> None:
     assert restored.scale_group is None
 
 
+def test_version_8_state_is_no_doughnut() -> None:
+    raw = valid_raw()
+    del raw["doughnut"]
+    raw["v"] = 8
+    restored = from_json(json.dumps(raw))
+    assert restored.version == SCHEMA_VERSION
+    assert restored.doughnut is False
+
+
+def test_round_trip_preserves_the_doughnut_flag() -> None:
+    state = make_state(kind="pie", doughnut=True)
+    assert from_json(to_json(state)) == state
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [
@@ -240,7 +254,10 @@ def test_integers_in_values_become_floats() -> None:
         lambda r: r.update(v="1"),
         lambda r: r.update(v=True),
         lambda r: r.update(v=0),
-        lambda r: r.update(kind="pie"),
+        lambda r: r.update(kind="spiral"),
+        lambda r: r.update(doughnut=True),
+        lambda r: r.update(doughnut="yes"),
+        lambda r: r.pop("doughnut"),
         lambda r: r.update(grouping="diagonal"),
         lambda r: r.update(cells="abc"),
         lambda r: r.update(cells=[["a"], 5]),

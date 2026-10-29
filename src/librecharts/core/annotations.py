@@ -12,6 +12,8 @@ from urllib.parse import parse_qs
 
 from librecharts.core.datasheet import ChartData, parse
 from librecharts.core.model import AXIS_ANNOTATIONS, Annotation, ChartKind, ChartState
+from librecharts.core.scatter import levels as scatter_levels
+from librecharts.core.scatter import parse_scatter
 from librecharts.core.waterfall import levels, parse_waterfall
 
 NOT_AVAILABLE = "\u2013"  # en dash
@@ -23,16 +25,20 @@ SUPPORTED: dict[ChartKind, frozenset[str]] = {
     "waterfall": frozenset({"difference", "cagr", "axis_break", "value_line"}),
     "line": frozenset({"difference", "cagr", "axis_break", "value_line"}),
     "area": frozenset({"value_line"}),
+    "scatter": frozenset({"value_line"}),
 }
 
 
 def measured(state: ChartState) -> ChartData:
     """The data an annotation of ``state`` measures: categories and the series values.
 
-    For a waterfall chart one value per step: the level its column ends at.
+    For a waterfall chart one value per step: the level its column ends at; for a scatter chart
+    one y value per point.
     """
     if state.kind == "waterfall":
         return levels(parse_waterfall(state))
+    if state.kind == "scatter":
+        return scatter_levels(parse_scatter(state))
     return parse(state)
 
 

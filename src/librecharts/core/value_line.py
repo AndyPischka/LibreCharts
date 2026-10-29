@@ -1,7 +1,8 @@
 """Value lines: a target level or the average across the plot (ADR 0014).
 
 A value line is an axis annotation (``core/model.py``). Its ``value`` is the level it marks;
-``None`` means the average of the column sums (on a waterfall: of the levels the steps end at).
+``None`` means the average of the column sums (on a waterfall: of the levels the steps end at,
+on a scatter chart: of the y values).
 """
 
 from __future__ import annotations
@@ -10,6 +11,8 @@ import math
 
 from librecharts.core.datasheet import ChartData, parse
 from librecharts.core.model import Annotation, ChartState
+from librecharts.core.scatter import levels as scatter_levels
+from librecharts.core.scatter import parse_scatter
 from librecharts.core.waterfall import levels, parse_waterfall
 
 
@@ -36,6 +39,8 @@ def average_for(state: ChartState) -> float | None:
         measured = levels(parse_waterfall(state))
         steps = [v for v in measured.series[0].values if v is not None]
         return sum(steps) / len(steps) if steps else None
+    if state.kind == "scatter":
+        return average(scatter_levels(parse_scatter(state)))
     return average(parse(state))
 
 

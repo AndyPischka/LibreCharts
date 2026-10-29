@@ -6,9 +6,11 @@ import math
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
-ChartKind = Literal["column", "bar", "waterfall", "mekko", "line", "area"]
+ChartKind = Literal[
+    "column", "bar", "waterfall", "mekko", "line", "area", "pie", "scatter", "butterfly"
+]
 Grouping = Literal["stacked", "clustered"]
 SortOrder = Literal["none", "descending", "ascending"]
 AnnotationKind = Literal["difference", "cagr", "axis_break", "value_line"]
@@ -138,6 +140,11 @@ class ChartState:
     series), indexed like annotation series indices: after a data edit a dangling index is ignored.
     ``scale_group`` ties charts together so that they draw the same value with the same length
     (ADR 0017); ``None`` is the chart's own scale.
+
+    ``doughnut`` turns a pie chart into a doughnut chart (ADR 0018). A pie chart draws one pie per
+    category; a scatter chart reads its data sheet by column position (``core/scatter.py``) and a
+    butterfly chart draws the first two series as mirrored bars. ``grouping`` has no meaning for
+    these three and stays ``"stacked"``.
     """
 
     kind: ChartKind
@@ -152,6 +159,7 @@ class ChartState:
     secondary: tuple[int, ...] = ()
     colors: tuple[int | None, ...] = ()
     scale_group: str | None = None
+    doughnut: bool = False
     version: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -171,8 +179,10 @@ class ChartState:
             )
         if self.kind in ("line", "area") and self.grouping != "stacked":
             raise ValueError(f"a {self.kind} chart is always stacked")
-        if self.sort != "none" and self.kind not in ("column", "bar"):
+        if self.sort != "none" and self.kind not in ("column", "bar", "butterfly"):
             raise ValueError(f"a {self.kind} chart cannot be sorted")
+        if self.doughnut and self.kind != "pie":
+            raise ValueError("only a pie chart can be a doughnut chart")
         if (self.lines or self.secondary) and self.kind != "column":
             raise ValueError("only a column chart can draw series as lines")
         if self.lines and self.percent:

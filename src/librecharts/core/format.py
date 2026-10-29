@@ -75,11 +75,11 @@ def magnitude_suffix(magnitude: int, language: str) -> str:
 def default_format(kind: str, grouping: Grouping, locale: str) -> Format:
     """The format a newly inserted chart starts with.
 
-    A Mekko, a line, an area and a stacked column or bar chart name their series next to the last
-    category (think-cell style); a clustered one uses a legend. New charts have no axis, like
+    A Mekko, a line, an area, a pie and a stacked column or bar chart name their series next to the
+    last category (think-cell style); a clustered one uses a legend. New charts have no axis, like
     before M6.
     """
-    if kind in ("mekko", "line", "area"):
+    if kind in ("mekko", "line", "area", "pie"):
         names: SeriesNames = "labels"
     elif kind in ("column", "bar"):
         names = "labels" if grouping == "stacked" else "legend"
@@ -94,10 +94,12 @@ def default_format(kind: str, grouping: Grouping, locale: str) -> Format:
 
 def supports(state: ChartState, option: str) -> bool:
     """Whether the chart kind (and variant) has the format option."""
-    if option in ("axis", "gridlines"):
-        return state.kind != "mekko" or not state.percent
+    if option == "axis":  # a scatter chart always has its axes
+        return state.kind not in ("pie", "scatter") and (state.kind != "mekko" or not state.percent)
+    if option == "gridlines":
+        return state.kind != "pie" and (state.kind != "mekko" or not state.percent)
     if option == "series_names":
-        return state.kind in ("column", "bar", "mekko", "line", "area")
+        return state.kind in ("column", "bar", "mekko", "line", "area", "pie")
     if option == "markers":
         return state.kind == "line" or (state.kind == "column" and bool(state.lines))
     return False
@@ -150,13 +152,13 @@ def format_options(state: ChartState) -> tuple[Switch, ...]:
                 f"ChangeFormat?axis={'false' if state.format.axis else 'true'}",
             )
         )
-        if state.format.axis:  # gridlines are only drawn with an axis
-            switches.append(
-                Switch(
-                    "menu_gridlines_hide" if state.format.gridlines else "menu_gridlines_show",
-                    f"ChangeFormat?gridlines={'false' if state.format.gridlines else 'true'}",
-                )
+    if supports(state, "gridlines") and (state.format.axis or state.kind == "scatter"):
+        switches.append(  # gridlines are only drawn with an axis
+            Switch(
+                "menu_gridlines_hide" if state.format.gridlines else "menu_gridlines_show",
+                f"ChangeFormat?gridlines={'false' if state.format.gridlines else 'true'}",
             )
+        )
     if supports(state, "series_names"):
         switches.extend(
             Switch(
