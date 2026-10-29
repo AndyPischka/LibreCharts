@@ -29,6 +29,7 @@ _POSSIZE = 15  # com.sun.star.awt.PosSize.POSSIZE
 _EXTENSION_ID = "org.librecharts.extension"
 
 MARGIN, GAP, BUTTON_HEIGHT, LABEL_HEIGHT, HEADING_HEIGHT = 8, 4, 26, 18, 20
+ICON_SIZE, FLOW_MIN_WIDTH = 30, 100
 REMOVE_WIDTH = 24
 REMOVE_LABEL = chr(0xD7)  # multiplication sign
 DEFAULT_WIDTH = 240
@@ -131,8 +132,7 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         self.controls.clear()
         layout = _Layout(self)
         layout.heading("panel_insert")
-        for button in panel.insert:
-            layout.button(button)
+        layout.icons(panel.insert)
         layout.heading("panel_chart")
         layout.label(panel.status, lines=2)
         for button in (*panel.edit, *panel.options):
@@ -142,8 +142,7 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
             for button in panel.format:
                 layout.button(button)
         layout.heading("panel_annotations")
-        for button in panel.add:
-            layout.button(button)
+        layout.icons(panel.add)
         layout.heading("panel_list")
         if not panel.rows:
             layout.label(text("panel_no_annotations", self.locale))
@@ -152,10 +151,8 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         layout.button(panel.remove_all)
         layout.heading("panel_document")
         layout.label(f"{text('panel_scheme', self.locale)}: {panel.scheme}")
-        for button in panel.schemes:
-            layout.button(button)
-        for button in panel.scheme_files:
-            layout.button(button)
+        layout.flow(panel.schemes)
+        layout.flow(panel.scheme_files)
         self.height = layout.y + MARGIN
         self.container.setPosSize(0, 0, self.width, self.height, _POSSIZE)
         if self.sidebar is not None:
@@ -219,6 +216,44 @@ class _Layout:
             ImageAlign=0,  # left
         )
         control.addActionListener(_Click(self.panel, button.command))
+
+    def icons(self, buttons: tuple[Button, ...]) -> None:
+        """Icon-only buttons side by side, wrapping into rows; the title is the tooltip."""
+        width = max(self.panel.width - 2 * MARGIN, ICON_SIZE)
+        columns = max((width + GAP) // (ICON_SIZE + GAP), 1)
+        for start in range(0, len(buttons), columns):
+            top = self.y
+            for column, button in enumerate(buttons[start : start + columns]):
+                image = self.panel.image(button.icon)
+                control = self.panel.add_control(
+                    "Button",
+                    (MARGIN + column * (ICON_SIZE + GAP), top, ICON_SIZE, ICON_SIZE),
+                    Label="" if image else button.title,
+                    Enabled=button.enabled,
+                    ImageURL=image,
+                    ImageAlign=1,  # centre
+                    HelpText=button.title,
+                )
+                control.addActionListener(_Click(self.panel, button.command))
+            self.y = top + ICON_SIZE + GAP
+
+    def flow(self, buttons: tuple[Button, ...], min_width: int = FLOW_MIN_WIDTH) -> None:
+        """Text buttons side by side, as many per row as fit at ``min_width``."""
+        width = max(self.panel.width - 2 * MARGIN, min_width)
+        columns = max((width + GAP) // (min_width + GAP), 1)
+        cell = (width - (columns - 1) * GAP) // columns
+        for start in range(0, len(buttons), columns):
+            top = self.y
+            for column, button in enumerate(buttons[start : start + columns]):
+                control = self.panel.add_control(
+                    "Button",
+                    (MARGIN + column * (cell + GAP), top, cell, BUTTON_HEIGHT),
+                    Label=button.title,
+                    Enabled=button.enabled,
+                    HelpText=button.title,
+                )
+                control.addActionListener(_Click(self.panel, button.command))
+            self.y = top + BUTTON_HEIGHT + GAP
 
     def row(self, title: str, remove: str) -> None:
         """An annotation: its title, and a button that removes it."""

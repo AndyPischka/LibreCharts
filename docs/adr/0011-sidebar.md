@@ -28,4 +28,7 @@ them without hunting for the arrow. The sidebar is the place for that in Impress
   builds the panel through the factory manager; layout and clicks are tested by hand.
 - The layout uses pixel sizes and the sidebar's width; very narrow or high-DPI setups may need
   adjusting.
+- Many buttons overflow a typical sidebar height, so the insert and annotation buttons are
+  icon-only (title as tooltip) in a wrapping grid and the scheme buttons share rows. Chart options
+  and format buttons keep full-width text because their titles are long.
 - Draw and Writer have no deck; only Impress, like the rest.

@@ -31,11 +31,12 @@ def _panel(ctx, doc):
 
 
 def _controls(element):
-    """Label and enabled state of every control in the panel, top to bottom."""
+    """Label (the tooltip for icon-only buttons) and enabled state of every control in the panel,
+    top to bottom."""
     found = []
     for control in element.getRealInterface().getControls():
         model = control.getModel()
-        found.append((model.Label, model.Enabled))
+        found.append((model.Label or model.HelpText, model.Enabled))
     return found
 
 
