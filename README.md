@@ -3,9 +3,9 @@
 think-cell-style charts for **LibreOffice Impress**, as an open-source extension.
 Charts are drawn as native shapes and fed from a Calc data sheet.
 
-> **Status: M1 to M9 done.** Stacked, clustered and 100 % **column and bar charts**,
+> **Status: M1 to M10 done.** Stacked, clustered and 100 % **column and bar charts**,
 > **line, stacked and 100 % area charts**, **pie, doughnut, scatter, bubble and butterfly
-> charts**, **waterfall** and **Marimekko charts** work: edit the
+> charts**, **waterfall**, **Marimekko** and **Gantt charts** work: edit the
 > data in a Calc window (formulas included), resize charts freely, undo everything, save as ODP or
 > PPTX. Column charts can draw single series as **lines on a secondary axis**.
 > Column, bar and waterfall charts take **difference arrows, CAGR arrows and axis breaks**; column
@@ -26,7 +26,7 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 1. Build the package (see below) or take `LibreCharts-<version>.oxt` from a release.
 2. In LibreOffice: *Tools → Extension Manager → Add…* and pick the `.oxt`; restart LibreOffice.
 3. In Impress, use the **LibreCharts** menu or toolbar to insert a column, bar, line, area,
-   pie, scatter, butterfly, waterfall or Marimekko chart; double-click a chart (or select it and choose *Edit chart data*)
+   pie, scatter, butterfly, waterfall, Marimekko or Gantt chart; double-click a chart (or select it and choose *Edit chart data*)
    to change its data in Calc. The **LibreCharts** deck in the sidebar (icon with the difference
    arrow; *View → Sidebar*) offers the same commands, shows the selected chart and lists its
    annotations.
@@ -43,6 +43,9 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
    or loads/saves a scheme file. Select several charts and choose *Use the same scale* to compare
    their values across slides; *Copy chart format* / *Apply chart format* transfer the look of one
    chart to others.
+   A Gantt chart's data sheet has one row per activity (Activity, Start, End, Remark, Phase): two
+   dates give a bar, one date a milestone, text in *Phase* makes a phase over the rows below it.
+   *Add date line...* and *Add today line* mark a date; the rows can be sorted by start date.
 4. To annotate a column, bar, line or waterfall chart, select it and choose *Add difference arrow*,
    *Add level difference* or *Add CAGR arrow* (menu, toolbar or the chart's context menu), then
    click the columns as the bar above the slide says; `Esc` cancels. *Add axis break* opens a

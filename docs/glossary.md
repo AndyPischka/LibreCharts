@@ -31,6 +31,13 @@ Use these terms consistently in code, UI strings and docs.
 | **Scatter chart / Bubble chart** | Points on two numeric axes read from a data sheet with one row per point (label, x, y, size, group). A point with a size is a bubble whose area is proportional to it (ADR 0018). |
 | **Bubble** | The translucent circle of a bubble chart point; its diameter is layout output, unlike the fixed-size marker (ADR 0018). |
 | **Butterfly chart** | Two series as bars mirrored around a central band of category names, on one common scale; further series are ignored (ADR 0018). |
+| **Gantt chart** | A project timeline: one row per data sheet row (label, start, end, remark, phase marker by column position), a two-level date scale on top (ADR 0019). |
+| **Activity** | A Gantt row with a start and an end date, drawn as a bar from the start of its first to the end of its last day. |
+| **Milestone** | A Gantt row with a single date (or start equal to end), drawn as a diamond with its date. |
+| **Phase** | A Gantt row with text in the phase column: a thin bar with ticks over the rows below it; it gives them its colour. |
+| **Heading row** | A Gantt row with a label but no dates: a bold label only. |
+| **Time scale** | The two-level date header of a Gantt chart, e.g. weeks under months; chosen from the date range alone (ADR 0019). |
+| **Date line** | A value line on a Gantt chart: a dashed vertical line at a date (a Calc serial number); the *today line* is one set to the day it was added. |
 | **Combination chart** | A column chart with single series drawn as lines (`ChartState.lines`), optionally on a secondary axis (`secondary`); line series are left out of stacking, clustering and picking (ADR 0015). |
 | **Secondary axis** | The right-hand value axis of a combination chart, scaled to its line series only. It is always drawn, even when the chart's value axis is off (ADR 0015). |
 | **Marker** | The fixed-size dot on a line point; switched on or off per chart in the format (ADR 0015). |

@@ -29,7 +29,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `format.py` | Chart format options: defaults for a new chart, `ChangeFormat` arguments, which chart kind supports what, number-format parsing and validation, locale rules, `apply` for "copy chart format" (ADR 0014) |
 | `style.py` | Colour schemes (palette, text, line, background, font), the built-ins, scheme JSON and the black/white text colour for a fill by WCAG relative luminance (ADRs 0014, 0016) |
 | `samescale.py` | Same-scale groups: orientation, joinability, the natural length per value unit of every layout and the smallest common one (ADR 0017) |
-| `value_line.py` | Value lines: the average of a chart, the level a line marks, validation of the dialog's value |
+| `value_line.py` | Value lines: the average of a chart, the level a line marks, validation of the dialog's value or date (Gantt date lines) |
 | `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows, command arguments (ADR 0010) |
 | `axis_break.py` | The axis break: automatic or manual value range to remove from the scale, `fold`, validation of the dialog's input |
 | `options.py` | Chart options the user can switch after inserting (variants, 100 %, sorting, Mekko percent/units, line series and their axis): the switches offered for a chart and the `ChangeChart` command's arguments (ADRs 0012, 0013, 0015) |
@@ -42,14 +42,17 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `messages.py` | All user-visible strings in English and German (a test enforces both) |
 | `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series); sample data |
 | `scale.py` | "Nice" value axis ranges |
-| `primitives.py` | `Rect`, `Line`, `Polyline`, `Polygon`, `Marker`, `Bubble`, `Text`: layout output in 1/100 mm, styling left to the renderer |
+| `primitives.py` | `Rect`, `Line`, `Polyline`, `Polygon`, `Marker`, `Bubble`, `Text`: layout output in 1/100 mm, styling left to the renderer (`BACKGROUND` and `SHADE` fills, bold `heading` text) |
 | `geometry.py` | Circle geometry: `polar` and `sector` (pie and doughnut segments as point lists; shared with the Harvey balls of M12) |
+| `gantt.py` | Gantt data sheet rules (one row per activity; label, start, end, remark, phase by column position) -> rows of type bar, milestone, phase or heading; Calc serial numbers <-> dates; sort by start (ADR 0019) |
+| `timescale.py` | The Gantt date scale: unit pair from the date range, periods, header labels and date texts per language |
 | `scatter.py` | Scatter data sheet rules (one row per point; label, x, y, size, group by column position) -> points and groups (ADR 0018) |
 | `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked, clustered and 100 % columns / horizontal bars; columns also draw annotations and line series on a secondary axis |
 | `layout/line.py` | Points at the category centres, one `Polyline` per run of values, markers, a label at every point and the series names right of the last point |
 | `layout/area.py` | Stacked and 100 % areas: one `Polygon` per series between its cumulative edges, labels inside, series names right of the last category |
 | `layout/pie.py` | Pies and doughnuts: one pie per category, one `Polygon` per segment clockwise from 12 o'clock, shares inside or outside by angle, the sum in a doughnut's hole |
 | `layout/scatter.py` | Scatter and bubble charts: forced axes without zero, `Marker`s or `Bubble`s, group legend, value line |
+| `layout/gantt.py` | Label column, two-level date header, a band per row with bars, milestone diamonds and phase brackets, remarks, shading, gridlines and date lines |
 | `layout/butterfly.py` | Two series as bars mirrored around a band of category names, one common scale, optional axis and gridlines |
 | `waterfall.py` | Waterfall data sheet rules (value row, "Total" marker row) -> steps with running totals |
 | `layout/waterfall.py` | Steps -> floating bars, totals, connectors and signed labels |
@@ -86,7 +89,7 @@ so every released schema version must stay readable (`state_io.py`).
 | `samescale.py` | Collects a scale group's charts and sizes, redraws every affected chart in one lock (ADR 0017) |
 | `undo.py` | One explicit undo action per chart operation |
 | `chart.py` | Insert (with the UI locale for number formats), `redraw`, `add_annotation`, `apply_changes`, `set_scheme`, `fit_to_size`: chart operations on a presentation |
-| `datasheet.py` | Calc window as a transient view: write stored cells, sync every committed edit back |
+| `datasheet.py` | Calc window as a transient view: write stored cells (Gantt date columns in a date format), sync every committed edit back |
 | `commands.py` | Menu commands (selection handling, messages, same scale, copy format, scheme files); called by `extension/entry.py` |
 | `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place, including their scale group (ADRs 0007, 0017) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |

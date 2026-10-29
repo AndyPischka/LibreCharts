@@ -6,6 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- **Gantt charts** (*Insert Gantt chart*): a project timeline with one row per activity. The data
+  sheet has the columns Activity, Start, End, Remark and Phase; its date columns show dates, and
+  formulas work. Two dates give a bar, one date a milestone (a diamond with its date), any text in
+  *Phase* makes the row a phase over the rows below it (bold, in its own colour), a row without dates
+  is a heading. The date scale picks days, weeks, months, quarters or years by itself and shades every
+  other month or year. *Add date line...* draws a dashed line at a date, *Add today line* at today's
+  date (it stays there); rows can be sorted by start date within their phase; gridlines are optional.
 - **Pie and doughnut charts** (*Insert pie chart*): one pie per category column, one segment per
   series, with the share inside or next to each segment; the context menu or the sidebar switches
   to a doughnut that shows the category sum in its hole.
