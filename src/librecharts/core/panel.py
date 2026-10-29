@@ -58,6 +58,7 @@ class Panel:
     scheme: str = ""
     elements: tuple[Button, ...] = ()
     arrange: tuple[Button, ...] = ()
+    agenda: tuple[Button, ...] = ()
 
 
 def content(
@@ -67,13 +68,17 @@ def content(
     scheme_name: str = style.DEFAULT.name,
     element_selected: bool = False,
     shapes_selected: int = 0,
+    has_agenda: bool = False,
+    agenda_slide: bool = False,
 ) -> Panel:
     """The panel for a selection: ``selected`` is whether a LibreCharts chart is selected and
     ``state`` its stored state (``None`` if the chart is orphaned or nothing is selected).
 
     ``scheme_name`` is the document's current colour scheme, for the Document section.
     ``element_selected`` is whether a Harvey ball or check mark is selected and ``shapes_selected``
-    how many shapes are, for the Elements and Arrange sections.
+    how many shapes are, for the Elements and Arrange sections. ``has_agenda`` is whether the
+    presentation has an agenda and ``agenda_slide`` whether the current slide is one of its
+    slides, for the Agenda section.
     """
     usable = selected and state is not None
     gantt = state is not None and state.kind == "gantt"
@@ -210,6 +215,14 @@ def content(
                 and (shapes_selected == 2 or not item.command.endswith("op=swap")),
             )
             for item in arrange_items(locale)
+        ),
+        agenda=(
+            # always enabled: after its main slide was deleted, an agenda is inserted again
+            _button("menu_insert_agenda", "InsertAgenda", "", locale),
+            _button(
+                "menu_start_chapter", "StartChapter", "", locale, has_agenda and not agenda_slide
+            ),
+            _button("menu_update_agenda", "UpdateAgenda", "", locale, has_agenda),
         ),
     )
 

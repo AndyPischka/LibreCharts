@@ -842,6 +842,67 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Update now",
         "de": "Jetzt aktualisieren",
     },
+    "panel_agenda": {
+        "en": "Agenda",
+        "de": "Agenda",
+    },
+    "menu_insert_agenda": {
+        "en": "Insert agenda",
+        "de": "Agenda einfügen",
+    },
+    "menu_start_chapter": {
+        "en": "Start chapter here",
+        "de": "Kapitel hier beginnen",
+    },
+    "menu_update_agenda": {
+        "en": "Update agenda",
+        "de": "Agenda aktualisieren",
+    },
+    "agenda_title": {
+        "en": "Agenda",
+        "de": "Agenda",
+    },
+    "agenda_placeholder": {
+        "en": "Chapter {number}",
+        "de": "Kapitel {number}",
+    },
+    "agenda_new_chapter": {
+        "en": "New chapter",
+        "de": "Neues Kapitel",
+    },
+    "agenda_exists": {
+        "en": (
+            "This presentation already has an agenda. Edit its chapters on the agenda slide, one "
+            "per line, then choose Update agenda."
+        ),
+        "de": (
+            "Diese Präsentation hat schon eine Agenda. Die Kapitel auf der Agenda-Folie "
+            "bearbeiten, eines pro Zeile, dann Agenda aktualisieren wählen."
+        ),
+    },
+    "agenda_missing": {
+        "en": "This presentation has no agenda yet. Insert one first.",
+        "de": "Diese Präsentation hat noch keine Agenda. Bitte zuerst eine einfügen.",
+    },
+    "agenda_empty": {
+        "en": (
+            "The agenda needs at least one chapter. Write one chapter per line on the agenda slide."
+        ),
+        "de": (
+            "Die Agenda braucht mindestens ein Kapitel. Auf der Agenda-Folie ein Kapitel pro Zeile "
+            "schreiben."
+        ),
+    },
+    "agenda_on_agenda_slide": {
+        "en": "A chapter starts on a content slide. Select the first slide of the chapter.",
+        "de": (
+            "Ein Kapitel beginnt auf einer Inhaltsfolie. Bitte die erste Folie des Kapitels wählen."
+        ),
+    },
+    "agenda_first_slide": {
+        "en": "A chapter cannot start on the first slide.",
+        "de": "Ein Kapitel kann nicht auf der ersten Folie beginnen.",
+    },
     "insert_harvey": {
         "en": "Harvey ball",
         "de": "Harvey Ball",

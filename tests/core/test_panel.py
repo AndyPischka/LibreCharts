@@ -188,3 +188,21 @@ def test_element_and_arrange_buttons_follow_the_selection() -> None:
     swap = [b for b in three.arrange if b.command.endswith("op=swap")]
     assert [b.enabled for b in swap] == [False]
     assert sum(b.enabled for b in three.arrange) == len(three.arrange) - 1
+
+
+def test_agenda_buttons_follow_the_agenda_and_the_current_slide() -> None:
+    commands = [PROTOCOL + c for c in ("InsertAgenda", "StartChapter", "UpdateAgenda")]
+    none = content(None, False, "en-US")
+    assert [b.command for b in none.agenda] == commands
+    assert [b.enabled for b in none.agenda] == [True, False, False]
+
+    content_slide = content(None, False, "de-DE", has_agenda=True)
+    assert [b.title for b in content_slide.agenda] == [
+        "Agenda einfügen",
+        "Kapitel hier beginnen",
+        "Agenda aktualisieren",
+    ]
+    assert [b.enabled for b in content_slide.agenda] == [True, True, True]
+
+    agenda_slide = content(None, False, "en-US", has_agenda=True, agenda_slide=True)
+    assert [b.enabled for b in agenda_slide.agenda] == [True, False, True]
