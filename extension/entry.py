@@ -82,6 +82,12 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.set_element(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("Arrange"):
                 commands.arrange(self.ctx, self.frame, _query(url))
+            elif url.Path == "InsertAgenda":
+                commands.insert_agenda(self.ctx, self.frame)
+            elif url.Path == "StartChapter":
+                commands.start_chapter(self.ctx, self.frame)
+            elif url.Path == "UpdateAgenda":
+                commands.update_agenda(self.ctx, self.frame)
             elif url.Path == "EditData":
                 commands.edit_data(self.ctx, self.frame)
             elif url.Path.startswith("LinkData"):

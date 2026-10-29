@@ -28,6 +28,9 @@ class FakeProps:
     def setPropertyValue(self, name: str, value: str) -> None:
         self.values[name] = value
 
+    def removeProperty(self, name: str) -> None:
+        del self.values[name], self.attributes[name]
+
     def getPropertyValue(self, name: str) -> str:
         return self.values[name]
 
@@ -181,6 +184,21 @@ def test_ambiguous_or_short_prefixes_are_not_guessed() -> None:
 def test_non_chart_shape_cannot_be_claimed() -> None:
     doc, _, _ = _doc_with_chart()
     assert store.claim(doc, FakeShape("Rectangle 1")) is None
+
+
+def test_document_wide_properties_are_no_chart_states() -> None:
+    doc = FakeDoc(FakePage("librecharts:scheme", "librecharts:agenda"))
+    store.write_property(doc, store.SCHEME_PROPERTY, "{}")
+    store.write_property(doc, store.AGENDA_PROPERTY, "{}")
+    assert [store.claim(doc, shape) for shape in doc.pages[0].shapes] == [None, None]
+
+
+def test_remove_property_removes_it_once() -> None:
+    doc = FakeDoc()
+    store.write_property(doc, store.AGENDA_PROPERTY, "{}")
+    store.remove_property(doc, store.AGENDA_PROPERTY)
+    store.remove_property(doc, store.AGENDA_PROPERTY)
+    assert store.read_property(doc, store.AGENDA_PROPERTY) is None
 
 
 def test_all_charts_spans_every_slide() -> None:

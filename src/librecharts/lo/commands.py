@@ -18,6 +18,7 @@ from librecharts.core.messages import text
 from librecharts.core.model import Annotation, AnnotationKind, ChartState
 from librecharts.core.picking import PickSession, supports
 from librecharts.core.state_io import StateError
+from librecharts.lo import agenda as lo_agenda
 from librecharts.lo import arrange as lo_arrange
 from librecharts.lo import (
     axisdialog,
@@ -164,6 +165,28 @@ def arrange(ctx: Any, frame: Any, query: str) -> None:
         ui.show_info(ctx, frame, text("arrange_unsupported", locale))
         return
     lo_arrange.apply(controller.getModel(), shapes, wanted)
+
+
+def insert_agenda(ctx: Any, frame: Any) -> None:
+    _agenda(ctx, frame, lo_agenda.insert)
+
+
+def start_chapter(ctx: Any, frame: Any) -> None:
+    _agenda(ctx, frame, lo_agenda.start_chapter)
+
+
+def update_agenda(ctx: Any, frame: Any) -> None:
+    _agenda(ctx, frame, lambda doc, _controller, locale: lo_agenda.update(doc, locale))
+
+
+def _agenda(ctx: Any, frame: Any, command: Callable[[Any, Any, str], None]) -> None:
+    """Run an agenda command on the presentation of ``frame``; tell the user if it cannot run."""
+    controller = frame.getController()
+    locale = ui.ui_locale(ctx)
+    try:
+        command(controller.getModel(), controller, locale)
+    except lo_agenda.Refused as refused:
+        ui.show_info(ctx, frame, text(refused.key, locale))
 
 
 def edit_data(ctx: Any, frame: Any) -> None:

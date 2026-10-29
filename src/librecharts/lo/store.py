@@ -24,6 +24,8 @@ PREFIX = "librecharts:"
 _REMOVEABLE = 128  # com.sun.star.beans.PropertyAttribute.REMOVEABLE
 MIN_PREFIX = 8  # shortest name prefix trusted to identify the origin of a renamed copy
 SCHEME_PROPERTY = PREFIX + "scheme"  # the document-wide colour scheme (ADR 0016)
+AGENDA_PROPERTY = PREFIX + "agenda"  # the chapters of the agenda (ADR 0022)
+_NOT_CHARTS = (SCHEME_PROPERTY, AGENDA_PROPERTY)
 
 
 def new_chart_id() -> str:
@@ -84,6 +86,13 @@ def read_property(doc: Any, name: str) -> str | None:
     return str(props.getPropertyValue(name))
 
 
+def remove_property(doc: Any, name: str) -> None:
+    """Remove the document's custom property ``name`` if it is set."""
+    props = doc.getDocumentProperties().getUserDefinedProperties()
+    if props.getPropertySetInfo().hasPropertyByName(name):
+        props.removeProperty(name)
+
+
 def all_charts(doc: Any) -> list[tuple[Any, str]]:
     """All LibreCharts groups on all slides of ``doc`` with the ids from their names."""
     pages = doc.getDrawPages()
@@ -125,7 +134,7 @@ def claim(doc: Any, group: Any) -> str | None:
 def _stored_ids(doc: Any) -> list[str]:
     props = doc.getDocumentProperties().getUserDefinedProperties()
     names = [p.Name for p in props.getPropertySetInfo().getProperties()]
-    return [n[len(PREFIX) :] for n in names if n.startswith(PREFIX) and n != SCHEME_PROPERTY]
+    return [n[len(PREFIX) :] for n in names if n.startswith(PREFIX) and n not in _NOT_CHARTS]
 
 
 def _origin_id(doc: Any, name_id: str) -> str | None:

@@ -22,7 +22,7 @@ from com.sun.star.view import XSelectionChangeListener
 from librecharts.core.messages import text
 from librecharts.core.panel import Button, Panel, content
 from librecharts.core.state_io import StateError
-from librecharts.lo import arrange, commands, scheme, store, ui
+from librecharts.lo import agenda, arrange, commands, scheme, store, ui
 from librecharts.lo import elements as lo_elements
 
 _TOOLPANEL = 7  # com.sun.star.ui.UIElementType.TOOLPANEL
@@ -128,6 +128,8 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
             scheme.load(doc).name,
             bool(lo_elements.selected_elements(controller)),
             len(arrange.selected_shapes(controller)),
+            agenda.stored(doc),
+            agenda.role_of_page(controller.getCurrentPage()) is not None,
         )
 
     def draw(self) -> None:
@@ -158,6 +160,8 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         layout.flow(panel.elements)
         layout.heading("panel_arrange")
         layout.flow(panel.arrange)
+        layout.heading("panel_agenda")
+        layout.flow(panel.agenda)
         layout.heading("panel_annotations")
         layout.icons(panel.add)
         layout.heading("panel_list")
