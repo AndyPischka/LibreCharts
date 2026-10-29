@@ -25,6 +25,11 @@ Use these terms consistently in code, UI strings and docs.
 | **Chart option** | A per-chart switch the user can change after inserting, via the context menu or the sidebar (`ChangeChart` command, `core/options.py`). |
 | **Stacked / Clustered** | The two ways to place the segments of one category: on top of each other in one column, or side by side as one bar per series. |
 | **100 % chart** | A stacked column or bar chart whose columns are all 100 % high; segments show their share, the absolute column sum stays above (right of, for bars) the column. Negative values count as empty (ADR 0013). A percent Mekko is the same idea with variable column widths. |
+| **Line chart** | One line per series through the category centres, with a marker and a value label at every point and the series name right of the last point; an empty value splits the line (ADR 0015). |
+| **Area chart** | Stacked areas: every series is one filled area between its cumulative edges. The 100 % variant shows shares of the column sums. Negative values count as empty, empty values as zero (ADR 0015). |
+| **Combination chart** | A column chart with single series drawn as lines (`ChartState.lines`), optionally on a secondary axis (`secondary`); line series are left out of stacking, clustering and picking (ADR 0015). |
+| **Secondary axis** | The right-hand value axis of a combination chart, scaled to its line series only. It is always drawn, even when the chart's value axis is off (ADR 0015). |
+| **Marker** | The fixed-size dot on a line point; switched on or off per chart in the format (ADR 0015). |
 | **Sort order** | Display order of the categories of a column or bar chart by value: data sheet order, descending or ascending. It never changes the data sheet or the stored annotation indices (ADR 0013). |
 | **Chart format** | The per-chart look stored in `ChartState.format`: value axis, gridlines, series names, decimals, magnitude, unit, decimal separator and language (ADR 0014). |
 | **Value axis** | The scale beside (below, for bar charts) the plot with one tick label per tick. Optional; a 100 % chart uses 0..100, a percent Mekko has none (ADR 0014). |

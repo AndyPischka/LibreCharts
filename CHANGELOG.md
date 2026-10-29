@@ -6,6 +6,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- **Line charts** (*Insert line chart*): one line per series with a marker and a value label at every
+  point and the series name right of the last point; an empty value splits the line. Markers can be
+  hidden from the *Format* section.
+- **Area charts** (*Insert area chart*): stacked areas, with the 100 % variant from the context menu
+  or the sidebar. Negative values count as empty; value lines are the annotation they take.
+- **Combination charts**: a column chart can draw single series as lines (*Series as lines* in its
+  context menu), optionally on a **secondary axis** right of the plot that is scaled to those series
+  and always shown. Difference and CAGR arrows can measure a line series.
 - Charts can show a **value axis** with tick labels and optional **gridlines**; a 100 % chart uses
   a fixed 0..100 scale, a percent Mekko has no value axis.
 - **Number formats** per chart: decimals, thousands/millions/billions with a localized suffix, and

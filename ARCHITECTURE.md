@@ -25,24 +25,26 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 
 | Module | Role |
 |---|---|
-| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, `format`, schema version) |
+| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, `format`, line series `lines`/`secondary`, schema version) |
 | `format.py` | Chart format options: defaults for a new chart, `ChangeFormat` arguments, which chart kind supports what, number-format parsing and validation, locale rules (ADR 0014) |
 | `style.py` | Series palette and the black/white text colour for a fill, by WCAG relative luminance (ADR 0014) |
 | `value_line.py` | Value lines: the average of a chart, the level a line marks, validation of the dialog's value |
 | `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows, command arguments (ADR 0010) |
 | `axis_break.py` | The axis break: automatic or manual value range to remove from the scale, `fold`, validation of the dialog's input |
-| `options.py` | Chart options the user can switch after inserting (variants, 100 %, sorting, Mekko percent/units): the switches offered for a chart and the `ChangeChart` command's arguments (ADRs 0012, 0013) |
+| `options.py` | Chart options the user can switch after inserting (variants, 100 %, sorting, Mekko percent/units, line series and their axis): the switches offered for a chart and the `ChangeChart` command's arguments (ADRs 0012, 0013, 0015) |
 | `percent.py` | Shares and the "negatives count as empty" rule for 100 % charts and the Mekko |
 | `sorting.py` | Display permutation of the categories, reordered data and annotation indices (ADR 0013) |
-| `picking.py` | Pick mode: chart point -> column, `PickSession` collects the picks for one annotation |
+| `picking.py` | Pick mode: chart point -> column or line point, `PickSession` collects the picks for one annotation |
 | `menu.py` | Contents of the chart's context menu as plain data |
 | `panel.py` | Contents of the sidebar panel (buttons, status, annotation list) as plain data |
 | `state_io.py` | `ChartState` <-> JSON with schema migrations; malformed input raises `StateError` |
 | `messages.py` | All user-visible strings in English and German (a test enforces both) |
 | `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series); sample data |
 | `scale.py` | "Nice" value axis ranges |
-| `primitives.py` | `Rect`, `Line`, `Text`: layout output in 1/100 mm, styling left to the renderer |
-| `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked, clustered and 100 % columns / horizontal bars; columns also draw annotations |
+| `primitives.py` | `Rect`, `Line`, `Polyline`, `Polygon`, `Marker`, `Text`: layout output in 1/100 mm, styling left to the renderer |
+| `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked, clustered and 100 % columns / horizontal bars; columns also draw annotations and line series on a secondary axis |
+| `layout/line.py` | Points at the category centres, one `Polyline` per run of values, markers, a label at every point and the series names right of the last point |
+| `layout/area.py` | Stacked and 100 % areas: one `Polygon` per series between its cumulative edges, labels inside, series names right of the last category |
 | `waterfall.py` | Waterfall data sheet rules (value row, "Total" marker row) -> steps with running totals |
 | `layout/waterfall.py` | Steps -> floating bars, totals, connectors and signed labels |
 | `mekko.py` | Mekko data sheet rules (optional "Width" row, negatives ignored) -> segments and column widths |
@@ -72,7 +74,7 @@ so every released schema version must stay readable (`state_io.py`).
 | Module | Role |
 |---|---|
 | `store.py` | Chart id anchor (group name `librecharts:<id>`), state in a document custom property, `claim` forks renamed copies; no `uno` import, unit-tested with fakes |
-| `render.py` | Primitives -> shapes in a group; `rerender` replaces children in place |
+| `render.py` | Primitives -> shapes in a group; `rerender` replaces children in place, `sync_geometry` moves them for a resize (poly shapes through `PolyPolygon`) |
 | `undo.py` | One explicit undo action per chart operation |
 | `chart.py` | Insert (with the UI locale for number formats), `redraw`, `add_annotation`: chart operations on a presentation |
 | `datasheet.py` | Calc window as a transient view: write stored cells, sync every committed edit back |
