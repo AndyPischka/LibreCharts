@@ -9,6 +9,7 @@ import time
 
 from helpers import (
     close_datasheets,
+    close_doc,
     datasheets,
     dispatch,
     first_page,
@@ -39,7 +40,7 @@ def test_duplicated_slide_yields_independent_charts(ctx):
         assert all(store.read_state(doc, i) is not None for i in ids)
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def _inserted_and_pasted(ctx):
@@ -68,7 +69,7 @@ def test_pasted_chart_is_renamed_and_has_no_state_of_its_own(ctx):
         assert copy_id.split(" ")[0] == original_id  # new ids end in a letter: nothing is cut
         assert store.read_state(doc, copy_id) is None
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_editing_a_pasted_chart_forks_it(ctx):
@@ -85,7 +86,7 @@ def test_editing_a_pasted_chart_forks_it(ctx):
             assert store.read_state(doc, chart_id) is not None
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_editing_a_copy_does_not_touch_the_original(ctx):
@@ -110,4 +111,4 @@ def test_editing_a_copy_does_not_touch_the_original(ctx):
         assert original_state.values[1][1] == 10
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)

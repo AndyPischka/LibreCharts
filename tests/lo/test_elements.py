@@ -4,7 +4,7 @@
 import time
 
 import uno
-from helpers import dispatch, first_page, new_impress, save_and_reload, uno_command
+from helpers import close_doc, dispatch, first_page, new_impress, save_and_reload, uno_command
 
 from librecharts.core import elements
 from librecharts.lo import elements as lo_elements
@@ -46,7 +46,7 @@ def test_insert_harvey_ball_and_change_state_in_one_undo_step(ctx):
         assert element == elements.Element.harvey(50)
         assert len(_children(group)) == 3
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_next_state_cycles_and_a_check_mark_ignores_ball_states(ctx):
@@ -58,7 +58,7 @@ def test_next_state_cycles_and_a_check_mark_ignores_ball_states(ctx):
         dispatch(ctx, doc, "org.librecharts:SetElement?harvey=75")  # wrong kind: no change
         assert _only(doc)[1] == elements.Element.check("cross")
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_resizing_keeps_the_ball_round(ctx):
@@ -74,7 +74,7 @@ def test_resizing_keeps_the_ball_round(ctx):
 
         _wait_for(round_)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_the_name_survives_odp_and_pptx(ctx):
@@ -86,6 +86,6 @@ def test_the_name_survives_odp_and_pptx(ctx):
             try:
                 assert _only(reloaded)[1] == elements.Element.harvey(75), fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)

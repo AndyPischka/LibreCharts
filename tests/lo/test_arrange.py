@@ -2,7 +2,7 @@
 """Arranging the selected shapes: same size, grid, swap; one undo step each."""
 
 import uno
-from helpers import dispatch, first_page, new_impress, uno_command
+from helpers import close_doc, dispatch, first_page, new_impress, uno_command
 
 
 def _rectangles(ctx, doc, specs):
@@ -39,7 +39,7 @@ def test_same_size_uses_the_largest_and_undoes_in_one_step(ctx):
         uno_command(ctx, doc, ".uno:Undo")
         assert _rects(shapes) == specs
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_grid_and_swap(ctx):
@@ -59,7 +59,7 @@ def test_grid_and_swap(ctx):
         dispatch(ctx, doc, "org.librecharts:Arrange?op=swap")
         assert [r[:2] for r in _rects(shapes[:2])] == [(1200, 0), (0, 0)]
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_chart_in_the_selection_is_laid_out_again(ctx):
@@ -73,4 +73,4 @@ def test_a_chart_in_the_selection_is_laid_out_again(ctx):
         dispatch(ctx, doc, "org.librecharts:Arrange?op=width")
         assert chart.Size.Width == other.Size.Width
     finally:
-        doc.close(True)
+        close_doc(doc)

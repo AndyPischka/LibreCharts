@@ -10,6 +10,7 @@ import time
 from helpers import (
     click,
     close_datasheets,
+    close_doc,
     datasheets,
     dispatch,
     first_page,
@@ -77,7 +78,7 @@ def test_double_click_on_a_chart_opens_its_data_sheet(ctx):
         assert commands.selected_chart(doc.getCurrentController()) is not None
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_single_click_does_not_open_the_data_sheet(ctx):
@@ -88,7 +89,7 @@ def test_single_click_does_not_open_the_data_sheet(ctx):
         assert datasheets(ctx) == []
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_double_click_next_to_the_chart_is_left_to_impress(ctx):
@@ -100,4 +101,4 @@ def test_double_click_next_to_the_chart_is_left_to_impress(ctx):
         assert datasheets(ctx) == []
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)

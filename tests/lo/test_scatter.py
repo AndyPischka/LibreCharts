@@ -5,6 +5,7 @@ import time
 from dataclasses import replace
 
 from helpers import (
+    close_doc,
     dispatch,
     first_page,
     new_impress,
@@ -80,7 +81,7 @@ def test_a_scatter_chart_draws_markers_labels_axes_and_a_legend(ctx):
         for expected in ("Alpha", "Theta", "Group 1", "Group 2"):
             assert expected in texts, (expected, texts)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_sizes_turn_markers_into_translucent_bubbles_that_follow_a_resize(ctx):
@@ -104,7 +105,7 @@ def test_sizes_turn_markers_into_translucent_bubbles_that_follow_a_resize(ctx):
         # bubbles keep their proportions to each other
         assert abs(after[-1] / after[0] - before[-1] / before[0]) <= 0.02 * before[-1] / before[0]
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_resize_keeps_the_markers_small(ctx):
@@ -118,7 +119,7 @@ def test_a_resize_keeps_the_markers_small(ctx):
         time.sleep(0.5)
         assert {(w, h) for w, h, _ in _ellipses(group)} == {(MARKER_SIZE, MARKER_SIZE)}
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_gridlines_and_a_value_line_work_on_a_scatter_chart(ctx):
@@ -134,7 +135,7 @@ def test_gridlines_and_a_value_line_work_on_a_scatter_chart(ctx):
         ]
         assert "40" in _texts(group)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_scatter_chart_survives_reload(ctx):
@@ -150,6 +151,6 @@ def test_a_scatter_chart_survives_reload(ctx):
                     assert len(_ellipses(reloaded_group)) == 8, fmt
                 assert "Alpha" in _texts(reloaded_group), fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)

@@ -1,7 +1,7 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
 """Colour schemes and series colours in a real LibreOffice (ADR 0016)."""
 
-from helpers import dispatch, first_page, new_impress, prop, uno_command
+from helpers import close_doc, dispatch, first_page, new_impress, prop, uno_command
 
 from librecharts.core import style
 from librecharts.lo import scheme, store
@@ -46,7 +46,7 @@ def test_a_built_in_scheme_recolours_a_chart_and_undoes_as_one_step(ctx):
         assert scheme.load(doc) == style.DEFAULT
         assert style.PALETTE[0] in _solid_fills(group)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_the_scheme_reaches_text_and_line_colours(ctx):
@@ -80,7 +80,7 @@ def test_the_scheme_reaches_text_and_line_colours(ctx):
         assert custom.text in colours
         assert custom.line in lines
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_series_colour_overrides_one_palette_entry_and_undoes(ctx):
@@ -103,7 +103,7 @@ def test_a_series_colour_overrides_one_palette_entry_and_undoes(ctx):
         assert _state(doc, chart_id).colors == ()
         assert style.PALETTE[0] in _solid_fills(group)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_the_configured_default_scheme_is_readable(ctx):
@@ -133,6 +133,6 @@ def test_a_scheme_survives_saving_as_odp_and_pptx(ctx):
                 if fmt == "odp":  # PPTX import turns shapes into custom shapes without FillColor
                     assert style.GREY.palette[0] in _solid_fills(group)
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)

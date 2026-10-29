@@ -1,7 +1,7 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
 """The agenda in a real LibreOffice: main slide, dividers, update and undo (ADR 0022)."""
 
-from helpers import dispatch, new_impress, save_and_reload, uno_command
+from helpers import close_doc, dispatch, new_impress, save_and_reload, uno_command
 
 from librecharts.core import agenda as core
 from librecharts.core import style
@@ -133,7 +133,7 @@ def test_insert_agenda_adds_a_main_slide_after_the_current_one_in_one_undo_step(
         assert _outline(doc) == ["Slide 1", "agenda", "Slide 2", "Slide 3"]
         assert _titles(doc) == tuple(placeholders)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_dividers_start_the_chapters_and_highlight_them(ctx):
@@ -175,7 +175,7 @@ def test_dividers_start_the_chapters_and_highlight_them(ctx):
         assert _outline(doc)[5] == "Slide 4"
         assert _undo_depth(doc) == depth - 1
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_update_follows_the_edited_main_list_in_one_undo_step(ctx):
@@ -210,7 +210,7 @@ def test_update_follows_the_edited_main_list_in_one_undo_step(ctx):
         assert _outline(doc)[5] == "Slide 4"
         assert _titles(doc) == ("Intro", third)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_chapter_started_between_two_others_is_new(ctx):
@@ -234,7 +234,7 @@ def test_a_chapter_started_between_two_others_is_new(ctx):
             "Slide 5",
         ]
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_commands_that_cannot_run_change_nothing(ctx):
@@ -256,7 +256,7 @@ def test_commands_that_cannot_run_change_nothing(ctx):
         dispatch(ctx, doc, UPDATE)  # no chapters
         assert _outline(doc) == ["Slide 1", "Slide 2", "agenda", "Slide 3"]
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_the_agenda_survives_odp_and_pptx(ctx):
@@ -276,6 +276,6 @@ def test_the_agenda_survives_odp_and_pptx(ctx):
                 assert _outline(again)[2] == "divider Renamed", (fmt, _outline(again))
                 assert _outline(again)[5] == f"divider {titles[1]}", fmt
             finally:
-                again.close(True)
+                close_doc(again)
     finally:
-        doc.close(True)
+        close_doc(doc)

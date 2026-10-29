@@ -5,6 +5,7 @@ import time
 
 from helpers import (
     close_datasheets,
+    close_doc,
     datasheets,
     dispatch,
     first_page,
@@ -53,9 +54,9 @@ def test_waterfall_is_inserted_and_survives_odp_and_pptx(ctx):
                     == sample_waterfall_state()
                 ), fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_sample_labels_show_steps_with_signs_and_the_computed_end_total(ctx):
@@ -67,7 +68,7 @@ def test_sample_labels_show_steps_with_signs_and_the_computed_end_total(ctx):
         for expected in ("100", "+30", "+15", "-25", "-10", "110"):
             assert expected in labels, (expected, labels)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_editing_a_value_and_the_total_row_redraws_the_chart(ctx):
@@ -91,4 +92,4 @@ def test_editing_a_value_and_the_total_row_redraws_the_chart(ctx):
         assert not calc.isModified()
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)

@@ -1,7 +1,7 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
 """Butterfly charts in a real LibreOffice: mirrored bars, sorting and persistence."""
 
-from helpers import dispatch, first_page, new_impress, save_and_reload, uno_command
+from helpers import close_doc, dispatch, first_page, new_impress, save_and_reload, uno_command
 
 from librecharts.lo import store
 
@@ -47,7 +47,7 @@ def test_a_butterfly_chart_mirrors_two_series_around_the_category_names(ctx):
         positions = sorted({x for _, _, x in _rectangles(children)})
         assert len(positions) > 3
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_sorting_reorders_the_categories_in_one_undo_step(ctx):
@@ -67,7 +67,7 @@ def test_sorting_reorders_the_categories_in_one_undo_step(ctx):
         uno_command(ctx, doc, ".uno:Undo")
         assert _category_order(group) == ["0-14", "15-29", "30-44", "45-59", "60+"]
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_butterfly_chart_survives_reload_with_its_sort_order(ctx):
@@ -83,6 +83,6 @@ def test_a_butterfly_chart_survives_reload_with_its_sort_order(ctx):
                 assert (restored.kind, restored.sort) == ("butterfly", "descending"), fmt
                 assert _category_order(reloaded_group)[0] == "30-44", fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)

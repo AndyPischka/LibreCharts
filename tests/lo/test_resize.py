@@ -5,6 +5,7 @@ import time
 
 import uno
 from helpers import (
+    close_doc,
     dispatch,
     first_page,
     new_impress,
@@ -76,7 +77,7 @@ def test_resized_chart_is_laid_out_again(ctx):
         assert (group.Size.Width, group.Size.Height) == (size.Width, size.Height * 2)
         assert len(_category_heights(group)) == 3
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_relayout_adds_no_undo_step(ctx):
@@ -89,7 +90,7 @@ def test_relayout_adds_no_undo_step(ctx):
         _wait_for(lambda: _laid_out(group))
         assert manager.getAllUndoActionTitles() == titles
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_undo_and_redo_of_a_resize(ctx):
@@ -123,7 +124,7 @@ def test_undo_and_redo_of_a_resize(ctx):
         _wait_for(lambda: group.Size.Height == original_size[1] + 6000)
         _wait_for(lambda: _close(_geometry(group), resized))
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_charts_in_a_reloaded_presentation_are_watched(ctx):
@@ -139,9 +140,9 @@ def test_charts_in_a_reloaded_presentation_are_watched(ctx):
             _resize(group, group.Size.Width, group.Size.Height * 2)
             _wait_for(lambda: _laid_out(group))
         finally:
-            reloaded.close(True)
+            close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_too_small_chart_is_left_stretched_and_recovers(ctx):
@@ -155,4 +156,4 @@ def test_too_small_chart_is_left_stretched_and_recovers(ctx):
         _resize(group, size.Width, size.Height)
         _wait_for(lambda: _laid_out(group))
     finally:
-        doc.close(True)
+        close_doc(doc)

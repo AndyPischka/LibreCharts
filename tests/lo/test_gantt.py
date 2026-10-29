@@ -6,6 +6,7 @@ import time
 
 from helpers import (
     close_datasheets,
+    close_doc,
     datasheets,
     dispatch,
     first_page,
@@ -83,7 +84,7 @@ def test_a_gantt_chart_draws_rows_milestones_and_bold_phases(ctx):
         assert weights["Concept"] == 150  # a phase label is bold
         assert weights["Testing"] < 150
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_the_data_sheet_shows_dates_and_an_edited_date_moves_the_bar(ctx):
@@ -108,7 +109,7 @@ def test_the_data_sheet_shows_dates_and_an_edited_date_moves_the_bar(ctx):
         assert not calc.isModified()
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_date_line_and_a_today_line_are_one_undo_step_each(ctx):
@@ -136,7 +137,7 @@ def test_a_date_line_and_a_today_line_are_one_undo_step_each(ctx):
         uno_command(ctx, doc, ".uno:Undo")
         assert _state(doc, chart_id).annotations == ()
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_sorting_by_start_date_is_one_undo_step(ctx):
@@ -149,7 +150,7 @@ def test_sorting_by_start_date_is_one_undo_step(ctx):
         uno_command(ctx, doc, ".uno:Undo")
         assert _state(doc, chart_id).sort == "none"
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_resize_keeps_the_milestones_small(ctx):
@@ -167,7 +168,7 @@ def test_a_resize_keeps_the_milestones_small(ctx):
         resized = [width for _, width, _, _ in _shapes(group, "PolyPolygonShape")]
         assert all(abs(a - b) <= 2 for a, b in zip(resized, diamonds, strict=True))
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_gantt_chart_survives_reload(ctx):
@@ -186,6 +187,6 @@ def test_a_gantt_chart_survives_reload(ctx):
                     assert len(_shapes(reloaded_group, "PolyPolygonShape")) == 2, fmt
                 assert "Go-live" in _texts(reloaded_group), fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)

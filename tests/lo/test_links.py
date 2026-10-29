@@ -14,6 +14,7 @@ from urllib.parse import quote
 import uno
 from helpers import (
     close_datasheets,
+    close_doc,
     datasheets,
     desktop,
     dispatch,
@@ -62,7 +63,7 @@ def _workbook(ctx, path, rows=DATA, names=()):
         fmt = path.suffix[1:]
         calc.storeToURL(_url(path), (prop("FilterName", CALC_FILTERS[fmt]),))
     finally:
-        calc.close(True)
+        close_doc(calc)
     return path
 
 
@@ -74,7 +75,7 @@ def _change(ctx, path, cell, value):
         calc.getSheets().getByIndex(0).getCellRangeByName(cell).setValue(value)
         calc.store()
     finally:
-        calc.close(True)
+        close_doc(calc)
 
 
 def _link(path, sheet="Data", reference="A1:D3"):
@@ -137,7 +138,7 @@ def test_linking_takes_the_source_values_in_one_undo_step(ctx):
         assert _state(doc, chart_id).link is None
         assert "North" not in _texts(group)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_an_update_reads_the_changed_source_in_one_undo_step(ctx):
@@ -154,7 +155,7 @@ def test_an_update_reads_the_changed_source_in_one_undo_step(ctx):
         uno_command(ctx, doc, ".uno:Undo")
         assert _state(doc, chart_id).values[1][1] == 10
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_update_all_links_updates_every_chart_in_one_undo_step(ctx):
@@ -178,7 +179,7 @@ def test_update_all_links_updates_every_chart_in_one_undo_step(ctx):
         assert _state(doc, first_id).values[1][1] == 10
         assert _state(doc, second_id).values[1][1] == 10
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_missing_source_leaves_the_chart_unchanged(ctx):
@@ -194,7 +195,7 @@ def test_a_missing_source_leaves_the_chart_unchanged(ctx):
         assert _state(doc, chart_id) == before
         assert _undo_depth(doc) == depth
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_named_range_and_a_csv_file_can_be_linked(ctx):
@@ -217,7 +218,7 @@ def test_a_named_range_and_a_csv_file_can_be_linked(ctx):
         assert state.cells[1][0] == "North"
         assert state.values[2][1:] == (3.0, 4.0)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_moving_deck_and_workbook_together_keeps_the_link(ctx):
@@ -236,7 +237,7 @@ def test_moving_deck_and_workbook_together_keeps_the_link(ctx):
         assert link.relative == "data/sales.ods"
         doc.store()
     finally:
-        doc.close(True)
+        close_doc(doc)
     shutil.copytree(old, new)
     shutil.rmtree(old)
     _change(ctx, new / "data" / "sales.ods", "B2", 7)
@@ -253,7 +254,7 @@ def test_moving_deck_and_workbook_together_keeps_the_link(ctx):
         assert state.link is not None
         assert same_file(state.link.url, _url(new / "data" / "sales.ods"))
     finally:
-        moved.close(True)
+        close_doc(moved)
 
 
 def test_the_link_survives_odp_and_pptx(ctx):
@@ -268,9 +269,9 @@ def test_the_link_survives_odp_and_pptx(ctx):
                 assert _state(reloaded, reloaded_id).link == link, fmt
                 assert "North" in _texts(group), fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_an_open_source_is_read_with_its_unsaved_edits_and_left_open(ctx):
@@ -289,8 +290,8 @@ def test_an_open_source_is_read_with_its_unsaved_edits_and_left_open(ctx):
         assert links.open_document(ctx, _url(source)) is not None
     finally:
         if opened is not None:
-            opened.close(True)
-        doc.close(True)
+            close_doc(opened)
+        close_doc(doc)
 
 
 def test_the_data_sheet_is_read_only_until_the_link_is_removed(ctx):
@@ -316,7 +317,7 @@ def test_the_data_sheet_is_read_only_until_the_link_is_removed(ctx):
         assert not calc.isModified()
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_changed_source_is_detected_without_opening_it(ctx):
@@ -329,7 +330,7 @@ def test_a_changed_source_is_detected_without_opening_it(ctx):
         dispatch(ctx, doc, "org.librecharts:UpdateAllLinks")
         assert links.changed_sources(ctx, doc) == []
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_opening_a_presentation_with_a_changed_source_offers_an_update(ctx):
@@ -341,7 +342,7 @@ def test_opening_a_presentation_with_a_changed_source_offers_an_update(ctx):
     try:
         doc.storeToURL(_url(deck), (prop("FilterName", "impress8"),))
     finally:
-        doc.close(True)
+        close_doc(doc)
     _change(ctx, source, "B2", 1)
     reopened = desktop(ctx).loadComponentFromURL(_url(deck), "_blank", 0, ())
     try:
@@ -352,4 +353,4 @@ def test_opening_a_presentation_with_a_changed_source_offers_an_update(ctx):
             time.sleep(0.1)
         assert not reopened.isModified()  # the offer changes nothing by itself
     finally:
-        reopened.close(True)
+        close_doc(reopened)
