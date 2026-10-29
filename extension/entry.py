@@ -72,6 +72,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.insert_scatter_chart(self.ctx, self.frame)
             elif url.Path == "InsertButterflyChart":
                 commands.insert_butterfly_chart(self.ctx, self.frame)
+            elif url.Path == "InsertGanttChart":
+                commands.insert_gantt_chart(self.ctx, self.frame)
             elif url.Path == "EditData":
                 commands.edit_data(self.ctx, self.frame)
             elif url.Path.startswith("AddAnnotation"):
@@ -102,6 +104,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.save_scheme(self.ctx, self.frame)
             elif url.Path == "ValueLine":
                 commands.value_line(self.ctx, self.frame)
+            elif url.Path == "TodayLine":
+                commands.today_line(self.ctx, self.frame)
             elif url.Path.startswith("EditValueLine"):
                 commands.edit_value_line(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ChangeAnnotation"):

@@ -12,6 +12,7 @@ from librecharts.core import annotations, style
 from librecharts.core.datasheet import (
     sample_area_state,
     sample_butterfly_state,
+    sample_gantt_state,
     sample_line_state,
     sample_mekko_state,
     sample_pie_state,
@@ -76,6 +77,11 @@ def insert_scatter_chart(doc: Any, page: Any, locale: str = "") -> Any:
 def insert_butterfly_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a butterfly chart with sample data centred on ``page``."""
     return _insert(doc, page, sample_butterfly_state(), locale)
+
+
+def insert_gantt_chart(doc: Any, page: Any, locale: str = "") -> Any:
+    """Insert a Gantt chart with a sample project centred on ``page``."""
+    return _insert(doc, page, sample_gantt_state(), locale)
 
 
 def _insert(doc: Any, page: Any, state: ChartState, locale: str = "") -> Any:

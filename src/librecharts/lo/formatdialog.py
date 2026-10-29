@@ -9,6 +9,7 @@ tested by hand; their logic is tested in ``tests/core``.
 
 from __future__ import annotations
 
+import datetime
 import traceback
 from dataclasses import replace
 from typing import Any
@@ -17,10 +18,11 @@ import unohelper
 from com.sun.star.awt import XActionListener, XCallback, XItemListener
 
 from librecharts.core.format import number_format
+from librecharts.core.gantt import serial
 from librecharts.core.layout.common import format_value
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, ChartState
-from librecharts.core.value_line import check
+from librecharts.core.value_line import check, check_date, date_input
 from librecharts.lo import chart, store, ui
 
 _PUSH_BUTTON_CANCEL = 2  # com.sun.star.awt.PushButtonType.CANCEL
@@ -167,7 +169,12 @@ def ask_value_line(
     current: Annotation | None,
     locale: str,
 ) -> float | _Cancelled | None:
-    """Show the value-line dialog; ``None`` for the average, a number, or ``CANCELLED``."""
+    """Show the value-line dialog; ``None`` for the average, a number, or ``CANCELLED``.
+
+    A Gantt chart asks for a date instead (a date line), today's date filled in for a new one.
+    """
+    if state.kind == "gantt":
+        return _ask_date_line(ctx, frame, state, current, locale)
     manual = current is not None and current.value is not None
     shown = (
         ""
@@ -178,6 +185,35 @@ def ask_value_line(
     outcome: list[Any] = []
     dialog.getControl("ok").addActionListener(
         _OkListener(dialog, locale, outcome, lambda: _value_line_outcome(dialog))
+    )
+    try:
+        dialog.execute()
+    finally:
+        dialog.dispose()
+    return outcome[0] if outcome else CANCELLED
+
+
+def _ask_date_line(
+    ctx: Any, frame: Any, state: ChartState, current: Annotation | None, locale: str
+) -> float | _Cancelled:
+    language = state.format.language
+    value = (
+        current.value
+        if current is not None and current.value is not None
+        else float(serial(datetime.date.today()))
+    )
+    builder = _Builder(ctx, frame, text("date_line_title", locale), 190, 92, locale)
+    builder.label("date_line_date", 10, 10, 170, 10)
+    builder.edit("value", 10, 22, 90, 12, date_input(value, language))
+    dialog = builder.finish("date_line", top=48)
+    outcome: list[Any] = []
+    dialog.getControl("ok").addActionListener(
+        _OkListener(
+            dialog,
+            locale,
+            outcome,
+            lambda: check_date(dialog.getControl("value").getText(), language),
+        )
     )
     try:
         dialog.execute()
@@ -232,6 +268,7 @@ _MESSAGES = frozenset(
         "format_magnitude_invalid",
         "format_separator_invalid",
         "value_line_not_a_number",
+        "date_line_invalid",
     }
 )
 

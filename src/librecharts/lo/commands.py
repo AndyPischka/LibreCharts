@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import datetime
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs
 
-from librecharts.core import annotations, options, style
+from librecharts.core import annotations, gantt, options, style
 from librecharts.core import format as formats
 from librecharts.core import samescale as core_samescale
 from librecharts.core.messages import text
@@ -66,6 +67,10 @@ def insert_scatter_chart(ctx: Any, frame: Any) -> None:
 
 def insert_butterfly_chart(ctx: Any, frame: Any) -> None:
     _insert(ctx, frame, chart.insert_butterfly_chart)
+
+
+def insert_gantt_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_gantt_chart)
 
 
 def _insert(ctx: Any, frame: Any, insert: Any) -> None:
@@ -174,6 +179,25 @@ def value_line(ctx: Any, frame: Any) -> None:
     if found is not None:
         group, state = found
         formatdialog.request_value_line(ctx, frame, group, state, None)
+
+
+def today_line(ctx: Any, frame: Any) -> None:
+    """Add a date line at today's date to the selected Gantt chart; one undo step.
+
+    The date is filled in once: the line does not move on later days (a layout depends on the
+    stored state only).
+    """
+    found = _annotatable_chart(ctx, frame, "value_line")
+    if found is None:
+        return
+    group, state = found
+    if state.kind != "gantt":
+        ui.show_info(ctx, frame, text("option_unsupported", ui.ui_locale(ctx)))
+        return
+    today = float(gantt.serial(datetime.date.today()))
+    chart.add_annotation(
+        frame.getController().getModel(), group, Annotation("value_line", 0, 0, value=today)
+    )
 
 
 def edit_value_line(ctx: Any, frame: Any, query: str) -> None:

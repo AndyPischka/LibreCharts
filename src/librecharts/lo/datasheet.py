@@ -16,11 +16,15 @@ from typing import Any
 
 import unohelper
 from com.sun.star.document import XDocumentEventListener
+from com.sun.star.lang import Locale
 from com.sun.star.util import XModifyListener
 
 from librecharts.core.datasheet import state_from_sheet
+from librecharts.core.gantt import END, START
 from librecharts.core.model import ChartState
 from librecharts.lo import chart, store
+
+_DATE = 2  # com.sun.star.util.NumberFormat.DATE
 
 
 class OrphanedChartError(Exception):
@@ -62,6 +66,8 @@ class _Session:
         self.key, self.doc, self.group, self.calc, self.state = key, doc, group, calc, state
         self._syncing = False
         self._write(state)
+        if state.kind == "gantt":
+            self._show_dates()
         calc.setModified(False)
         calc.getCurrentController().getFrame().setTitle(title)
         self._doc_listener = _DocListener(self)
@@ -115,6 +121,18 @@ class _Session:
         self._sheet().getCellRangeByPosition(0, 0, columns - 1, rows - 1).setFormulaArray(
             state.cells
         )
+
+    def _show_dates(self) -> None:
+        """Show the start and end columns of a Gantt sheet as dates, not serial numbers.
+
+        The standard date format of the Calc document's locale, so that dates typed in that
+        locale's style are recognised as well.
+        """
+        formats = self.calc.getNumberFormats()
+        key = formats.getStandardFormat(_DATE, Locale())
+        columns = self._sheet().getColumns()
+        for column in (START, END):
+            columns.getByIndex(column).NumberFormat = key
 
     def _read(self) -> ChartState:
         sheet = self._sheet()

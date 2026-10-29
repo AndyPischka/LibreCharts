@@ -18,6 +18,7 @@ from librecharts.core import style
 from librecharts.core.primitives import (
     BACKGROUND,
     MARKER_SIZE,
+    SHADE,
     Bubble,
     Line,
     Marker,
@@ -35,6 +36,7 @@ ARROW_NAME = "Arrow"  # a line end from LibreOffice's standard arrow list
 ARROW_WIDTH = 250  # 1/100 mm
 DASH_LENGTH = 100  # 1/100 mm, dashes and gaps of helper lines
 BUBBLE_TRANSPARENCY = 30  # percent; overlapping bubbles stay visible
+BOLD = 150.0  # com.sun.star.awt.FontWeight.BOLD
 
 _FILL_NONE = uno.Enum("com.sun.star.drawing.FillStyle", "NONE")
 _FILL_SOLID = uno.Enum("com.sun.star.drawing.FillStyle", "SOLID")
@@ -261,7 +263,12 @@ def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
     if p is None:  # the invisible frame
         shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_NONE
     elif isinstance(p, Rect):
-        color = look.scheme.background if p.series == BACKGROUND else look.color(p.series)
+        if p.series == BACKGROUND:
+            color = look.scheme.background
+        elif p.series == SHADE:
+            color = look.scheme.shade()
+        else:
+            color = look.color(p.series)
         shape.FillStyle, shape.FillColor = _FILL_SOLID, color
         shape.LineStyle = _LINE_NONE
     elif isinstance(p, (Marker, Bubble)):
@@ -303,3 +310,5 @@ def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
             look.text_on(look.color(label.fill)) if label.fill is not None else look.scheme.text
         )
         shape.ParaAdjust = _PARA_ADJUST[label.align]
+        if label.role == "heading":
+            shape.CharWeight = BOLD
