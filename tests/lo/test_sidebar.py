@@ -6,8 +6,12 @@ what it looks like and the clicks are checked by hand. Its contents are tested i
 tests/core/test_panel.py.
 """
 
-from helpers import dispatch, first_page, new_impress, prop
+import datetime
+import time
 
+from helpers import close_datasheets, datasheets, dispatch, first_page, new_impress, prop
+
+from librecharts.core.gantt import serial
 from librecharts.core.messages import text
 from librecharts.lo import store, ui
 
@@ -36,6 +40,8 @@ def _controls(element):
     found = []
     for control in element.getRealInterface().getControls():
         model = control.getModel()
+        if not hasattr(model, "Label"):  # the scrollbar
+            continue
         found.append((model.Label or model.HelpText, model.Enabled))
     return found
 
@@ -80,4 +86,38 @@ def test_panel_follows_the_selected_chart(ctx):
         difference = text("menu_bracket", ui.ui_locale(ctx), start="", end="").split(" ")[0]
         assert any(label.startswith(difference) for label in labels)
     finally:
+        doc.close(True)
+
+
+def test_a_redraw_refreshes_the_panel_once_not_per_shape(ctx):
+    doc = new_impress(ctx)
+    try:
+        say = lambda key: text(key, ui.ui_locale(ctx))  # noqa: E731 - the profile's language varies
+        element = _panel(ctx, doc)
+        dispatch(ctx, doc, "org.librecharts:InsertGanttChart")  # selects the new chart
+        dispatch(ctx, doc, "org.librecharts:EditData")
+        (calc,) = datasheets(ctx)
+        sheet = calc.getSheets().getByIndex(0)
+
+        start = time.monotonic()
+        sheet.getCellRangeByName("C3").setValue(serial(datetime.date(2026, 2, 10)))
+        # Refreshing on every modify event of the redraw took over 20 s here, the redraw < 1 s.
+        assert time.monotonic() - start < 5
+
+        # The panel still follows a change of the document that keeps the selection.
+        sheet.getCellRangeByName("A11:C11").setDataArray(
+            (("Extra", serial(datetime.date(2026, 7, 1)), serial(datetime.date(2026, 7, 3))),)
+        )
+
+        def status():
+            labels = [label for label, _ in _controls(element)]
+            prefix = say("kind_gantt") + ", "  # not the insert button, whose tooltip is the kind
+            return next((label for label in labels if label.startswith(prefix)), labels)
+
+        deadline = time.monotonic() + 10
+        while "10" not in status() and time.monotonic() < deadline:
+            time.sleep(0.1)
+        assert "10" in status(), status()
+    finally:
+        close_datasheets(ctx)
         doc.close(True)

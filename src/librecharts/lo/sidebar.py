@@ -14,7 +14,7 @@ import traceback
 from typing import Any
 
 import unohelper
-from com.sun.star.awt import XActionListener, XWindowListener
+from com.sun.star.awt import XActionListener, XAdjustmentListener, XCallback, XWindowListener
 from com.sun.star.ui import LayoutSize, XSidebarPanel, XToolPanel, XUIElement
 from com.sun.star.util import XModifyListener
 from com.sun.star.view import XSelectionChangeListener
@@ -34,6 +34,7 @@ ICON_SIZE, FLOW_MIN_WIDTH = 30, 100
 REMOVE_WIDTH = 24
 REMOVE_LABEL = chr(0xD7)  # multiplication sign
 DEFAULT_WIDTH = 240
+MIN_HEIGHT, SCROLLBAR_WIDTH, LINE_STEP = 150, 16, 30
 
 Rect = tuple[int, int, int, int]
 
@@ -52,8 +53,11 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         self.ctx, self.sidebar = ctx, sidebar
         self.locale = ui.ui_locale(ctx)
         self.shown: Panel | None = None
-        self.width, self.height = DEFAULT_WIDTH, 200
-        self.controls: list[Any] = []
+        self.width, self.height = DEFAULT_WIDTH, 200  # of the container; of the content
+        self.view_height = self.height  # what the sidebar gives the container
+        self.offset = 0  # how far the content is scrolled up
+        self.controls: list[tuple[Any, Rect]] = []  # scrolled with the content
+        self.fixed: list[Any] = []  # the scrollbar
         self.images = _extension_url(ctx)
         self.disposers: list[Any] = []
 
@@ -65,7 +69,7 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         self.container.setModel(self.model)
         toolkit = smgr.createInstanceWithContext("com.sun.star.awt.Toolkit", ctx)
         self.container.createPeer(toolkit, parent)
-        self.container.setPosSize(0, 0, self.width, self.height, _POSSIZE)
+        self.container.setPosSize(0, 0, self.width, self.view_height, _POSSIZE)
         self.container.setVisible(True)
 
         resized = _Resized(self)
@@ -78,6 +82,7 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         document = controller.getModel()
         document.addModifyListener(selection)
         self.disposers.append(lambda: document.removeModifyListener(selection))
+        self.disposers.append(selection.stop)
         self.refresh()
 
     # XUIElement
@@ -93,7 +98,8 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
 
     # XSidebarPanel
     def getHeightRequest(self) -> Any:
-        return LayoutSize(self.height, self.height, self.height)
+        # Take what fits; the panel scrolls itself when the sidebar gives it less than the content.
+        return LayoutSize(MIN_HEIGHT, -1, self.height)
 
     def dispose(self) -> None:
         for disposer in self.disposers:
@@ -136,11 +142,30 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         panel = self.shown
         if panel is None:
             return
-        for control in self.controls:
+        self._clear()
+        content_height = self._fill(panel, self.width)
+        if content_height > self.view_height:  # narrower, to make room for the scrollbar
+            self._clear()
+            content_height = self._fill(panel, self.width - SCROLLBAR_WIDTH)
+        self.offset = max(min(self.offset, content_height - self.view_height), 0)
+        self.scroll_to(self.offset)
+        if content_height > self.view_height:
+            self._add_scrollbar(content_height)
+        if content_height != self.height:
+            self.height = content_height
+            if self.sidebar is not None:
+                self.sidebar.requestLayout()
+
+    def _clear(self) -> None:
+        for control in [*self.fixed, *(control for control, _ in self.controls)]:
             self.container.removeControl(control)
             control.dispose()
         self.controls.clear()
-        layout = _Layout(self)
+        self.fixed.clear()
+
+    def _fill(self, panel: Panel, width: int) -> int:
+        """Create the controls for ``width``; the height of the content."""
+        layout = _Layout(self, width)
         layout.heading("panel_insert")
         layout.icons(panel.insert)
         layout.heading("panel_chart")
@@ -157,9 +182,9 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
             for button in panel.format:
                 layout.button(button)
         layout.heading("panel_elements")
-        layout.flow(panel.elements)
+        layout.icons(panel.elements)
         layout.heading("panel_arrange")
-        layout.flow(panel.arrange)
+        layout.icons(panel.arrange)
         layout.heading("panel_agenda")
         layout.flow(panel.agenda)
         layout.heading("panel_annotations")
@@ -175,21 +200,40 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         layout.label(f"{text('panel_scheme', self.locale)}: {panel.scheme}")
         layout.flow(panel.schemes)
         layout.flow(panel.scheme_files)
-        self.height = layout.y + MARGIN
-        self.container.setPosSize(0, 0, self.width, self.height, _POSSIZE)
-        if self.sidebar is not None:
-            self.sidebar.requestLayout()
+        return layout.y + MARGIN
 
-    def add_control(self, kind: str, rect: Rect, **props: Any) -> Any:
+    def _add_scrollbar(self, content_height: int) -> None:
+        bar = self._create("ScrollBar", Orientation=1, ScrollValueMax=content_height)
+        model = bar.getModel()
+        model.VisibleSize = self.view_height
+        model.LineIncrement = LINE_STEP
+        model.BlockIncrement = max(self.view_height - LINE_STEP, LINE_STEP)
+        model.ScrollValue = self.offset
+        self.container.addControl("scrollbar", bar)
+        bar.setPosSize(self.width - SCROLLBAR_WIDTH, 0, SCROLLBAR_WIDTH, self.view_height, _POSSIZE)
+        bar.addAdjustmentListener(_Scrolled(self))
+        self.fixed.append(bar)
+
+    def scroll_to(self, offset: int) -> None:
+        self.offset = offset
+        for control, (x, y, width, height) in self.controls:
+            control.setPosSize(x, y - offset, width, height, _POSSIZE)
+
+    def _create(self, kind: str, **props: Any) -> Any:
         smgr = self.ctx.ServiceManager
         model = smgr.createInstanceWithContext(f"com.sun.star.awt.UnoControl{kind}Model", self.ctx)
         for prop, value in props.items():
             setattr(model, prop, value)
         control = smgr.createInstanceWithContext(f"com.sun.star.awt.UnoControl{kind}", self.ctx)
         control.setModel(model)
+        return control
+
+    def add_control(self, kind: str, rect: Rect, **props: Any) -> Any:
+        control = self._create(kind, **props)
         self.container.addControl(f"c{len(self.controls)}", control)
-        control.setPosSize(*rect, _POSSIZE)
-        self.controls.append(control)
+        x, y, width, height = rect
+        control.setPosSize(x, y - self.offset, width, height, _POSSIZE)
+        self.controls.append((control, rect))
         return control
 
     def dispatch(self, command: str) -> None:
@@ -206,11 +250,11 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
 class _Layout:
     """Stacks controls top to bottom over the panel's width."""
 
-    def __init__(self, panel: _Panel) -> None:
-        self.panel, self.y = panel, MARGIN
+    def __init__(self, panel: _Panel, width: int) -> None:
+        self.panel, self.width, self.y = panel, width, MARGIN
 
     def _rect(self, height: int, right: int = MARGIN) -> Rect:
-        rect = (MARGIN, self.y, max(self.panel.width - MARGIN - right, 20), height)
+        rect = (MARGIN, self.y, max(self.width - MARGIN - right, 20), height)
         self.y += height + GAP
         return rect
 
@@ -241,7 +285,7 @@ class _Layout:
 
     def icons(self, buttons: tuple[Button, ...]) -> None:
         """Icon-only buttons side by side, wrapping into rows; the title is the tooltip."""
-        width = max(self.panel.width - 2 * MARGIN, ICON_SIZE)
+        width = max(self.width - 2 * MARGIN, ICON_SIZE)
         columns = max((width + GAP) // (ICON_SIZE + GAP), 1)
         for start in range(0, len(buttons), columns):
             top = self.y
@@ -261,7 +305,7 @@ class _Layout:
 
     def flow(self, buttons: tuple[Button, ...], min_width: int = FLOW_MIN_WIDTH) -> None:
         """Text buttons side by side, as many per row as fit at ``min_width``."""
-        width = max(self.panel.width - 2 * MARGIN, min_width)
+        width = max(self.width - 2 * MARGIN, min_width)
         columns = max((width + GAP) // (min_width + GAP), 1)
         cell = (width - (columns - 1) * GAP) // columns
         for start in range(0, len(buttons), columns):
@@ -288,7 +332,7 @@ class _Layout:
         )
         control = self.panel.add_control(
             "Button",
-            (self.panel.width - MARGIN - REMOVE_WIDTH, top, REMOVE_WIDTH, BUTTON_HEIGHT),
+            (self.width - MARGIN - REMOVE_WIDTH, top, REMOVE_WIDTH, BUTTON_HEIGHT),
             Label=REMOVE_LABEL,
         )
         control.addActionListener(_Click(self.panel, "org.librecharts:" + remove))
@@ -308,21 +352,63 @@ class _Click(unohelper.Base, XActionListener):
         pass
 
 
-class _Changed(unohelper.Base, XSelectionChangeListener, XModifyListener):
-    """Selection or document changed: show what the panel should show now."""
+class _Changed(unohelper.Base, XSelectionChangeListener, XModifyListener, XCallback):
+    """Selection or document changed: show what the panel should show now.
+
+    Modify events are coalesced into one asynchronous refresh on the main thread: redrawing a
+    chart sets every property of every new shape, thousands of modify events, and refreshing on
+    each made a date edit in a Gantt data sheet take half a minute.
+    """
 
     def __init__(self, panel: _Panel) -> None:
         self.panel = panel
+        self._pending = False
+        self._stopped = False
+        ctx = panel.ctx
+        self._async = ctx.ServiceManager.createInstanceWithContext(
+            "com.sun.star.awt.AsyncCallback", ctx
+        )
+
+    def stop(self) -> None:
+        """No more refreshes, not even an already scheduled one: the panel is gone."""
+        self._stopped = True
 
     def selectionChanged(self, event: Any) -> None:
         self._refresh()
 
     def modified(self, event: Any) -> None:
+        if self._pending:
+            return
+        try:
+            self._async.addCallback(self, None)  # None: the void "any", see lo/resize.py
+            self._pending = True
+        except Exception:
+            traceback.print_exc()
+
+    # XCallback
+    def notify(self, data: Any) -> None:
+        self._pending = False
         self._refresh()
 
     def _refresh(self) -> None:
+        if self._stopped:
+            return
         try:
             self.panel.refresh()
+        except Exception:
+            traceback.print_exc()
+
+    def disposing(self, event: Any) -> None:
+        pass
+
+
+class _Scrolled(unohelper.Base, XAdjustmentListener):
+    def __init__(self, panel: _Panel) -> None:
+        self.panel = panel
+
+    def adjustmentValueChanged(self, event: Any) -> None:
+        try:
+            self.panel.scroll_to(int(event.Value))
         except Exception:
             traceback.print_exc()
 
@@ -336,8 +422,8 @@ class _Resized(unohelper.Base, XWindowListener):
 
     def windowResized(self, event: Any) -> None:
         try:
-            if event.Width != self.panel.width:  # not the resize draw() itself causes
-                self.panel.width = event.Width
+            if (event.Width, event.Height) != (self.panel.width, self.panel.view_height):
+                self.panel.width, self.panel.view_height = event.Width, event.Height
                 self.panel.draw()
         except Exception:
             traceback.print_exc()
