@@ -66,6 +66,12 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.insert_waterfall_chart(self.ctx, self.frame)
             elif url.Path == "InsertMekkoChart":
                 commands.insert_mekko_chart(self.ctx, self.frame)
+            elif url.Path == "InsertPieChart":
+                commands.insert_pie_chart(self.ctx, self.frame)
+            elif url.Path == "InsertScatterChart":
+                commands.insert_scatter_chart(self.ctx, self.frame)
+            elif url.Path == "InsertButterflyChart":
+                commands.insert_butterfly_chart(self.ctx, self.frame)
             elif url.Path == "EditData":
                 commands.edit_data(self.ctx, self.frame)
             elif url.Path.startswith("AddAnnotation"):

@@ -95,6 +95,45 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m1g" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Insert pie chart</value>
+              <value xml:lang="de">Kreisdiagramm einfügen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:InsertPieChart</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="m1h" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Insert scatter chart</value>
+              <value xml:lang="de">Streudiagramm einfügen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:InsertScatterChart</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="m1i" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Insert butterfly chart</value>
+              <value xml:lang="de">Schmetterlingsdiagramm einfügen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:InsertButterflyChart</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
           <node oor:name="m2" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>
@@ -305,6 +344,54 @@
           <value/>
           <value xml:lang="en-US">Insert area chart</value>
           <value xml:lang="de">Flächendiagramm einfügen</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
+      <node oor:name="t1g" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:InsertPieChart</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Insert pie chart</value>
+          <value xml:lang="de">Kreisdiagramm einfügen</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
+      <node oor:name="t1h" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:InsertScatterChart</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Insert scatter chart</value>
+          <value xml:lang="de">Streudiagramm einfügen</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
+      <node oor:name="t1i" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:InsertButterflyChart</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Insert butterfly chart</value>
+          <value xml:lang="de">Schmetterlingsdiagramm einfügen</value>
         </prop>
         <prop oor:name="Target" oor:type="xs:string">
           <value>_self</value>
@@ -535,6 +622,45 @@
           </prop>
           <prop oor:name="ImageBigURL" oor:type="xs:string">
             <value>%origin%/images/insert_area_26.png</value>
+          </prop>
+        </node>
+      </node>
+      <node oor:name="org.librecharts.image1g" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:InsertPieChart</value>
+        </prop>
+        <node oor:name="UserDefinedImages">
+          <prop oor:name="ImageSmallURL" oor:type="xs:string">
+            <value>%origin%/images/insert_pie_16.png</value>
+          </prop>
+          <prop oor:name="ImageBigURL" oor:type="xs:string">
+            <value>%origin%/images/insert_pie_26.png</value>
+          </prop>
+        </node>
+      </node>
+      <node oor:name="org.librecharts.image1h" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:InsertScatterChart</value>
+        </prop>
+        <node oor:name="UserDefinedImages">
+          <prop oor:name="ImageSmallURL" oor:type="xs:string">
+            <value>%origin%/images/insert_scatter_16.png</value>
+          </prop>
+          <prop oor:name="ImageBigURL" oor:type="xs:string">
+            <value>%origin%/images/insert_scatter_26.png</value>
+          </prop>
+        </node>
+      </node>
+      <node oor:name="org.librecharts.image1i" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:InsertButterflyChart</value>
+        </prop>
+        <node oor:name="UserDefinedImages">
+          <prop oor:name="ImageSmallURL" oor:type="xs:string">
+            <value>%origin%/images/insert_butterfly_16.png</value>
+          </prop>
+          <prop oor:name="ImageBigURL" oor:type="xs:string">
+            <value>%origin%/images/insert_butterfly_26.png</value>
           </prop>
         </node>
       </node>

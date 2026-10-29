@@ -56,6 +56,18 @@ def insert_mekko_chart(ctx: Any, frame: Any) -> None:
     _insert(ctx, frame, chart.insert_mekko_chart)
 
 
+def insert_pie_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_pie_chart)
+
+
+def insert_scatter_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_scatter_chart)
+
+
+def insert_butterfly_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_butterfly_chart)
+
+
 def _insert(ctx: Any, frame: Any, insert: Any) -> None:
     controller = frame.getController()
     doc = controller.getModel()

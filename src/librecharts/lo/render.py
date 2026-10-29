@@ -18,6 +18,7 @@ from librecharts.core import style
 from librecharts.core.primitives import (
     BACKGROUND,
     MARKER_SIZE,
+    Bubble,
     Line,
     Marker,
     Polygon,
@@ -33,6 +34,7 @@ GRID_WIDTH = 15  # 1/100 mm
 ARROW_NAME = "Arrow"  # a line end from LibreOffice's standard arrow list
 ARROW_WIDTH = 250  # 1/100 mm
 DASH_LENGTH = 100  # 1/100 mm, dashes and gaps of helper lines
+BUBBLE_TRANSPARENCY = 30  # percent; overlapping bubbles stay visible
 
 _FILL_NONE = uno.Enum("com.sun.star.drawing.FillStyle", "NONE")
 _FILL_SOLID = uno.Enum("com.sun.star.drawing.FillStyle", "SOLID")
@@ -218,6 +220,17 @@ def _specs(
                     MARKER_SIZE,
                 )
             )
+        elif isinstance(p, Bubble):
+            specs.append(
+                _spec(
+                    "EllipseShape",
+                    p,
+                    x + p.x - p.diameter / 2,
+                    y + p.y - p.diameter / 2,
+                    p.diameter,
+                    p.diameter,
+                )
+            )
         else:
             specs.append(_spec("TextShape", p, x + p.x, y + p.y, p.width, p.height))
     return specs
@@ -251,9 +264,11 @@ def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
         color = look.scheme.background if p.series == BACKGROUND else look.color(p.series)
         shape.FillStyle, shape.FillColor = _FILL_SOLID, color
         shape.LineStyle = _LINE_NONE
-    elif isinstance(p, Marker):
+    elif isinstance(p, (Marker, Bubble)):
         shape.FillStyle, shape.FillColor = _FILL_SOLID, look.color(p.series)
         shape.LineStyle = _LINE_NONE
+        if isinstance(p, Bubble):
+            shape.FillTransparence = BUBBLE_TRANSPARENCY
     elif isinstance(p, Line):
         shape.LineStyle, shape.LineColor, shape.LineWidth = (
             _LINE_SOLID,
