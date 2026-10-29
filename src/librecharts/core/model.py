@@ -6,10 +6,10 @@ import math
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 ChartKind = Literal[
-    "column", "bar", "waterfall", "mekko", "line", "area", "pie", "scatter", "butterfly"
+    "column", "bar", "waterfall", "mekko", "line", "area", "pie", "scatter", "butterfly", "gantt"
 ]
 Grouping = Literal["stacked", "clustered"]
 SortOrder = Literal["none", "descending", "ascending"]
@@ -143,8 +143,10 @@ class ChartState:
 
     ``doughnut`` turns a pie chart into a doughnut chart (ADR 0018). A pie chart draws one pie per
     category; a scatter chart reads its data sheet by column position (``core/scatter.py``) and a
-    butterfly chart draws the first two series as mirrored bars. ``grouping`` has no meaning for
-    these three and stays ``"stacked"``.
+    butterfly chart draws the first two series as mirrored bars. A Gantt chart reads its data sheet
+    by column position too (``core/gantt.py``); its only sort order besides ``"none"`` is
+    ``"ascending"``, by start date. ``grouping`` has no meaning for these four and stays
+    ``"stacked"``.
     """
 
     kind: ChartKind
@@ -179,8 +181,10 @@ class ChartState:
             )
         if self.kind in ("line", "area") and self.grouping != "stacked":
             raise ValueError(f"a {self.kind} chart is always stacked")
-        if self.sort != "none" and self.kind not in ("column", "bar", "butterfly"):
+        if self.sort != "none" and self.kind not in ("column", "bar", "butterfly", "gantt"):
             raise ValueError(f"a {self.kind} chart cannot be sorted")
+        if self.kind == "gantt" and self.sort == "descending":
+            raise ValueError("a Gantt chart sorts by ascending start date only")
         if self.doughnut and self.kind != "pie":
             raise ValueError("only a pie chart can be a doughnut chart")
         if (self.lines or self.secondary) and self.kind != "column":

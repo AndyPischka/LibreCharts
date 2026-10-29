@@ -69,6 +69,10 @@ class Scheme:
         """A light colour for gridlines: the line colour mixed far towards the background."""
         return mix(self.line, self.background, 0.15)
 
+    def shade(self) -> int:
+        """A very light colour for bands behind the data: a little line colour in the background."""
+        return mix(self.background, self.line, 0.08)
+
     def text_on(self, fill: int) -> int:
         """A readable text colour on ``fill`` (WCAG relative luminance)."""
         return text_color(fill)

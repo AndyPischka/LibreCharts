@@ -25,6 +25,7 @@ def test_insert_buttons_are_always_enabled() -> None:
             "InsertPieChart",
             "InsertScatterChart",
             "InsertButterflyChart",
+            "InsertGanttChart",
         )
     ]
     assert all(b.enabled for b in panel.insert)

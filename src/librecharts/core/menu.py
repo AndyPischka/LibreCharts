@@ -13,11 +13,13 @@ from librecharts.core import format as formats
 from librecharts.core import options, style
 from librecharts.core.axis_break import describe
 from librecharts.core.datasheet import ChartData
+from librecharts.core.gantt import parse_gantt, to_date
 from librecharts.core.layout.common import format_value
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, ChartState, Format
 from librecharts.core.picking import supports
 from librecharts.core.scatter import parse_scatter
+from librecharts.core.timescale import format_date
 
 PROTOCOL = "org.librecharts:"
 
@@ -80,19 +82,23 @@ def chart_menu(
             items.append(SEPARATOR)
         if supports(state, "axis_break"):
             items.append(_command("menu_add_break", "AxisBreak", locale))
-        if supports(state, "value_line"):
+        if supports(state, "value_line") and state.kind == "gantt":
+            items.append(_command("menu_add_date_line", "ValueLine", locale))
+            items.append(_command("menu_add_today_line", "TodayLine", locale))
+        elif supports(state, "value_line"):
             items.append(_command("menu_add_value_line", "ValueLine", locale))
     shown = [
         (index, annotation)
         for index, annotation in enumerate(state.annotations)
         if notes.drawable(annotation, data, state.kind)
     ]
+    dates = state.kind == "gantt"
     if shown:
         items.append(SEPARATOR)
         items += [
             MenuItem(
-                annotation_title(annotation, data, locale, state.format),
-                children=_actions(index, annotation, locale),
+                annotation_title(annotation, data, locale, state.format, dates=dates),
+                children=_actions(index, annotation, locale, dates=dates),
             )
             for index, annotation in shown
         ]
@@ -142,7 +148,7 @@ def _colour_menu(
     if state.kind == "waterfall":  # its colours mean increase, decrease and total, not series
         return MenuItem(text("menu_series_color", locale))
     series_items: list[MenuItem] = []
-    for index, name in enumerate(_series_names(state, data)):
+    for index, name in enumerate(_series_names(state, data, locale)):
         current = state.colors[index] if index < len(state.colors) else None
         entries: list[MenuItem] = []
         if current is not None:
@@ -165,10 +171,16 @@ def _colour_menu(
     return MenuItem(text("menu_series_color", locale), children=tuple(series_items))
 
 
-def _series_names(state: ChartState, data: ChartData) -> list[str]:
-    """What gets its own colour: the series, on a scatter chart the groups."""
+def _series_names(state: ChartState, data: ChartData, locale: str) -> list[str]:
+    """What gets its own colour: the series, on a scatter chart the groups, on a Gantt chart the
+    phases (all bars, if there is no phase)."""
     if state.kind == "scatter":
         return [name or f"{index + 1}" for index, name in enumerate(parse_scatter(state).groups)]
+    if state.kind == "gantt":
+        phases = parse_gantt(state).phases
+        return [name or f"{index + 1}" for index, name in enumerate(phases)] or [
+            text("menu_gantt_bars", locale)
+        ]
     return [series.name for series in data.series]
 
 
@@ -187,16 +199,32 @@ def _format_menu(state: ChartState, locale: str) -> MenuItem:
     )
     if series:
         entries.append(MenuItem(text("menu_series_names", locale), children=series))
-    entries.append(_command("menu_number_format", "NumberFormat", locale))
+    if formats.supports(state, "number_format"):
+        entries.append(_command("menu_number_format", "NumberFormat", locale))
     return MenuItem(text("menu_format", locale), children=tuple(entries))
 
 
 def annotation_title(
-    annotation: Annotation, data: ChartData, locale: str, fmt: Format | None = None
+    annotation: Annotation,
+    data: ChartData,
+    locale: str,
+    fmt: Format | None = None,
+    *,
+    dates: bool = False,
 ) -> str:
-    """The label of an annotation in menus and the sidebar, e.g. "Difference 2023 to 2025"."""
+    """The label of an annotation in menus and the sidebar, e.g. "Difference 2023 to 2025".
+
+    ``dates``: the chart is a Gantt chart, whose value lines are date lines.
+    """
     if annotation.kind == "axis_break":
         return text("menu_axis_break", locale, range=describe(annotation))
+    if annotation.kind == "value_line" and dates:
+        day = None if annotation.value is None else to_date(annotation.value)
+        language = (fmt or Format()).language
+        value = (
+            text("menu_value_line_average", locale) if day is None else format_date(day, language)
+        )
+        return text("menu_date_line", locale, value=value)
     if annotation.kind == "value_line":
         value = (
             text("menu_value_line_average", locale)
@@ -218,13 +246,16 @@ def annotation_title(
     return title
 
 
-def _actions(index: int, annotation: Annotation, locale: str) -> tuple[MenuItem, ...]:
+def _actions(
+    index: int, annotation: Annotation, locale: str, *, dates: bool = False
+) -> tuple[MenuItem, ...]:
     change = f"ChangeAnnotation?index={index}&"
     actions: list[MenuItem] = []
     if annotation.kind == "axis_break":
         actions.append(_command("menu_change_break", "EditAxisBreak", locale))
     if annotation.kind == "value_line":
-        actions.append(_command("menu_change_value_line", f"EditValueLine?index={index}", locale))
+        key = "menu_change_date_line" if dates else "menu_change_value_line"
+        actions.append(_command(key, f"EditValueLine?index={index}", locale))
     if annotation.kind == "difference":
         if annotation.label == "percent":
             actions.append(_command("menu_show_absolute", change + "label=absolute", locale))

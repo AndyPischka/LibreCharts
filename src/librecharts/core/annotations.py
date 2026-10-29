@@ -11,6 +11,7 @@ from dataclasses import replace
 from urllib.parse import parse_qs
 
 from librecharts.core.datasheet import ChartData, parse
+from librecharts.core.gantt import parse_gantt, starts
 from librecharts.core.model import AXIS_ANNOTATIONS, Annotation, ChartKind, ChartState
 from librecharts.core.scatter import levels as scatter_levels
 from librecharts.core.scatter import parse_scatter
@@ -26,6 +27,7 @@ SUPPORTED: dict[ChartKind, frozenset[str]] = {
     "line": frozenset({"difference", "cagr", "axis_break", "value_line"}),
     "area": frozenset({"value_line"}),
     "scatter": frozenset({"value_line"}),
+    "gantt": frozenset({"value_line"}),  # date lines
 }
 
 
@@ -33,12 +35,14 @@ def measured(state: ChartState) -> ChartData:
     """The data an annotation of ``state`` measures: categories and the series values.
 
     For a waterfall chart one value per step: the level its column ends at; for a scatter chart
-    one y value per point.
+    one y value per point; for a Gantt chart one row per category and its start serial number.
     """
     if state.kind == "waterfall":
         return levels(parse_waterfall(state))
     if state.kind == "scatter":
         return scatter_levels(parse_scatter(state))
+    if state.kind == "gantt":
+        return starts(parse_gantt(state, state.sort))
     return parse(state)
 
 

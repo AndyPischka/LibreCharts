@@ -221,7 +221,8 @@ def test_the_panel_says_that_a_butterfly_chart_ignores_further_series() -> None:
 
 def test_the_panel_offers_the_three_new_chart_types() -> None:
     commands = [b.command for b in content(None, False, "en-US").insert]
-    assert commands[-3:] == [
+    start = commands.index(PROTOCOL + "InsertPieChart")
+    assert commands[start : start + 3] == [
         PROTOCOL + "InsertPieChart",
         PROTOCOL + "InsertScatterChart",
         PROTOCOL + "InsertButterflyChart",

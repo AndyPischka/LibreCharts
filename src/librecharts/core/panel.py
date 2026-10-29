@@ -66,6 +66,7 @@ def content(
     ``scheme_name`` is the document's current colour scheme, for the Document section.
     """
     usable = selected and state is not None
+    gantt = state is not None and state.kind == "gantt"
     rows: tuple[Row, ...] = ()
     if state is None:
         status = text("status_orphaned" if selected else "status_none", locale)
@@ -83,7 +84,7 @@ def content(
         elif kind == "scatter" and parse_scatter(state).bubbles:
             kind = "bubble"
         status = text(
-            "status_chart",
+            "status_gantt" if kind == "gantt" else "status_chart",
             locale,
             kind=text(f"kind_{kind}", locale),
             count=str(len(data.categories)),
@@ -92,7 +93,9 @@ def content(
             status += " " + text("status_butterfly_extra", locale)
         rows = tuple(
             Row(
-                annotation_title(annotation, data, locale, state.format),
+                annotation_title(
+                    annotation, data, locale, state.format, dates=state.kind == "gantt"
+                ),
                 f"RemoveAnnotation?index={index}",
             )
             for index, annotation in enumerate(state.annotations)
@@ -109,6 +112,7 @@ def content(
             _button("insert_pie", "InsertPieChart", "insert_pie", locale),
             _button("insert_scatter", "InsertScatterChart", "insert_scatter", locale),
             _button("insert_butterfly", "InsertButterflyChart", "insert_butterfly", locale),
+            _button("insert_gantt", "InsertGanttChart", "insert_gantt", locale),
         ),
         status=status,
         edit=(_button("menu_edit_data", "EditData", "edit", locale, usable),),
@@ -144,11 +148,16 @@ def content(
                 _can_annotate(state, usable, "axis_break"),
             ),
             _button(
-                "menu_add_value_line",
+                "menu_add_date_line" if gantt else "menu_add_value_line",
                 "ValueLine",
                 "value_line",
                 locale,
                 _can_annotate(state, usable, "value_line"),
+            ),
+            *(
+                (_button("menu_add_today_line", "TodayLine", "today_line", locale, usable),)
+                if gantt
+                else ()
             ),
         ),
         rows=rows,
@@ -202,7 +211,9 @@ def _format(state: ChartState | None, usable: bool, locale: str) -> tuple[Button
     )
     if state.scale_group is not None:
         buttons += (_button("menu_remove_same_scale", "RemoveSameScale", "", locale, usable),)
-    return (*buttons, _button("menu_number_format", "NumberFormat", "", locale, usable))
+    if formats.supports(state, "number_format"):
+        buttons += (_button("menu_number_format", "NumberFormat", "", locale, usable),)
+    return buttons
 
 
 def _can_annotate(state: ChartState | None, usable: bool, kind: AnnotationKind) -> bool:

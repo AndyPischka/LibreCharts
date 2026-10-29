@@ -94,14 +94,18 @@ def default_format(kind: str, grouping: Grouping, locale: str) -> Format:
 
 def supports(state: ChartState, option: str) -> bool:
     """Whether the chart kind (and variant) has the format option."""
-    if option == "axis":  # a scatter chart always has its axes
-        return state.kind not in ("pie", "scatter") and (state.kind != "mekko" or not state.percent)
+    if option == "axis":  # a scatter chart always has its axes, a Gantt chart its date scale
+        return state.kind not in ("pie", "scatter", "gantt") and (
+            state.kind != "mekko" or not state.percent
+        )
     if option == "gridlines":
         return state.kind != "pie" and (state.kind != "mekko" or not state.percent)
     if option == "series_names":
         return state.kind in ("column", "bar", "mekko", "line", "area", "pie")
     if option == "markers":
         return state.kind == "line" or (state.kind == "column" and bool(state.lines))
+    if option == "number_format":  # a Gantt chart shows dates, no numbers
+        return state.kind != "gantt"
     return False
 
 
@@ -152,7 +156,7 @@ def format_options(state: ChartState) -> tuple[Switch, ...]:
                 f"ChangeFormat?axis={'false' if state.format.axis else 'true'}",
             )
         )
-    if supports(state, "gridlines") and (state.format.axis or state.kind == "scatter"):
+    if supports(state, "gridlines") and (state.format.axis or state.kind in ("scatter", "gantt")):
         switches.append(  # gridlines are only drawn with an axis
             Switch(
                 "menu_gridlines_hide" if state.format.gridlines else "menu_gridlines_show",

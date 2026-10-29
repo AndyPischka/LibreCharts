@@ -84,6 +84,11 @@ def _v8_to_v9(raw: _Raw) -> _Raw:
     return {**raw, "doughnut": False}
 
 
+def _v9_to_v10(raw: _Raw) -> _Raw:
+    """Version 10 added Gantt charts; existing charts need no new field."""
+    return raw
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -94,6 +99,7 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     6: _v6_to_v7,
     7: _v7_to_v8,
     8: _v8_to_v9,
+    9: _v9_to_v10,
 }
 
 

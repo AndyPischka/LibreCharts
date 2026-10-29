@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from librecharts.core import sorting
 from librecharts.core.datasheet import ChartData, parse
+from librecharts.core.gantt import parse_gantt
 from librecharts.core.layout.area import layout_area
 from librecharts.core.layout.bar import layout_bar
 from librecharts.core.layout.butterfly import layout_butterfly
 from librecharts.core.layout.column import layout_column
+from librecharts.core.layout.gantt import layout_gantt
 from librecharts.core.layout.line import layout_line
 from librecharts.core.layout.mekko import layout_mekko
 from librecharts.core.layout.pie import layout_pie
@@ -46,6 +48,10 @@ def layout_chart(
         )
     if state.kind == "scatter":
         return layout_scatter(parse_scatter(state), width, height, state.annotations, state.format)
+    if state.kind == "gantt":
+        return layout_gantt(
+            parse_gantt(state, state.sort), width, height, state.annotations, state.format
+        )
     data, annotations = display_data(state)
     if state.kind == "pie":
         return layout_pie(data, state.doughnut, width, height, state.format)

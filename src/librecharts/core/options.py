@@ -1,9 +1,10 @@
 """Chart options: switches the user can change after inserting a chart (ADRs 0012, 0013).
 
 Column and bar charts switch between stacked, clustered and 100 %, and sort their categories by
-value (a butterfly chart sorts too). A pie chart switches between pie and doughnut. Area charts
-switch between stacked and 100 %. A Marimekko chart switches between percent and units. On a
-column chart, single series can be drawn as lines, optionally on a secondary axis.
+value (a butterfly chart sorts too, a Gantt chart by start date). A pie chart switches between
+pie and doughnut. Area charts switch between stacked and 100 %. A Marimekko chart switches between
+percent and units. On a column chart, single series can be drawn as lines, optionally on a
+secondary axis.
 
 Every switch is one ``ChangeChart`` command with a single argument, so each click is one undo step.
 The two line switches ``line=<index>`` and ``secondary=<index>`` carry ``on=true`` or ``on=false``
@@ -17,7 +18,7 @@ from urllib.parse import parse_qs
 
 from librecharts.core.model import ChartState, Grouping, SortOrder
 
-SORTABLE = frozenset({"column", "bar", "butterfly"})  # chart kinds that sort their categories
+SORTABLE = frozenset({"column", "bar", "butterfly", "gantt"})  # chart kinds that sort
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +61,11 @@ def sort_options(state: ChartState) -> tuple[Switch, ...]:
     """The sort orders of a column or bar chart, the current one included."""
     if state.kind not in SORTABLE:
         return ()
+    if state.kind == "gantt":
+        return (
+            Switch("menu_sort_none", "ChangeChart?sort=none", state.sort == "none"),
+            Switch("menu_sort_start", "ChangeChart?sort=ascending", state.sort == "ascending"),
+        )
     return (
         Switch("menu_sort_none", "ChangeChart?sort=none", state.sort == "none"),
         Switch(
@@ -72,9 +78,16 @@ def sort_options(state: ChartState) -> tuple[Switch, ...]:
 
 
 def sort_toggle(state: ChartState) -> Switch | None:
-    """The next sort order in the cycle none -> descending -> ascending -> none."""
+    """The next sort order in the cycle none -> descending -> ascending -> none.
+
+    A Gantt chart toggles between data sheet order and start date order.
+    """
     if state.kind not in SORTABLE:
         return None
+    if state.kind == "gantt":
+        if state.sort == "none":
+            return Switch("menu_sort_start", "ChangeChart?sort=ascending")
+        return Switch("menu_sort_none", "ChangeChart?sort=none")
     following: dict[SortOrder, SortOrder] = {
         "none": "descending",
         "descending": "ascending",
@@ -181,6 +194,8 @@ def _sort(state: ChartState, value: str) -> ChartState:
         raise ValueError(f"a {state.kind} chart cannot be sorted")
     if value not in ("none", "descending", "ascending"):
         raise ValueError(f"sort must be none, descending or ascending, not {value!r}")
+    if state.kind == "gantt" and value == "descending":
+        raise ValueError("a Gantt chart sorts by ascending start date only")
     sort: SortOrder = (
         "descending" if value == "descending" else ("ascending" if value == "ascending" else "none")
     )

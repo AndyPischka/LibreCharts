@@ -12,6 +12,7 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 
 from librecharts.core.model import ChartKind, ChartState, Grouping
 
@@ -208,6 +209,31 @@ def sample_butterfly_state() -> ChartState:
             [None, "0-14", "15-29", "30-44", "45-59", "60+"],
             ["Men", 6.5, 8.1, 9.4, 8.7, 8.2],
             ["Women", 6.2, 7.8, 9.3, 8.9, 10.1],
+        ],
+    )
+
+
+def sample_gantt_state() -> ChartState:
+    """A project of two phases, five activities and two milestones over half a year: what a new
+    Gantt chart shows. Dates are Calc serial numbers (``core/gantt.py``)."""
+
+    def day(month: int, number: int) -> int:
+        return (date(2026, month, number) - date(1899, 12, 30)).days
+
+    return state_from_table(
+        "gantt",
+        "stacked",
+        [
+            ["Activity", "Start", "End", "Remark", "Phase"],
+            ["Concept", day(1, 5), day(2, 27), None, "x"],
+            ["Requirements", day(1, 5), day(1, 30), "Team A", None],
+            ["Design", day(2, 2), day(2, 27), None, None],
+            ["Design approved", day(2, 27), None, None, None],
+            ["Implementation", day(3, 2), day(6, 30), None, "x"],
+            ["Development", day(3, 2), day(5, 15), "Team B", None],
+            ["Testing", day(4, 13), day(6, 12), None, None],
+            ["Rollout", day(6, 1), day(6, 26), None, None],
+            ["Go-live", day(6, 30), None, None, None],
         ],
     )
 

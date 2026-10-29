@@ -428,6 +428,66 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Butterfly chart",
         "de": "Schmetterlingsdiagramm",
     },
+    "insert_gantt": {
+        "en": "Gantt chart",
+        "de": "Gantt-Diagramm",
+    },
+    "kind_gantt": {
+        "en": "Gantt chart",
+        "de": "Gantt-Diagramm",
+    },
+    "status_gantt": {
+        "en": "{kind}, {count} rows",
+        "de": "{kind}, {count} Zeilen",
+    },
+    "menu_sort_start": {
+        "en": "By start date",
+        "de": "Nach Startdatum",
+    },
+    "menu_add_date_line": {
+        "en": "Add date line...",
+        "de": "Datumslinie hinzufügen...",
+    },
+    "menu_add_today_line": {
+        "en": "Add today line",
+        "de": "Heute-Linie hinzufügen",
+    },
+    "menu_date_line": {
+        "en": "Date line ({value})",
+        "de": "Datumslinie ({value})",
+    },
+    "menu_change_date_line": {
+        "en": "Change date line...",
+        "de": "Datumslinie ändern...",
+    },
+    "menu_gantt_bars": {
+        "en": "Bars",
+        "de": "Balken",
+    },
+    "date_line_title": {
+        "en": "Date line",
+        "de": "Datumslinie",
+    },
+    "date_line_date": {
+        "en": "Date (e.g. 2026-06-30):",
+        "de": "Datum (z. B. 30.06.2026):",
+    },
+    "date_line_invalid": {
+        "en": "Please enter a date such as 2026-06-30 or 6/30/2026.",
+        "de": "Bitte ein Datum wie 30.06.2026 eingeben.",
+    },
+    "gantt_months": {
+        "en": "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec",
+        "de": "Jan,Feb,Mär,Apr,Mai,Jun,Jul,Aug,Sep,Okt,Nov,Dez",
+    },
+    "gantt_quarter": {
+        "en": "Q{number}",
+        "de": "Q{number}",
+    },
+    "gantt_decade": {
+        "en": "{year}s",
+        "de": "{year}er",
+    },
     "kind_pie": {
         "en": "Pie chart",
         "de": "Kreisdiagramm",

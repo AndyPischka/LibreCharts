@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-TextRole = Literal["value", "total", "category", "series", "annotation", "axis"]
+TextRole = Literal["value", "total", "category", "series", "annotation", "axis", "heading"]
 LineRole = Literal["baseline", "connector", "annotation", "helper", "axis", "grid"]
 Align = Literal["left", "center", "right"]
 
@@ -20,10 +20,11 @@ class Rect:
     y: float
     width: float
     height: float
-    series: int  # index into ChartData.series, selects the fill colour; BACKGROUND: none
+    series: int  # index into ChartData.series, selects the fill colour; or BACKGROUND, SHADE
 
 
 BACKGROUND = -1  # Rect.series of gaps cut into other shapes (axis breaks): slide background
+SHADE = -2  # Rect.series of a light band behind the data (Gantt time units)
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,7 +45,7 @@ class Line:
 
 @dataclass(frozen=True, slots=True)
 class Text:
-    """A text box; the renderer centres the text vertically inside it.
+    """A text box; the renderer centres the text vertically inside it. ``heading`` text is bold.
 
     ``fill`` is the series index of the rectangle behind the text, if any. The renderer then picks
     black or white text for contrast (``core/style.py``).
