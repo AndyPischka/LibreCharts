@@ -67,10 +67,20 @@ re-lays the whole chart out at the larger size.
 
 ### Detecting a move (`lo/resize.py`, new `lo/labels.py`)
 
-The watcher already runs (coalesced, asynchronously) after every change of the document. For the
-charts on the **current slide** it now:
+The watcher already runs (coalesced, asynchronously) after every change of the document. Reading
+every child is too slow to do for all charts on every change (spike: 17 ms for a chart of 122
+shapes), so it reads the children of a chart only when a label of it can have moved:
 
-1. reads the frame; a changed frame size is a resize: `fit_to_size` as today, offsets included;
+- the chart whose child is **selected**: a label is selected while it is dragged, nudged with the
+  arrow keys or placed with the position dialog, and after an undo or redo inside the group;
+- the charts of the **current slide** after an **undo or redo** of an action that is not ours
+  (an `XUndoManagerListener` on the document): after leaving the group nothing is selected, and
+  Impress switches to the slide of the undone action itself.
+
+For such a chart it
+
+1. reads the frame; a changed frame size is a resize: `fit_to_size` as today, offsets included
+   (resizes are still found by the group size, which is cheap to read);
 2. otherwise reads the children's geometry in one pass and asks `labels.moved`; new offsets are
    stored (`store.write_state`, **no undo action**) and the moved labels synced in place (box,
    text, colour; `sync_geometry` learns to sync the text colour);
@@ -81,11 +91,23 @@ charts on the **current slide** it now:
 Undo follows ADR 0007: LibreOffice records the drag (or arrow-key nudge) as one step; its undo
 moves the label back, and the watcher, comparing again, clears the offset. Redo likewise.
 
-Our own redraws never look like a label move: they move bars too, and while children are being
-replaced their count does not match. `samescale.apply_states` additionally marks the document busy
+### Redraw in place (`lo/render.py`)
+
+LibreOffice's undo of a label move (and of a resize) refers to the shapes it moved. A later redraw
+replaces them, and that undo step then does nothing visible (spike, item 2; it already happens to
+resizes today). `render.rerender` therefore updates the existing shapes when the primitive
+structure (kinds and order) is unchanged: geometry, text and every property the renderer sets, in
+one code path for new and existing shapes. Only a changed structure replaces the children. Value
+edits, number formats, sorting, colours and offsets keep the structure, so their undo keeps
+LibreOffice's older steps working; after a structural change (a new category, the axis switched
+on) those older steps stay without visible effect.
+
+Our own redraws must never look like a label move. Most move bars too, and while children are
+being replaced their count does not match; but a redraw in place (below) that only moves labels,
+such as *Reset label positions*, would. `samescale.apply_states` therefore marks the document busy
 while it stores and draws, and the watcher skips a busy document: commands from scripts and tests
-run on a bridge thread beside it (AGENTS.md), and comparing old shapes with an already stored new
-state (e.g. after *Reset label positions*) would otherwise read the old offsets back.
+run on a bridge thread beside it (AGENTS.md), and comparing half-updated shapes with an already
+stored new state would read the old offsets back.
 
 ### UI and commands
 
@@ -108,19 +130,30 @@ state (e.g. after *Reset label positions*) would otherwise read the old offsets 
 - Copies and forks carry them with the state; PPTX keeps the shapes as drawn and the state in the
   custom property.
 
-## Spike first (LibreOffice 25.8.7 and 26.8)
+## Spike results (LibreOffice 26.8, Windows, 2026-10-29)
 
-1. Dragging a child in an entered group, and an API move, fire the document's modify listeners;
-   LibreOffice records exactly one undo step for a drag.
-2. Undo of a child move after a redraw replaced that child (move label, edit data, undo, undo,
-   redo, redo): no crash, and what happens. Resize has the same pattern today (ADR 0007) and no
-   test for it. If it misbehaves: a redraw whose primitive structure did not change updates the
-   shapes in place instead of replacing them, which keeps LibreOffice's actions valid for most data
-   edits.
-3. Resizing a group with a child outside the frame scales the frame like every other child.
-4. Undoing a label move on another slide switches to that slide (the watcher reads the current
-   slide only); otherwise all charts are checked and the cost measured.
-5. Cost per modify event of reading every child of five charts with 100 shapes each.
+25.8.7 is only available in CI; the integration tests below cover it there.
+
+1. Moving a child of an entered group with the position dialog (`.uno:TransformDialog` with
+   `TransformPosX`/`TransformPosY`) fires three modify events and records exactly one undo step;
+   undo and redo restore it and fire modify events again. An API move fires two modify events and
+   records nothing. A real drag of the group recorded one step too; a robot drag *inside* the
+   entered group could not be aimed (the warm-up click left the group) and is checked by hand.
+2. Undo of a child move or of a group resize after a redraw that replaced the children: no crash,
+   but the step does nothing visible. Resize, *axis on*, undo, undo leaves the chart at its new
+   size today. Putting the removed shapes back on undo fails: shapes removed from a group and
+   added again lose their geometry (position 0/0, wrong sizes, 100 x 100 after redo). Updating the
+   shapes in place keeps the steps working: move, value edit, undo, undo, redo, redo all show the
+   right label position.
+3. Resizing a group with a child outside the frame scales the frame like every other child, by API
+   and by dialog. Today, a label moved out of the chart (by API) is taken for a resize: the watcher
+   widened the chart from 16 800 to 20 613.
+4. Undoing a move on another slide switches to that slide, in hidden and visible documents.
+5. Reading every child in process: 17 ms for a chart of 122 shapes (`getByIndex` alone 4 ms),
+   85 ms for five; reading the state and laying out: 1.3 ms per chart; `store.all_charts`: under
+   1 ms. After a move, and after an undo inside the group, the moved label is selected; after
+   leaving the group an undo leaves nothing selected, but the undo manager reports
+   `actionUndone`/`actionRedone` for LibreOffice's own actions.
 
 ## Affected modules
 
@@ -138,20 +171,26 @@ change clears offsets), `core/menu.py`, `core/panel.py`, `core/messages.py`; new
   for every chart kind; `moved` finds one or several moved labels, returns `None` for a resize and
   for a redraw (bars moved too), snaps below 1 mm; a variant change clears offsets; the menu and
   panel entries.
-- `tests/lo/test_labels.py`: moving a value label and a total through the API stores their
-  offsets; the offsets survive a data sheet edit, sorting, a resize (the label keeps its distance
-  from its segment), ODP and PPTX reload and a copy; a label moved out of the frame: a later resize
-  lays the chart out at the frame, not the group; *Reset label positions* is one `.uno:Undo` step;
-  a moved series name and a moved axis label are put back. API moves are not recorded for undo, so
-  undo and redo of a real drag, the info bar and *Move labels* are tested by hand.
+- `tests/lo/test_labels.py`: labels are moved like a user does, with the position dialog inside
+  the entered group (recorded for undo, spike item 1). Moving a value label and a total stores
+  their offsets; undo clears and redo restores them; the offsets survive a data sheet edit,
+  sorting, a resize (the label keeps its distance from its segment), ODP and PPTX reload and a
+  copy; move, value edit, undo, undo puts the label back (redraw in place); a label moved out of
+  the frame: a later resize lays the chart out at the frame, not the group; *Reset label
+  positions* is one `.uno:Undo` step; a moved series name and a moved axis label are put back.
+  `tests/lo/test_resize.py`: resize, value edit, undo, undo restores the size. A real mouse drag,
+  the info bar and *Move labels* are tested by hand.
 
 ## Docs
 
 New ADR "Label placement" (value labels and totals only, offsets per label key, the frame as the
 layout box, the watcher stores moves without an undo action and puts other moved children back);
 ADR 0007 gets a pointer to it; ARCHITECTURE.md (`core/labels.py`, `lo/labels.py`, invariant 6:
-the frame is the layout box); glossary ("Label key", "Label offset"); CHANGELOG; ROADMAP; README;
-AGENTS.md pitfalls from the spike.
+the frame is the layout box; `render.rerender` updates in place); glossary ("Label key", "Label
+offset"); CHANGELOG (also the fixed resize undo); ROADMAP; README; AGENTS.md pitfalls from the
+spike: shapes removed from a group lose their geometry when added again; in `tests/lo`, move a
+child like a user with `.uno:TransformDialog` inside the entered group; reading every child of a
+chart costs milliseconds, so never do it for all charts on every modify event.
 
 ## Decisions (agreed)
 
