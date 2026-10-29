@@ -31,6 +31,9 @@ Use these terms consistently in code, UI strings and docs.
 | **Scatter chart / Bubble chart** | Points on two numeric axes read from a data sheet with one row per point (label, x, y, size, group). A point with a size is a bubble whose area is proportional to it (ADR 0018). |
 | **Bubble** | The translucent circle of a bubble chart point; its diameter is layout output, unlike the fixed-size marker (ADR 0018). |
 | **Butterfly chart** | Two series as bars mirrored around a central band of category names, on one common scale; further series are ignored (ADR 0018). |
+| **Slide element** | A Harvey ball or check mark: a group of native shapes whose whole state is its group name (ADR 0021). |
+| **Harvey ball** | A circle filled to 0, 25, 50, 75 or 100 %, drawn as an outline plus a sector. |
+| **Check mark** | A tick, a cross or an empty circle; tick and cross have fixed colours. |
 | **Gantt chart** | A project timeline: one row per data sheet row (label, start, end, remark, phase marker by column position), a two-level date scale on top (ADR 0019). |
 | **Activity** | A Gantt row with a start and an end date, drawn as a bar from the start of its first to the end of its last day. |
 | **Milestone** | A Gantt row with a single date (or start equal to end), drawn as a diamond with its date. |

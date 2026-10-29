@@ -40,7 +40,7 @@ that the later milestones use; M6 then gives every chart type the same axis and 
 | M9 | Further chart types | Pie and doughnut, scatter and bubble charts, butterfly (mirrored bar) charts (ADR 0018) | done |
 | M10 | Gantt / timeline | Date-scaled timeline with bars, milestones, phases and labels per row; data in the Calc data sheet; date and today lines (ADR 0019) | done |
 | M11 | Data links | Link a chart to a range in an external Calc or Excel file (or CSV) and update it on demand; relative paths, read-only data sheet, info bar when sources changed (ADR 0020) | done |
-| M12 | Slide elements | Harvey balls, check marks, agenda slides, same size and arranging shapes into a grid. Plan: [slide-elements](docs/plans/slide-elements.md) | open |
+| M12 | Slide elements | Harvey balls, check marks, same size and arranging shapes into a grid (ADR 0021: done); agenda slides (open). Plan: [slide-elements](docs/plans/slide-elements.md) | open |
 | M13 | Label placement | Moving single labels by hand; the offsets survive data edits, sorting and resizing (deferred from M6) | open |
 
 M9 comes first: its sector geometry is reused by the Harvey balls in M12, and its scatter data

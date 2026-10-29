@@ -6,6 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- **Harvey balls and check marks** (*Insert Harvey ball*, *Insert check mark*, the sidebar's Elements
+  section): small circles filled to 0, 25, 50, 75 or 100 %, and ticks, crosses or empty circles. The
+  right-click menu of a selected element switches its state, *Next state* cycles it (also for several
+  elements at once); they stay round when resized and survive copying and saving as ODP or PPTX.
+- **Arranging shapes** (*Same width*, *Same height*, *Same size*, *Arrange in grid*, *Swap
+  positions* in the LibreCharts menu and the sidebar): works on any selected shapes, charts included;
+  one undo step each. The grid offers 2, 3 or 4 columns with 5 mm gaps.
 - **Data links** (*Link data...* in the context menu, the sidebar or the LibreCharts menu): a chart
   takes its data from a range or a named range of a Calc, Excel or CSV file. *Update link* reads
   the selected charts' files again, *Update all links* every linked chart of the presentation, in

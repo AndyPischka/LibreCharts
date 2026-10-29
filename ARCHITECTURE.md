@@ -44,6 +44,8 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series); sample data |
 | `scale.py` | "Nice" value axis ranges |
 | `primitives.py` | `Rect`, `Line`, `Polyline`, `Polygon`, `Marker`, `Bubble`, `Text`: layout output in 1/100 mm, styling left to the renderer (`BACKGROUND` and `SHADE` fills, bold `heading` text) |
+| `elements.py` | Harvey ball and check mark names (state in the group name, ending in a letter), the cycle of states and the primitives of each (ADR 0021) |
+| `arrange.py` | Geometry of same width / height / size, grid and swap on rectangles |
 | `geometry.py` | Circle geometry: `polar` and `sector` (pie and doughnut segments as point lists; shared with the Harvey balls of M12) |
 | `gantt.py` | Gantt data sheet rules (one row per activity; label, start, end, remark, phase by column position) -> rows of type bar, milestone, phase or heading; Calc serial numbers <-> dates; sort by start (ADR 0019) |
 | `timescale.py` | The Gantt date scale: unit pair from the date range, periods, header labels and date texts per language |
@@ -89,6 +91,8 @@ so every released schema version must stay readable (`state_io.py`).
 | `scheme.py` | Reads and writes the document's colour scheme; the configured default for new documents; builds the renderer's `Look` (ADR 0016) |
 | `samescale.py` | Collects a scale group's charts and sizes, redraws every affected chart in one lock (ADR 0017) |
 | `undo.py` | One explicit undo action per chart operation |
+| `elements.py` | Harvey balls and check marks: find, insert, change state (one undo step), re-lay out after a resize; the state is the group name (ADR 0021) |
+| `arrange.py` | The selected shapes and the undo action for same size, grid and swap; the geometry is `core/arrange.py` |
 | `chart.py` | Insert (with the UI locale for number formats), `redraw`, `add_annotation`, `apply_changes`, `set_scheme`, `fit_to_size`: chart operations on a presentation |
 | `datasheet.py` | Calc window as a transient view: write stored cells (Gantt date columns in a date format), sync every committed edit back; a protected read-only view for linked charts |
 | `links.py` | Data links: find, open (hidden, read-only, no macros) and read the sources of linked charts, each once per update; the info bar when sources changed (ADR 0020) |
