@@ -22,7 +22,7 @@ from com.sun.star.view import XSelectionChangeListener
 from librecharts.core.messages import text
 from librecharts.core.panel import Button, Panel, content
 from librecharts.core.state_io import StateError
-from librecharts.lo import commands, store, ui
+from librecharts.lo import commands, scheme, store, ui
 
 _TOOLPANEL = 7  # com.sun.star.ui.UIElementType.TOOLPANEL
 _POSSIZE = 15  # com.sun.star.awt.PosSize.POSSIZE
@@ -110,16 +110,16 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
 
     def _current(self) -> Panel:
         controller = self.Frame.getController()
+        doc = controller.getModel()
         group = commands.selected_chart(controller)
         state = None
         if group is not None:
-            doc = controller.getModel()
             chart_id = store.resolve(doc, group)
             try:
                 state = store.read_state(doc, chart_id) if chart_id else None
             except StateError:
                 state = None
-        return content(state, group is not None, self.locale)
+        return content(state, group is not None, self.locale, scheme.load(doc).name)
 
     def draw(self) -> None:
         panel = self.shown
@@ -150,6 +150,12 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         for row in panel.rows:
             layout.row(row.title, row.remove)
         layout.button(panel.remove_all)
+        layout.heading("panel_document")
+        layout.label(f"{text('panel_scheme', self.locale)}: {panel.scheme}")
+        for button in panel.schemes:
+            layout.button(button)
+        for button in panel.scheme_files:
+            layout.button(button)
         self.height = layout.y + MARGIN
         self.container.setPosSize(0, 0, self.width, self.height, _POSSIZE)
         if self.sidebar is not None:

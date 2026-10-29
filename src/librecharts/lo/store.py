@@ -23,6 +23,7 @@ from librecharts.core.state_io import from_json, to_json
 PREFIX = "librecharts:"
 _REMOVEABLE = 128  # com.sun.star.beans.PropertyAttribute.REMOVEABLE
 MIN_PREFIX = 8  # shortest name prefix trusted to identify the origin of a renamed copy
+SCHEME_PROPERTY = PREFIX + "scheme"  # the document-wide colour scheme (ADR 0016)
 
 
 def new_chart_id() -> str:
@@ -54,12 +55,7 @@ def find_charts(page: Any) -> list[tuple[Any, str]]:
 
 
 def write_state(doc: Any, chart_id: str, state: ChartState) -> None:
-    props = doc.getDocumentProperties().getUserDefinedProperties()
-    key, text = anchor_name(chart_id), to_json(state)
-    if props.getPropertySetInfo().hasPropertyByName(key):
-        props.setPropertyValue(key, text)
-    else:
-        props.addProperty(key, _REMOVEABLE, text)
+    write_property(doc, anchor_name(chart_id), to_json(state))
 
 
 def read_state(doc: Any, chart_id: str) -> ChartState | None:
@@ -67,11 +63,25 @@ def read_state(doc: Any, chart_id: str) -> ChartState | None:
 
     Raises ``StateError`` if the stored state is corrupt or from a newer LibreCharts.
     """
+    text = read_property(doc, anchor_name(chart_id))
+    return None if text is None else from_json(text)
+
+
+def write_property(doc: Any, name: str, text: str) -> None:
+    """Set the document's custom property ``name`` to ``text``, adding it if needed."""
     props = doc.getDocumentProperties().getUserDefinedProperties()
-    key = anchor_name(chart_id)
-    if not props.getPropertySetInfo().hasPropertyByName(key):
+    if props.getPropertySetInfo().hasPropertyByName(name):
+        props.setPropertyValue(name, text)
+    else:
+        props.addProperty(name, _REMOVEABLE, text)
+
+
+def read_property(doc: Any, name: str) -> str | None:
+    """The document's custom property ``name``, or ``None`` if it is not set."""
+    props = doc.getDocumentProperties().getUserDefinedProperties()
+    if not props.getPropertySetInfo().hasPropertyByName(name):
         return None
-    return from_json(str(props.getPropertyValue(key)))
+    return str(props.getPropertyValue(name))
 
 
 def all_charts(doc: Any) -> list[tuple[Any, str]]:
@@ -115,7 +125,7 @@ def claim(doc: Any, group: Any) -> str | None:
 def _stored_ids(doc: Any) -> list[str]:
     props = doc.getDocumentProperties().getUserDefinedProperties()
     names = [p.Name for p in props.getPropertySetInfo().getProperties()]
-    return [n[len(PREFIX) :] for n in names if n.startswith(PREFIX)]
+    return [n[len(PREFIX) :] for n in names if n.startswith(PREFIX) and n != SCHEME_PROPERTY]
 
 
 def _origin_id(doc: Any, name_id: str) -> str | None:

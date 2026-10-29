@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oor:component-schema xmlns:oor="http://openoffice.org/2001/registry"
+                      xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                      oor:name="Settings" oor:package="org.librecharts" xml:lang="en">
+  <component oor:name="Settings">
+    <prop oor:name="DefaultScheme" oor:type="xs:string" oor:nillable="false">
+      <info>
+        <desc>Colour scheme for presentations that do not carry their own (Default, Grey, High
+        contrast, or a scheme loaded into the document).</desc>
+      </info>
+      <value>Default</value>
+    </prop>
+  </component>
+</oor:component-schema>

@@ -108,6 +108,58 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m2b" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Use the same scale</value>
+              <value xml:lang="de">Gleichen Maßstab verwenden</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:SameScale</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="m2c" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Use own scale</value>
+              <value xml:lang="de">Eigenen Maßstab verwenden</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:RemoveSameScale</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="m2d" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Copy chart format</value>
+              <value xml:lang="de">Diagrammformat kopieren</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:CopyChartFormat</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="m2e" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Apply chart format</value>
+              <value xml:lang="de">Diagrammformat übernehmen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:ApplyChartFormat</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
           <node oor:name="m3" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>
@@ -333,6 +385,70 @@
           <value/>
           <value xml:lang="en-US">Add axis break</value>
           <value xml:lang="de">Achsenbruch hinzufügen</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
+      <node oor:name="t6" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:SameScale</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Use the same scale</value>
+          <value xml:lang="de">Gleichen Maßstab verwenden</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
+      <node oor:name="t7" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:RemoveSameScale</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Use own scale</value>
+          <value xml:lang="de">Eigenen Maßstab verwenden</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
+      <node oor:name="t8" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:CopyChartFormat</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Copy chart format</value>
+          <value xml:lang="de">Diagrammformat kopieren</value>
+        </prop>
+        <prop oor:name="Target" oor:type="xs:string">
+          <value>_self</value>
+        </prop>
+        <prop oor:name="Context" oor:type="xs:string">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
+      <node oor:name="t9" oor:op="replace">
+        <prop oor:name="URL" oor:type="xs:string">
+          <value>org.librecharts:ApplyChartFormat</value>
+        </prop>
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Apply chart format</value>
+          <value xml:lang="de">Diagrammformat übernehmen</value>
         </prop>
         <prop oor:name="Target" oor:type="xs:string">
           <value>_self</value>

@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from librecharts.core import annotations
+from librecharts.core import annotations, style
 from librecharts.core.datasheet import (
     sample_area_state,
     sample_line_state,
@@ -19,7 +19,8 @@ from librecharts.core.datasheet import (
 from librecharts.core.format import default_format
 from librecharts.core.layout.chart import layout_chart
 from librecharts.core.model import Annotation, ChartState
-from librecharts.lo import render, store, undo
+from librecharts.core.state_io import StateError
+from librecharts.lo import render, samescale, scheme, store, undo
 
 NEW_CHART_SHARE = 0.6  # a new chart covers this share of the slide's width and height
 
@@ -65,9 +66,10 @@ def _insert(doc: Any, page: Any, state: ChartState, locale: str = "") -> Any:
     height = round(page.Height * NEW_CHART_SHARE)
     x, y = (page.Width - width) // 2, (page.Height - height) // 2
     primitives = layout_chart(state, width, height)
+    look = scheme.look(doc, state)
 
     with undo.recording_locked(doc):
-        group = render.render_group(doc, page, primitives, x, y, width, height)
+        group = render.render_group(doc, page, primitives, x, y, width, height, look)
         chart_id = store.new_chart_id()
         group.Name = store.anchor_name(chart_id)
     # The state stays in the document after an undo; unused states are cleaned up separately.
@@ -82,20 +84,50 @@ def _insert(doc: Any, page: Any, state: ChartState, locale: str = "") -> Any:
 
 
 def redraw(doc: Any, group: Any, state: ChartState) -> None:
-    """Store ``state`` for the chart in ``group`` and redraw it at the group's current size."""
+    """Store ``state`` for the chart in ``group`` and redraw it at the group's current size.
+
+    Charts of the same same-scale group are redrawn too, because their shared scale may change:
+    still one undo step.
+    """
     chart_id = store.chart_id_of(group)
     if chart_id is None:
         raise ValueError("shape is not a LibreCharts chart")
     previous = store.read_state(doc, chart_id)
 
-    _apply(doc, group, chart_id, state)
+    samescale.apply_states(doc, {chart_id: state})
     if previous is not None:
         undo.add_action(
             doc,
             "Update LibreCharts chart",
-            undo=lambda: _apply(doc, group, chart_id, previous),
-            redo=lambda: _apply(doc, group, chart_id, state),
+            undo=lambda: samescale.apply_states(doc, {chart_id: previous}),
+            redo=lambda: samescale.apply_states(doc, {chart_id: state}),
         )
+
+
+def apply_changes(doc: Any, changes: dict[Any, ChartState]) -> None:
+    """Redraw several charts (keyed by their group shape) with new states as one undo step."""
+    updates: dict[str, ChartState] = {}
+    previous: dict[str, ChartState] = {}
+    for group, state in changes.items():
+        chart_id = store.chart_id_of(group)
+        if chart_id is None:
+            continue
+        try:
+            before = store.read_state(doc, chart_id)
+        except StateError:
+            before = None
+        updates[chart_id] = state
+        if before is not None:
+            previous[chart_id] = before
+    if not updates:
+        return
+    samescale.apply_states(doc, updates)
+    undo.add_action(
+        doc,
+        "Update LibreCharts charts",
+        undo=lambda: samescale.apply_states(doc, previous),
+        redo=lambda: samescale.apply_states(doc, updates),
+    )
 
 
 def add_annotation(doc: Any, group: Any, annotation: Annotation) -> None:
@@ -108,14 +140,6 @@ def add_annotation(doc: Any, group: Any, annotation: Annotation) -> None:
     if state is None:
         raise ValueError("chart has no stored state")
     redraw(doc, group, replace(state, annotations=annotations.added(state.annotations, annotation)))
-
-
-def _apply(doc: Any, group: Any, chart_id: str, state: ChartState) -> None:
-    size = group.Size
-    primitives = layout_chart(state, size.Width, size.Height)
-    with undo.recording_locked(doc):
-        render.rerender(doc, group, primitives)
-    store.write_state(doc, chart_id, state)
 
 
 def fit_to_size(doc: Any, group: Any) -> bool:
@@ -133,10 +157,49 @@ def fit_to_size(doc: Any, group: Any) -> bool:
         if state is None:
             return False
         size = group.Size
-        primitives = layout_chart(state, size.Width, size.Height)
+        length = samescale.group_length_per_unit(doc, chart_id, state)
+        primitives = layout_chart(state, size.Width, size.Height, length)
+        changed = render.sync_geometry(group, primitives) == "updated"
+        # The whole group shares one scale: a resize of one chart re-lays out the others too.
+        for peer, peer_state in samescale.peers(doc, chart_id, state):
+            peer_size = peer.Size
+            peer_primitives = layout_chart(peer_state, peer_size.Width, peer_size.Height, length)
+            if render.sync_geometry(peer, peer_primitives) == "updated":
+                changed = True
     except ValueError:  # StateError, or the group is too small to lay out
         return False
     # No undo lock needed: LibreOffice does not record geometry changes made through the API.
     # "mismatch" means the children are being replaced right now (e.g. a redraw in progress);
     # leave them alone, the layout structure itself does not depend on the size.
-    return render.sync_geometry(group, primitives) == "updated"
+    return changed
+
+
+def set_scheme(doc: Any, new: style.Scheme) -> bool:
+    """Make ``new`` the document's colour scheme and redraw every chart: one undo step.
+
+    Returns ``False`` if the document already uses that scheme.
+    """
+    previous = scheme.load(doc)
+    if previous == new:
+        return False
+    _apply_scheme(doc, new)
+    undo.add_action(
+        doc,
+        "Change LibreCharts colour scheme",
+        undo=lambda: _apply_scheme(doc, previous),
+        redo=lambda: _apply_scheme(doc, new),
+    )
+    return True
+
+
+def _apply_scheme(doc: Any, new: style.Scheme) -> None:
+    scheme.save(doc, new)
+    states: dict[str, ChartState] = {}
+    for _, chart_id in store.all_charts(doc):
+        try:
+            state = store.read_state(doc, chart_id)
+        except StateError:
+            continue
+        if state is not None:
+            states[chart_id] = state
+    samescale.apply_states(doc, states)

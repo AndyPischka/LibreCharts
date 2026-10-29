@@ -4,17 +4,32 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs
 
-from librecharts.core import annotations, options
+from librecharts.core import annotations, options, style
 from librecharts.core import format as formats
+from librecharts.core import samescale as core_samescale
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, AnnotationKind, ChartState
 from librecharts.core.picking import PickSession, supports
 from librecharts.core.state_io import StateError
-from librecharts.lo import axisdialog, chart, formatdialog, pick, resize, store, ui
+from librecharts.lo import (
+    axisdialog,
+    chart,
+    formatdialog,
+    pick,
+    resize,
+    samescale,
+    scheme,
+    store,
+    ui,
+)
 from librecharts.lo.datasheet import OrphanedChartError, open_datasheet
+
+# The format copied by "Copy chart format", shared by the menu and the sidebar in this process.
+_format_slot: ChartState | None = None
 
 
 def insert_column_chart(ctx: Any, frame: Any) -> None:
@@ -197,6 +212,181 @@ def _update_annotations(ctx: Any, frame: Any, update: Update) -> None:
         chart.redraw(doc, group, replace(state, annotations=update(state.annotations)))
 
 
+def same_scale(ctx: Any, frame: Any) -> None:
+    """Put the selected charts (and their groups) on one shared scale; one undo step."""
+    controller = frame.getController()
+    locale = ui.ui_locale(ctx)
+    groups = selected_charts(controller)
+    if len(groups) < 2:
+        ui.show_info(ctx, frame, text("same_scale_need_two", locale))
+        return
+    doc = controller.getModel()
+    states = _claimed_states(ctx, frame, doc, groups, locale)
+    if states is None:
+        return
+    if not core_samescale.can_join([state for _, state in states]):
+        ui.show_info(ctx, frame, text("same_scale_incompatible", locale))
+        return
+    group_ids = {state.scale_group for _, state in states if state.scale_group is not None}
+    if len(group_ids) == 1:
+        only = next(iter(group_ids))
+        if all(state.scale_group == only for _, state in states):
+            return
+    group_id = samescale.new_group_id()
+    changes = {group: replace(state, scale_group=group_id) for group, state in states}
+    for group, state in _group_members(doc, group_ids):
+        changes.setdefault(group, replace(state, scale_group=group_id))
+    chart.apply_changes(doc, changes)
+
+
+def remove_same_scale(ctx: Any, frame: Any) -> None:
+    """Give the selected charts (and their groups) their own scale again; one undo step."""
+    controller = frame.getController()
+    locale = ui.ui_locale(ctx)
+    groups = selected_charts(controller)
+    if not groups:
+        ui.show_info(ctx, frame, text("select_chart", locale))
+        return
+    doc = controller.getModel()
+    states = _claimed_states(ctx, frame, doc, groups, locale)
+    if states is None:
+        return
+    group_ids = {state.scale_group for _, state in states if state.scale_group is not None}
+    if not group_ids:
+        return
+    changes = {
+        group: replace(state, scale_group=None) for group, state in _group_members(doc, group_ids)
+    }
+    chart.apply_changes(doc, changes)
+
+
+def copy_chart_format(ctx: Any, frame: Any) -> None:
+    """Remember the selected chart's format and series colours for :func:`apply_chart_format`."""
+    global _format_slot
+    controller = frame.getController()
+    locale = ui.ui_locale(ctx)
+    states = _claimed_states(ctx, frame, controller.getModel(), selected_charts(controller), locale)
+    if states is None:
+        return
+    if len(states) != 1:
+        ui.show_info(ctx, frame, text("select_chart", locale))
+        return
+    _format_slot = states[0][1]
+    ui.show_info(ctx, frame, text("format_copied", locale))
+
+
+def apply_chart_format(ctx: Any, frame: Any) -> None:
+    """Apply the copied chart format to every selected chart; one undo step."""
+    controller = frame.getController()
+    locale = ui.ui_locale(ctx)
+    if _format_slot is None:
+        ui.show_info(ctx, frame, text("format_not_copied", locale))
+        return
+    doc = controller.getModel()
+    states = _claimed_states(ctx, frame, doc, selected_charts(controller), locale)
+    if states is None:
+        return
+    changes: dict[Any, ChartState] = {}
+    for group, state in states:
+        applied = formats.apply(state, _format_slot)
+        if applied != state:
+            changes[group] = applied
+    chart.apply_changes(doc, changes)
+
+
+def set_scheme(ctx: Any, frame: Any, query: str) -> None:
+    """Switch the document to a built-in colour scheme (``name=Grey``); one undo step."""
+    locale = ui.ui_locale(ctx)
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    chosen = style.built_in(args.get("name", ""))
+    if chosen is None:
+        ui.show_info(ctx, frame, text("scheme_unknown", locale))
+        return
+    chart.set_scheme(frame.getController().getModel(), chosen)
+
+
+def load_scheme(ctx: Any, frame: Any) -> None:
+    """Load a colour-scheme file and make it the document's scheme; one undo step."""
+    locale = ui.ui_locale(ctx)
+    path = _pick_file(ctx, text("scheme_title_load", locale), save=False)
+    if path is None:
+        return
+    try:
+        loaded = style.scheme_from_json(Path(path).read_text(encoding="utf-8"))
+    except (OSError, style.SchemeError) as exc:
+        ui.show_info(ctx, frame, text("scheme_load_failed", locale, detail=str(exc)))
+        return
+    chart.set_scheme(frame.getController().getModel(), loaded)
+    ui.show_info(ctx, frame, text("scheme_loaded", locale, name=loaded.name))
+
+
+def save_scheme(ctx: Any, frame: Any) -> None:
+    """Save the document's current colour scheme to a file."""
+    locale = ui.ui_locale(ctx)
+    doc = frame.getController().getModel()
+    path = _pick_file(ctx, text("scheme_title_save", locale), save=True)
+    if path is None:
+        return
+    try:
+        Path(path).write_text(style.scheme_to_json(scheme.load(doc)), encoding="utf-8")
+    except OSError as exc:
+        ui.show_info(ctx, frame, text("scheme_save_failed", locale, detail=str(exc)))
+        return
+    ui.show_info(ctx, frame, text("scheme_saved", locale, path=path))
+
+
+def _pick_file(ctx: Any, title: str, *, save: bool) -> str | None:
+    """Ask for a scheme file with LibreOffice's file picker; ``None`` if the user cancels."""
+    picker = ctx.ServiceManager.createInstanceWithContext("com.sun.star.ui.dialogs.FilePicker", ctx)
+    picker.setTitle(title)
+    label = text("scheme_filter", ui.ui_locale(ctx))
+    picker.appendFilter(label, "*.json")
+    picker.setCurrentFilter(label)
+    if save:
+        picker.setDefaultName("librecharts-scheme.json")
+    if picker.execute() != 1:  # com.sun.star.ui.dialogs.ExecutableDialogResults.OK
+        return None
+    files = picker.getFiles()
+    return str(files[0]) if files else None
+
+
+def _claimed_states(
+    ctx: Any, frame: Any, doc: Any, groups: list[Any], locale: str
+) -> list[tuple[Any, ChartState]] | None:
+    """The state of every chart group, claiming renamed copies.
+
+    Shows a message and returns ``None`` if a chart is orphaned or its state is corrupt.
+    """
+    found: list[tuple[Any, ChartState]] = []
+    for group in groups:
+        chart_id = store.claim(doc, group)
+        try:
+            state = store.read_state(doc, chart_id) if chart_id else None
+        except StateError as exc:
+            ui.show_info(ctx, frame, text("corrupt_chart", locale, detail=str(exc)))
+            return None
+        if state is None:
+            ui.show_info(ctx, frame, text("orphaned_chart", locale))
+            return None
+        found.append((group, state))
+    return found
+
+
+def _group_members(doc: Any, group_ids: set[str]) -> list[tuple[Any, ChartState]]:
+    """Every named chart in one of the scale groups, with its stored state."""
+    members: list[tuple[Any, ChartState]] = []
+    if not group_ids:
+        return members
+    for group, chart_id in store.all_charts(doc):
+        try:
+            state = store.read_state(doc, chart_id)
+        except StateError:
+            continue
+        if state is not None and state.scale_group in group_ids:
+            members.append((group, state))
+    return members
+
+
 def _annotatable_chart(
     ctx: Any, frame: Any, kind: AnnotationKind | None
 ) -> tuple[Any, ChartState] | None:
@@ -222,6 +412,24 @@ def _annotatable_chart(
         ui.show_info(ctx, frame, text("annotation_unsupported", locale))
         return None
     return group, state
+
+
+def selected_charts(controller: Any) -> list[Any]:
+    """Every selected LibreCharts group, including charts inside a multiple selection."""
+    return _charts_in(controller.getSelection())
+
+
+def _charts_in(selection: Any) -> list[Any]:
+    if selection is None:
+        return []
+    if _is_chart(selection):
+        return [selection]
+    if hasattr(selection, "getCount"):
+        found: list[Any] = []
+        for index in range(selection.getCount()):
+            found.extend(_charts_in(selection.getByIndex(index)))
+        return found
+    return []
 
 
 def selected_chart(controller: Any) -> Any:

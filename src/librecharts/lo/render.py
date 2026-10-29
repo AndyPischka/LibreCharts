@@ -27,16 +27,9 @@ from librecharts.core.primitives import (
     Text,
 )
 
-PALETTE = style.PALETTE
-TEXT_COLOR = style.TEXT_COLOR
-BACKGROUND_COLOR = 0xFFFFFF  # gaps of axis breaks; assumes a white slide
-LINE_COLOR = 0x404040
-GRID_COLOR = 0xD9D9D9
 LINE_WIDTH = 25  # 1/100 mm
 AXIS_WIDTH = 20  # 1/100 mm
 GRID_WIDTH = 15  # 1/100 mm
-FONT_HEIGHT_PT = 10.0
-AXIS_FONT_HEIGHT_PT = 8.0
 ARROW_NAME = "Arrow"  # a line end from LibreOffice's standard arrow list
 ARROW_WIDTH = 250  # 1/100 mm
 DASH_LENGTH = 100  # 1/100 mm, dashes and gaps of helper lines
@@ -55,18 +48,54 @@ _PARA_ADJUST = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class Look:
+    """How the shapes of a chart are coloured and lettered (ADR 0016).
+
+    ``scheme`` is the document-wide colour scheme; ``colors`` holds the palette indices of single
+    series (ADR 0016, series colours), indexed like ``ChartState.colors``.
+    """
+
+    scheme: style.Scheme = style.DEFAULT
+    colors: tuple[int | None, ...] = ()
+
+    def color(self, series: int) -> int:
+        """The fill colour of a series index."""
+        return self.scheme.color(series, self.colors)
+
+    def text_on(self, fill: int) -> int:
+        """A readable text colour on ``fill``."""
+        return self.scheme.text_on(fill)
+
+    @property
+    def font_size(self) -> float:
+        return self.scheme.font_size
+
+
+DEFAULT_LOOK = Look()
+
+
 def render_group(
-    doc: Any, page: Any, primitives: tuple[Primitive, ...], x: int, y: int, width: int, height: int
+    doc: Any,
+    page: Any,
+    primitives: tuple[Primitive, ...],
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    look: Look = DEFAULT_LOOK,
 ) -> Any:
     """Create a new group at (``x``, ``y``) on ``page`` holding the frame and ``primitives``."""
     group = doc.createInstance("com.sun.star.drawing.GroupShape")
     page.add(group)
     for spec in _specs(primitives, x, y, width, height):
-        _create(doc, group, spec)
+        _create(doc, group, spec, look)
     return group
 
 
-def rerender(doc: Any, group: Any, primitives: tuple[Primitive, ...]) -> None:
+def rerender(
+    doc: Any, group: Any, primitives: tuple[Primitive, ...], look: Look = DEFAULT_LOOK
+) -> None:
     """Replace the group's children; position, size, name and z-order of the group are kept.
 
     ``primitives`` must have been laid out for the group's current size.
@@ -75,7 +104,7 @@ def rerender(doc: Any, group: Any, primitives: tuple[Primitive, ...]) -> None:
     position, size = group.Position, group.Size
     # Add first, then remove: an emptied group may be dissolved by LibreOffice.
     for spec in _specs(primitives, position.X, position.Y, size.Width, size.Height):
-        _create(doc, group, spec)
+        _create(doc, group, spec, look)
     for shape in old:
         group.remove(shape)
 
@@ -201,36 +230,40 @@ def _dash() -> Any:
     return dash
 
 
-def _create(doc: Any, group: Any, spec: _Spec) -> None:
+def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
     shape = doc.createInstance(f"com.sun.star.drawing.{spec.kind}")
     group.add(shape)
     p = spec.primitive
     if spec.points is not None:  # polyline or polygon: its points define the geometry
         shape.PolyPolygon = spec.points
         if isinstance(p, Polygon):
-            shape.FillStyle, shape.FillColor = _FILL_SOLID, style.series_color(p.series)
+            shape.FillStyle, shape.FillColor = _FILL_SOLID, look.color(p.series)
             shape.LineStyle = _LINE_NONE
         elif isinstance(p, Polyline):
             shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_SOLID
-            shape.LineColor, shape.LineWidth = style.series_color(p.series), LINE_WIDTH
+            shape.LineColor, shape.LineWidth = look.color(p.series), LINE_WIDTH
         return
     shape.Position = Point(spec.x, spec.y)
     shape.Size = Size(spec.width, spec.height)
     if p is None:  # the invisible frame
         shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_NONE
     elif isinstance(p, Rect):
-        color = BACKGROUND_COLOR if p.series == BACKGROUND else style.series_color(p.series)
+        color = look.scheme.background if p.series == BACKGROUND else look.color(p.series)
         shape.FillStyle, shape.FillColor = _FILL_SOLID, color
         shape.LineStyle = _LINE_NONE
     elif isinstance(p, Marker):
-        shape.FillStyle, shape.FillColor = _FILL_SOLID, style.series_color(p.series)
+        shape.FillStyle, shape.FillColor = _FILL_SOLID, look.color(p.series)
         shape.LineStyle = _LINE_NONE
     elif isinstance(p, Line):
-        shape.LineStyle, shape.LineColor, shape.LineWidth = _LINE_SOLID, LINE_COLOR, LINE_WIDTH
+        shape.LineStyle, shape.LineColor, shape.LineWidth = (
+            _LINE_SOLID,
+            look.scheme.line,
+            LINE_WIDTH,
+        )
         if p.role == "helper":
             shape.LineStyle, shape.LineDash = _LINE_DASH, _dash()
         elif p.role == "grid":
-            shape.LineColor, shape.LineWidth = GRID_COLOR, GRID_WIDTH
+            shape.LineColor, shape.LineWidth = look.scheme.grid(), GRID_WIDTH
         elif p.role == "axis":
             shape.LineWidth = AXIS_WIDTH
         if p.arrow and (p.x2 < p.x1 or p.y2 < p.y1):  # drawn reversed: (x2, y2) is its start
@@ -247,10 +280,11 @@ def _create(doc: Any, group: Any, spec: _Spec) -> None:
         shape.TextUpperDistance = shape.TextLowerDistance = 0
         # Text and character properties only stick once the shape is in a group or on a page.
         shape.String = label.text
-        shape.CharHeight = AXIS_FONT_HEIGHT_PT if label.role == "axis" else FONT_HEIGHT_PT
+        shape.CharFontName = look.scheme.font_name
+        shape.CharHeight = (
+            max(look.font_size * 0.8, 4.0) if label.role == "axis" else look.font_size
+        )
         shape.CharColor = (
-            style.text_color(style.series_color(label.fill))
-            if label.fill is not None
-            else TEXT_COLOR
+            look.text_on(look.color(label.fill)) if label.fill is not None else look.scheme.text
         )
         shape.ParaAdjust = _PARA_ADJUST[label.align]

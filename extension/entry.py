@@ -80,6 +80,20 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.change_format(self.ctx, self.frame, _query(url))
             elif url.Path == "NumberFormat":
                 commands.number_format(self.ctx, self.frame)
+            elif url.Path == "SameScale":
+                commands.same_scale(self.ctx, self.frame)
+            elif url.Path == "RemoveSameScale":
+                commands.remove_same_scale(self.ctx, self.frame)
+            elif url.Path == "CopyChartFormat":
+                commands.copy_chart_format(self.ctx, self.frame)
+            elif url.Path == "ApplyChartFormat":
+                commands.apply_chart_format(self.ctx, self.frame)
+            elif url.Path.startswith("SetScheme"):
+                commands.set_scheme(self.ctx, self.frame, _query(url))
+            elif url.Path == "LoadScheme":
+                commands.load_scheme(self.ctx, self.frame)
+            elif url.Path == "SaveScheme":
+                commands.save_scheme(self.ctx, self.frame)
             elif url.Path == "ValueLine":
                 commands.value_line(self.ctx, self.frame)
             elif url.Path.startswith("EditValueLine"):

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry"
+                    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                    oor:name="Settings" oor:package="org.librecharts">
+  <prop oor:name="DefaultScheme" oor:op="fuse">
+    <value>Default</value>
+  </prop>
+</oor:component-data>
