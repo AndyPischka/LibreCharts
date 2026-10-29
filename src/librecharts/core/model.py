@@ -6,28 +6,69 @@ import math
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 ChartKind = Literal["column", "bar", "waterfall", "mekko"]
 Grouping = Literal["stacked", "clustered"]
 SortOrder = Literal["none", "descending", "ascending"]
-AnnotationKind = Literal["difference", "cagr", "axis_break"]
+AnnotationKind = Literal["difference", "cagr", "axis_break", "value_line"]
 ArrowStyle = Literal["bracket", "level"]
 LabelMode = Literal["percent", "absolute"]
+SeriesNames = Literal["none", "labels", "legend"]
+Magnitude = Literal[0, 3, 6, 9]
+Separator = Literal[".", ","]
+
+AXIS_ANNOTATIONS = frozenset({"axis_break", "value_line"})
+
+
+@dataclass(frozen=True, slots=True)
+class Format:
+    """How a chart shows values, axes and series names (ADR 0014).
+
+    ``decimals`` is ``None`` for the automatic rule ("integers plain, at most two decimals").
+    ``magnitude`` divides every value by a power of ten before formatting (3: thousands, 6:
+    millions, 9: billions); ``unit`` is appended after it. ``separator`` and ``language`` are
+    stored per chart, so a German deck keeps its decimal comma and German magnitude suffixes on an
+    English machine. Format is the unit "copy chart format" copies between charts.
+    """
+
+    axis: bool = False
+    gridlines: bool = False  # only drawn together with ``axis``
+    series_names: SeriesNames = "none"
+    decimals: int | None = None
+    magnitude: Magnitude = 0
+    unit: str = ""
+    separator: Separator = "."
+    language: str = "en"
+
+    def __post_init__(self) -> None:
+        if self.series_names not in get_args(SeriesNames):
+            raise ValueError(f"unknown series name mode: {self.series_names!r}")
+        if self.decimals is not None and not 0 <= self.decimals <= 4:
+            raise ValueError("decimals must be None or between 0 and 4")
+        if self.magnitude not in (0, 3, 6, 9):
+            raise ValueError("magnitude must be 0, 3, 6 or 9")
+        if len(self.unit) > 10:
+            raise ValueError("the unit must be at most 10 characters")
+        if self.separator not in (".", ","):
+            raise ValueError(f"unknown decimal separator: {self.separator!r}")
+        if len(self.language) != 2 or not self.language.isalpha():
+            raise ValueError(f"language must be a two-letter code, not {self.language!r}")
 
 
 @dataclass(frozen=True, slots=True)
 class Annotation:
-    """An arrow or axis break the user placed on a chart.
+    """An arrow, axis break or value line the user placed on a chart.
 
     ``start`` and ``end`` are category indices. ``series`` is ``None`` for a column total and a
     series index for one bar of a clustered chart. ``style`` and ``label`` only matter for
     difference arrows. Indices are not checked against the data: after a data sheet edit an
     annotation may point past the last category, it is then not drawn.
 
-    An axis break belongs to the whole axis, not to a category (``start == end == 0`` by
-    convention). ``lower`` and ``upper`` are the data values it removes from the scale; both
-    ``None`` means automatic (see ``core/axis_break.py``).
+    An axis break and a value line belong to the whole axis, not to a category (``start == end ==
+    0`` by convention). ``lower`` and ``upper`` are the values an axis break removes from the
+    scale; both ``None`` means automatic (see ``core/axis_break.py``). A value line's ``value`` is
+    the horizontal/vertical level it marks; ``None`` means the average (see ``core/value_line.py``).
     """
 
     kind: AnnotationKind
@@ -38,6 +79,7 @@ class Annotation:
     label: LabelMode = "percent"
     lower: float | None = None
     upper: float | None = None
+    value: float | None = None
 
     def __post_init__(self) -> None:
         if self.kind not in get_args(AnnotationKind):
@@ -48,9 +90,11 @@ class Annotation:
             raise ValueError(f"unknown label mode: {self.label!r}")
         if min(self.start, self.end, 0 if self.series is None else self.series) < 0:
             raise ValueError("annotation indices must not be negative")
-        if self.kind == "axis_break":
-            if self.end != self.start:
-                raise ValueError("an axis break belongs to the axis, not to categories")
+        if self.kind in AXIS_ANNOTATIONS:
+            if self.start != 0 or self.end != 0:
+                raise ValueError("this annotation belongs to the axis, not to categories")
+            if self.series is not None:
+                raise ValueError("this annotation belongs to the whole axis, not to one series")
         elif self.end == self.start:
             raise ValueError("an arrow needs two different categories")
         if (self.lower is None) != (self.upper is None):
@@ -62,6 +106,11 @@ class Annotation:
                 raise ValueError("the range of an axis break must be finite")
             if not 0 <= self.lower < self.upper:
                 raise ValueError("an axis break needs 0 <= lower < upper")
+        if self.value is not None:
+            if self.kind != "value_line":
+                raise ValueError("only a value line has a value")
+            if not math.isfinite(self.value):
+                raise ValueError("the value of a value line must be finite")
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,7 +124,8 @@ class ChartState:
     ``percent`` draws a 100 % chart: a Mekko with every column 100 % high, or a stacked column or
     bar chart whose segments show shares of their column. ``sort`` reorders the categories of a
     column or bar chart for display only, without touching the data sheet. Neither has a meaning
-    for the other chart kinds, where they keep their defaults.
+    for the other chart kinds, where they keep their defaults. ``format`` holds axis, number and
+    series-name options.
     """
 
     kind: ChartKind
@@ -85,6 +135,7 @@ class ChartState:
     annotations: tuple[Annotation, ...] = ()
     percent: bool = False
     sort: SortOrder = "none"
+    format: Format = Format()
     version: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:

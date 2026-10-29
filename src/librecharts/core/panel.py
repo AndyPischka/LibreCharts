@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
+from librecharts.core import format as formats
 from librecharts.core import options
 from librecharts.core.menu import PROTOCOL, annotation_title
 from librecharts.core.messages import text
@@ -36,13 +37,14 @@ class Row:
 
 @dataclass(frozen=True, slots=True)
 class Panel:
-    """Sections top to bottom: insert, selected chart (``status``, edit, ``options``),
+    """Sections top to bottom: insert, selected chart (``status``, edit, ``options``, ``format``),
     annotations, list."""
 
     insert: tuple[Button, ...]
     status: str
     edit: tuple[Button, ...]
     options: tuple[Button, ...]
+    format: tuple[Button, ...]
     add: tuple[Button, ...]
     rows: tuple[Row, ...]
     remove_all: Button
@@ -67,7 +69,10 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
             count=str(len(data.categories)),
         )
         rows = tuple(
-            Row(annotation_title(annotation, data, locale), f"RemoveAnnotation?index={index}")
+            Row(
+                annotation_title(annotation, data, locale, state.format),
+                f"RemoveAnnotation?index={index}",
+            )
             for index, annotation in enumerate(state.annotations)
             if notes.drawable(annotation, data, state.kind)
         )
@@ -81,6 +86,7 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
         status=status,
         edit=(_button("menu_edit_data", "EditData", "edit", locale, usable),),
         options=_options(state, usable, locale),
+        format=_format(state, usable, locale),
         add=(
             _button(
                 "menu_add_difference",
@@ -110,6 +116,13 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
                 locale,
                 _can_annotate(state, usable, "axis_break"),
             ),
+            _button(
+                "menu_add_value_line",
+                "ValueLine",
+                "",
+                locale,
+                _can_annotate(state, usable, "value_line"),
+            ),
         ),
         rows=rows,
         remove_all=_button("menu_remove_all", "RemoveAnnotations", "", locale, bool(rows)),
@@ -130,6 +143,17 @@ def _options(state: ChartState | None, usable: bool, locale: str) -> tuple[Butto
     if toggle is not None:
         buttons += (_button(toggle.title, toggle.command, "", locale, usable),)
     return buttons
+
+
+def _format(state: ChartState | None, usable: bool, locale: str) -> tuple[Button, ...]:
+    if state is None:
+        return ()
+    buttons = tuple(
+        _button(switch.title, switch.command, "", locale, usable)
+        for switch in formats.format_options(state)
+        if not switch.current
+    )
+    return (*buttons, _button("menu_number_format", "NumberFormat", "", locale, usable))
 
 
 def _can_annotate(state: ChartState | None, usable: bool, kind: AnnotationKind) -> bool:

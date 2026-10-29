@@ -45,9 +45,9 @@ def test_stacked_golden_geometry() -> None:
     assert layout_column(chart, "stacked", 1000, 10000) == (
         Line(0, 9000, 1000, 9000, "baseline"),
         Rect(150, 6950, 700, 2050, 0),
-        Text(150, 6950, 700, 2050, "10", "center", "value"),
+        Text(150, 6950, 700, 2050, "10", "center", "value", fill=0),
         Rect(150, 800, 700, 6150, 1),
-        Text(150, 800, 700, 6150, "30", "center", "value"),
+        Text(150, 800, 700, 6150, "30", "center", "value", fill=1),
         Text(150, 200, 700, LABEL_HEIGHT, "40", "center", "total"),
         Text(0, 9000, 1000, CATEGORY_BAND, "X", "center", "category"),
     )

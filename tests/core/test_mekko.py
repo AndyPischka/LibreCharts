@@ -15,7 +15,7 @@ from librecharts.core.layout.mekko import (
     layout_mekko,
 )
 from librecharts.core.mekko import MekkoData, has_width_row, parse_mekko
-from librecharts.core.model import ChartState
+from librecharts.core.model import ChartState, Format
 from librecharts.core.primitives import Line, Rect, Text
 
 
@@ -82,15 +82,15 @@ def test_golden_geometry() -> None:
     assert layout_mekko(data, 10600, 10000) == (
         Line(0, 9000, 8100, 9000, "baseline"),
         Rect(0, 2850, 4000, 6150, 0),
-        Text(0, 2850, 4000, 6150, "75%", "center", "value"),
+        Text(0, 2850, 4000, 6150, "75%", "center", "value", fill=0),
         Rect(0, 800, 4000, 2050, 1),
-        Text(0, 800, 4000, 2050, "25%", "center", "value"),
+        Text(0, 800, 4000, 2050, "25%", "center", "value", fill=1),
         Text(0, 200, 4000, LABEL_HEIGHT, "40", "center", "total"),
         Text(0, 9000, 4000, CATEGORY_BAND, "A", "center", "category"),
         Rect(4100, 6950, 4000, 2050, 0),
-        Text(4100, 6950, 4000, 2050, "25%", "center", "value"),
+        Text(4100, 6950, 4000, 2050, "25%", "center", "value", fill=0),
         Rect(4100, 800, 4000, 6150, 1),
-        Text(4100, 800, 4000, 6150, "75%", "center", "value"),
+        Text(4100, 800, 4000, 6150, "75%", "center", "value", fill=1),
         Text(4100, 200, 4000, LABEL_HEIGHT, "40", "center", "total"),
         Text(4100, 9000, 4000, CATEGORY_BAND, "B", "center", "category"),
         Text(8250, 7675, 2350, LABEL_HEIGHT, "S1", "left", "series"),
@@ -151,7 +151,8 @@ def test_all_zero_data_still_lays_out() -> None:
 
 
 def test_series_names_sit_right_of_the_plot() -> None:
-    primitives = layout_chart(sample_mekko_state(), 24000, 12000)
+    state = replace(sample_mekko_state(), format=Format(series_names="labels"))
+    primitives = layout_chart(state, 24000, 12000)
     names = [p for p in primitives if isinstance(p, Text) and p.role == "series"]
     assert [n.text for n in names] == ["Product A", "Product B", "Product C"]
     assert all(n.x + n.width <= 24000 + 1e-9 for n in names)
@@ -207,16 +208,16 @@ def test_units_golden_geometry() -> None:
     assert layout_mekko(data, 10600, 10000, percent=False) == (
         Line(0, 8400, 8100, 8400, "baseline"),
         Rect(0, 2700, 4000, 5700, 0),
-        Text(0, 2700, 4000, 5700, "30", "center", "value"),
+        Text(0, 2700, 4000, 5700, "30", "center", "value", fill=0),
         Rect(0, 800, 4000, 1900, 1),
-        Text(0, 800, 4000, 1900, "10", "center", "value"),
+        Text(0, 800, 4000, 1900, "10", "center", "value", fill=1),
         Text(0, 200, 4000, LABEL_HEIGHT, "40", "center", "total"),
         Text(0, 8400, 4000, CATEGORY_BAND, "A", "center", "category"),
         Text(0, 9400, 4000, LABEL_HEIGHT, "40", "center", "value"),
         Rect(4100, 6500, 4000, 1900, 0),
-        Text(4100, 6500, 4000, 1900, "10", "center", "value"),
+        Text(4100, 6500, 4000, 1900, "10", "center", "value", fill=0),
         Rect(4100, 800, 4000, 5700, 1),
-        Text(4100, 800, 4000, 5700, "30", "center", "value"),
+        Text(4100, 800, 4000, 5700, "30", "center", "value", fill=1),
         Text(4100, 200, 4000, LABEL_HEIGHT, "40", "center", "total"),
         Text(4100, 8400, 4000, CATEGORY_BAND, "B", "center", "category"),
         Text(4100, 9400, 4000, LABEL_HEIGHT, "40", "center", "value"),

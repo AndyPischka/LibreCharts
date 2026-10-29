@@ -188,6 +188,150 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Ascending",
         "de": "Aufsteigend",
     },
+    "menu_format": {
+        "en": "Format",
+        "de": "Format",
+    },
+    "menu_axis": {
+        "en": "Value axis",
+        "de": "Wertachse",
+    },
+    "menu_axis_show": {
+        "en": "Show value axis",
+        "de": "Wertachse anzeigen",
+    },
+    "menu_axis_hide": {
+        "en": "Hide value axis",
+        "de": "Wertachse ausblenden",
+    },
+    "menu_gridlines": {
+        "en": "Gridlines",
+        "de": "Gitternetzlinien",
+    },
+    "menu_gridlines_show": {
+        "en": "Show gridlines",
+        "de": "Gitternetzlinien anzeigen",
+    },
+    "menu_gridlines_hide": {
+        "en": "Hide gridlines",
+        "de": "Gitternetzlinien ausblenden",
+    },
+    "menu_series_names": {
+        "en": "Series names",
+        "de": "Reihennamen",
+    },
+    "menu_series_none": {
+        "en": "Hide series names",
+        "de": "Reihennamen ausblenden",
+    },
+    "menu_series_labels": {
+        "en": "Show series labels",
+        "de": "Reihennamen anzeigen",
+    },
+    "menu_series_legend": {
+        "en": "Show legend",
+        "de": "Legende anzeigen",
+    },
+    "menu_number_format": {
+        "en": "Number format...",
+        "de": "Zahlenformat...",
+    },
+    "menu_add_value_line": {
+        "en": "Add value line...",
+        "de": "Wertlinie hinzufügen...",
+    },
+    "menu_value_line": {
+        "en": "Value line ({value})",
+        "de": "Wertlinie ({value})",
+    },
+    "menu_value_line_average": {
+        "en": "average",
+        "de": "Durchschnitt",
+    },
+    "menu_change_value_line": {
+        "en": "Change value line...",
+        "de": "Wertlinie ändern...",
+    },
+    "panel_format": {
+        "en": "Format",
+        "de": "Format",
+    },
+    "format_title": {
+        "en": "Number format",
+        "de": "Zahlenformat",
+    },
+    "format_decimals": {
+        "en": "Decimals (empty: automatic):",
+        "de": "Nachkommastellen (leer: automatisch):",
+    },
+    "format_magnitude": {
+        "en": "Magnitude:",
+        "de": "Größenordnung:",
+    },
+    "format_unit": {
+        "en": "Unit:",
+        "de": "Einheit:",
+    },
+    "format_separator": {
+        "en": "Decimal separator:",
+        "de": "Dezimaltrennzeichen:",
+    },
+    "format_separator_dot": {
+        "en": "Point (1.5)",
+        "de": "Punkt (1.5)",
+    },
+    "format_separator_comma": {
+        "en": "Comma (1,5)",
+        "de": "Komma (1,5)",
+    },
+    "format_decimals_invalid": {
+        "en": "Enter a whole number from 0 to 4, or leave the field empty.",
+        "de": "Bitte eine ganze Zahl von 0 bis 4 eingeben oder das Feld leer lassen.",
+    },
+    "format_unit_too_long": {
+        "en": "The unit must be at most 10 characters long.",
+        "de": "Die Einheit darf höchstens 10 Zeichen lang sein.",
+    },
+    "format_magnitude_invalid": {
+        "en": "Choose a magnitude.",
+        "de": "Bitte eine Größenordnung wählen.",
+    },
+    "format_separator_invalid": {
+        "en": "Choose a decimal separator.",
+        "de": "Bitte ein Dezimaltrennzeichen wählen.",
+    },
+    "format_magnitude_none": {
+        "en": "None",
+        "de": "Keine",
+    },
+    "format_magnitude_thousands": {
+        "en": "Thousands (k)",
+        "de": "Tausender (Tsd.)",
+    },
+    "format_magnitude_millions": {
+        "en": "Millions (M)",
+        "de": "Millionen (Mio.)",
+    },
+    "format_magnitude_billions": {
+        "en": "Billions (bn)",
+        "de": "Milliarden (Mrd.)",
+    },
+    "value_line_title": {
+        "en": "Value line",
+        "de": "Wertlinie",
+    },
+    "value_line_average": {
+        "en": "Average",
+        "de": "Durchschnitt",
+    },
+    "value_line_value": {
+        "en": "Value:",
+        "de": "Wert:",
+    },
+    "value_line_not_a_number": {
+        "en": "Please enter a number.",
+        "de": "Bitte eine Zahl eingeben.",
+    },
     "option_unsupported": {
         "en": "This option is not available for this chart type.",
         "de": "Diese Option gibt es für diesen Diagrammtyp nicht.",

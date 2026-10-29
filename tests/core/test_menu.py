@@ -2,7 +2,9 @@ from dataclasses import replace
 
 from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
 from librecharts.core.menu import PROTOCOL, SEPARATOR, MenuItem, chart_menu
-from librecharts.core.model import Annotation
+from librecharts.core.model import Annotation, Format
+
+FORMAT_STATE = Format(axis=True, gridlines=True, series_names="labels")
 
 EDIT = MenuItem("Edit chart data", PROTOCOL + "EditData")
 VARIANTS = (
@@ -16,12 +18,34 @@ SORT = MenuItem(
         MenuItem("Ascending", PROTOCOL + "ChangeChart?sort=ascending"),
     ),
 )
+SERIES = MenuItem(
+    "Series names",
+    children=(
+        MenuItem("Show series labels", PROTOCOL + "ChangeFormat?series_names=labels"),
+        MenuItem("Show legend", PROTOCOL + "ChangeFormat?series_names=legend"),
+    ),
+)
+NUMBER_FORMAT = MenuItem("Number format...", PROTOCOL + "NumberFormat")
+FORMAT = MenuItem(
+    "Format",
+    children=(
+        MenuItem("Show value axis", PROTOCOL + "ChangeFormat?axis=true"),
+        SERIES,
+        NUMBER_FORMAT,
+    ),
+)
+FORMAT_MEKKO = MenuItem("Format", children=(SERIES, NUMBER_FORMAT))
+FORMAT_WATERFALL = MenuItem(
+    "Format",
+    children=(MenuItem("Show value axis", PROTOCOL + "ChangeFormat?axis=true"), NUMBER_FORMAT),
+)
 ADD = (
     SEPARATOR,
     MenuItem("Add difference arrow", PROTOCOL + "PickAnnotation?kind=difference"),
     MenuItem("Add level difference", PROTOCOL + "PickAnnotation?kind=difference&style=level"),
     MenuItem("Add CAGR arrow", PROTOCOL + "PickAnnotation?kind=cagr"),
     MenuItem("Add axis break", PROTOCOL + "AxisBreak"),
+    MenuItem("Add value line...", PROTOCOL + "ValueLine"),
 )
 
 
@@ -29,9 +53,9 @@ def commands(item: MenuItem) -> list[str]:
     return [child.command for child in item.children]
 
 
-def test_column_chart_without_annotations_offers_data_variants_sort_and_arrows() -> None:
+def test_column_chart_without_annotations_offers_data_variants_sort_format_and_arrows() -> None:
     assert chart_menu(sample_state(), "en-US") == MenuItem(
-        "LibreCharts", children=(EDIT, *VARIANTS, SORT, *ADD)
+        "LibreCharts", children=(EDIT, *VARIANTS, SORT, FORMAT, *ADD)
     )
 
 
@@ -40,6 +64,7 @@ def test_bar_charts_offer_the_same_variants_and_annotations() -> None:
         EDIT,
         *VARIANTS,
         SORT,
+        FORMAT,
         *ADD,
     )
 
@@ -62,7 +87,9 @@ def test_a_100_percent_chart_offers_no_annotations() -> None:
 
 def test_the_current_sort_order_is_not_offered_again() -> None:
     state = replace(sample_state(), sort="descending")
-    sort = next(item for item in chart_menu(state, "en-US").children if item.children)
+    sort = next(
+        item for item in chart_menu(state, "en-US").children if item.title == "Sort categories"
+    )
     assert [item.title for item in sort.children] == ["Data sheet order", "Ascending"]
     assert commands(sort) == [
         PROTOCOL + "ChangeChart?sort=none",
@@ -71,7 +98,11 @@ def test_the_current_sort_order_is_not_offered_again() -> None:
 
 
 def test_waterfall_charts_have_no_variants_or_sort() -> None:
-    assert chart_menu(sample_waterfall_state(), "en-US").children == (EDIT, *ADD)
+    assert chart_menu(sample_waterfall_state(), "en-US").children == (
+        EDIT,
+        FORMAT_WATERFALL,
+        *ADD,
+    )
 
 
 def test_waterfall_annotations_are_titled_with_the_step_names() -> None:
@@ -80,16 +111,49 @@ def test_waterfall_annotations_are_titled_with_the_step_names() -> None:
     assert "Difference Start → End" in titles
 
 
-def test_a_percent_mekko_offers_the_data_and_the_switch_to_units() -> None:
+def test_a_percent_mekko_offers_the_data_the_switch_to_units_and_the_format() -> None:
     units = MenuItem("Show with units", PROTOCOL + "ChangeChart?percent=false")
-    assert chart_menu(sample_mekko_state(), "en-US").children == (EDIT, units)
+    assert chart_menu(sample_mekko_state(), "en-US").children == (EDIT, units, FORMAT_MEKKO)
 
 
-def test_a_units_mekko_offers_the_switch_back_to_percent() -> None:
+def test_a_units_mekko_offers_the_switch_back_to_percent_and_an_axis() -> None:
     state = replace(sample_mekko_state(), percent=False)
     percent = MenuItem("Als 100 % anzeigen", PROTOCOL + "ChangeChart?percent=true")
     edit = MenuItem("Diagrammdaten bearbeiten", EDIT.command)
-    assert chart_menu(state, "de-DE").children == (edit, percent)
+    format_menu = chart_menu(state, "de-DE").children[-1]
+    assert chart_menu(state, "de-DE").children[:2] == (edit, percent)
+    assert format_menu.title == "Format"
+    assert "Wertachse anzeigen" in [child.title for child in format_menu.children]
+
+
+def test_the_format_menu_hides_what_the_chart_already_shows() -> None:
+    state = replace(sample_state(), format=FORMAT_STATE)
+    format_menu = next(
+        item for item in chart_menu(state, "en-US").children if item.title == "Format"
+    )
+    assert [child.title for child in format_menu.children] == [
+        "Hide value axis",
+        "Hide gridlines",
+        "Series names",
+        "Number format...",
+    ]
+    assert commands(format_menu)[0] == PROTOCOL + "ChangeFormat?axis=false"
+    assert commands(format_menu)[1] == PROTOCOL + "ChangeFormat?gridlines=false"
+
+
+def test_series_labels_and_legend_are_mutually_exclusive() -> None:
+    state = replace(sample_state(), format=FORMAT_STATE)
+    series = next(
+        child
+        for item in chart_menu(state, "en-US").children
+        if item.title == "Format"
+        for child in item.children
+        if child.title == "Series names"
+    )
+    assert [child.title for child in series.children] == ["Hide series names", "Show legend"]
+    assert all(
+        child.command != PROTOCOL + "ChangeFormat?series_names=labels" for child in series.children
+    )
 
 
 def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
@@ -103,7 +167,9 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
         ),
     )
     items = chart_menu(state, "en-US").children
-    annotation_items = [item for item in items if item.children and item.title != "Sort categories"]
+    annotation_items = [
+        item for item in items if item.children and item.title not in ("Sort categories", "Format")
+    ]
     assert [item.title for item in annotation_items] == [
         "Difference 2023 → 2025",
         "CAGR 2023 → 2024 (Product B)",
@@ -137,7 +203,7 @@ def test_hidden_annotations_are_not_listed_but_keep_their_index() -> None:
     listed = [
         item
         for item in chart_menu(state, "en-US").children
-        if item.children and item.title != "Sort categories"
+        if item.children and item.title not in ("Sort categories", "Format")
     ]
     assert len(listed) == 1
     assert commands(listed[0])[-1] == PROTOCOL + "RemoveAnnotation?index=1"
@@ -149,3 +215,4 @@ def test_menu_is_translated() -> None:
     assert "Diagrammdaten bearbeiten" in titles
     assert "Differenz 2023 → 2024" in titles
     assert "Kategorien sortieren" in titles
+    assert "Format" in titles

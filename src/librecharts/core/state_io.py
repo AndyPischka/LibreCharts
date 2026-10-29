@@ -11,7 +11,7 @@ import json
 from collections.abc import Callable
 from typing import Any, cast
 
-from librecharts.core.model import SCHEMA_VERSION, Annotation, ChartState
+from librecharts.core.model import SCHEMA_VERSION, Annotation, ChartState, Format, Magnitude
 
 _Raw = dict[str, Any]
 
@@ -42,12 +42,35 @@ def _v4_to_v5(raw: _Raw) -> _Raw:
     return {**raw, "sort": "none"}
 
 
+def _v5_to_v6(raw: _Raw) -> _Raw:
+    """Version 6 added the chart format and value lines.
+
+    Existing column, bar and waterfall charts showed no series names; a Mekko always showed them to
+    the right of the last column, so it keeps that look with ``labels``.
+    """
+    annotations: list[Any] = []
+    for annotation in _as_list(raw.get("annotations", [])):
+        annotations.append({**_as_object(annotation), "value": None})
+    format_raw = {
+        "axis": False,
+        "gridlines": False,
+        "series_names": "labels" if raw.get("kind") == "mekko" else "none",
+        "decimals": None,
+        "magnitude": 0,
+        "unit": "",
+        "separator": ".",
+        "language": "en",
+    }
+    return {**raw, "annotations": annotations, "format": format_raw}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
     2: _v2_to_v3,
     3: _v3_to_v4,
     4: _v4_to_v5,
+    5: _v5_to_v6,
 }
 
 
@@ -66,6 +89,7 @@ def to_json(state: ChartState) -> str:
             "annotations": [_annotation_to_raw(a) for a in state.annotations],
             "percent": state.percent,
             "sort": state.sort,
+            "format": _format_to_raw(state.format),
         },
         separators=(",", ":"),
         ensure_ascii=False,
@@ -89,6 +113,7 @@ def from_json(text: str) -> ChartState:
             annotations=tuple(_as_annotation(a) for a in _as_list(_get(raw, "annotations"))),
             percent=_as_bool(_get(raw, "percent")),
             sort=_get(raw, "sort"),
+            format=_as_format(_get(raw, "format")),
             version=raw["v"],
         )
     except ValueError as exc:
@@ -105,6 +130,20 @@ def _annotation_to_raw(annotation: Annotation) -> _Raw:
         "label": annotation.label,
         "lower": annotation.lower,
         "upper": annotation.upper,
+        "value": annotation.value,
+    }
+
+
+def _format_to_raw(fmt: Format) -> _Raw:
+    return {
+        "axis": fmt.axis,
+        "gridlines": fmt.gridlines,
+        "series_names": fmt.series_names,
+        "decimals": fmt.decimals,
+        "magnitude": fmt.magnitude,
+        "unit": fmt.unit,
+        "separator": fmt.separator,
+        "language": fmt.language,
     }
 
 
@@ -187,10 +226,35 @@ def _as_annotation(value: object) -> Annotation:
         label=_get(raw, "label"),
         lower=_as_number(_get(raw, "lower")),
         upper=_as_number(_get(raw, "upper")),
+        value=_as_number(_get(raw, "value")),
     )
 
 
-def _as_index(value: object) -> int:
+def _as_format(value: object) -> Format:
+    raw = _as_object(value)
+    return Format(
+        axis=_as_flag(_get(raw, "axis"), "axis"),
+        gridlines=_as_flag(_get(raw, "gridlines"), "gridlines"),
+        series_names=_get(raw, "series_names"),
+        decimals=_as_optional_index(_get(raw, "decimals"), "decimals"),
+        magnitude=cast("Magnitude", _as_index(_get(raw, "magnitude"))),
+        unit=_as_str(_get(raw, "unit")),
+        separator=_get(raw, "separator"),
+        language=_as_str(_get(raw, "language")),
+    )
+
+
+def _as_flag(value: object, name: str) -> bool:
+    if not isinstance(value, bool):
+        raise StateError(f"{name} must be true or false")
+    return value
+
+
+def _as_optional_index(value: object, name: str) -> int | None:
+    return None if value is None else _as_index(value, name)
+
+
+def _as_index(value: object, name: str = "annotation indices") -> int:
     if isinstance(value, bool) or not isinstance(value, int):
-        raise StateError("annotation indices must be integers")
+        raise StateError(f"{name} must be integers")
     return value

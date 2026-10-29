@@ -11,16 +11,16 @@ from dataclasses import replace
 from urllib.parse import parse_qs
 
 from librecharts.core.datasheet import ChartData, parse
-from librecharts.core.model import Annotation, ChartKind, ChartState
+from librecharts.core.model import AXIS_ANNOTATIONS, Annotation, ChartKind, ChartState
 from librecharts.core.waterfall import levels, parse_waterfall
 
 NOT_AVAILABLE = "\u2013"  # en dash
 
 # Annotation kinds per chart kind.
 SUPPORTED: dict[ChartKind, frozenset[str]] = {
-    "column": frozenset({"difference", "cagr", "axis_break"}),
-    "bar": frozenset({"difference", "cagr", "axis_break"}),
-    "waterfall": frozenset({"difference", "cagr", "axis_break"}),
+    "column": frozenset({"difference", "cagr", "axis_break", "value_line"}),
+    "bar": frozenset({"difference", "cagr", "axis_break", "value_line"}),
+    "waterfall": frozenset({"difference", "cagr", "axis_break", "value_line"}),
 }
 
 
@@ -37,10 +37,21 @@ def measured(state: ChartState) -> ChartData:
 def arrows(
     annotations: tuple[Annotation, ...], data: ChartData, kind: ChartKind
 ) -> tuple[list[Annotation], list[Annotation]]:
-    """The drawable arrows: (bracket arrows, level arrows). Axis breaks are not arrows."""
-    shown = [a for a in annotations if a.kind != "axis_break" and drawable(a, data, kind)]
+    """The drawable arrows: (bracket arrows, level arrows). Axis annotations are not arrows."""
+    shown = [a for a in annotations if a.kind not in AXIS_ANNOTATIONS and drawable(a, data, kind)]
     levels = [a for a in shown if a.kind == "difference" and a.style == "level"]
     return [a for a in shown if a not in levels], levels
+
+
+def value_lines(
+    annotations: tuple[Annotation, ...], data: ChartData, kind: ChartKind
+) -> list[Annotation]:
+    """The drawable value lines of a chart, in the order they were added."""
+    return [
+        a
+        for a in annotations
+        if a.kind == "value_line" and drawable(a, data, kind) and data.categories
+    ]
 
 
 def drawable(annotation: Annotation, data: ChartData, kind: ChartKind) -> bool:
@@ -126,6 +137,7 @@ def changed(annotations: tuple[Annotation, ...], query: str) -> tuple[Annotation
         style=args.get("style", old.style),  # pyright: ignore[reportArgumentType]
         lower=_optional_float(args["lower"]) if "lower" in args else old.lower,
         upper=_optional_float(args["upper"]) if "upper" in args else old.upper,
+        value=_optional_float(args["value"]) if "value" in args else old.value,
     )
     return (*annotations[:index], annotation, *annotations[index + 1 :])
 
@@ -160,7 +172,7 @@ def from_query(query: str) -> Annotation:
     args = {key: values[-1] for key, values in parse_qs(query, strict_parsing=True).items()}
     try:
         kind = args["kind"]
-        start = int(args.get("start", "0") if kind == "axis_break" else args["start"])
+        start = int(args.get("start", "0") if kind in AXIS_ANNOTATIONS else args["start"])
     except KeyError as exc:
         raise ValueError(f"missing argument {exc}") from exc
     series = args.get("series")
@@ -173,4 +185,5 @@ def from_query(query: str) -> Annotation:
         label=args.get("label", "percent"),  # pyright: ignore[reportArgumentType]
         lower=_optional_float(args.get("lower", "")),
         upper=_optional_float(args.get("upper", "")),
+        value=_optional_float(args.get("value", "")),
     )

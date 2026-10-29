@@ -47,9 +47,9 @@ def test_stacked_golden_geometry() -> None:
     assert layout_bar(chart, "stacked", 8200, 2000) == (
         Line(3000, 0, 3000, 2000, "baseline"),
         Rect(3000, 300, 1000, 1400, 0),
-        Text(3000, 300, 1000, 1400, "10", "center", "value"),
+        Text(3000, 300, 1000, 1400, "10", "center", "value", fill=0),
         Rect(4000, 300, 3000, 1400, 1),
-        Text(4000, 300, 3000, 1400, "30", "center", "value"),
+        Text(4000, 300, 3000, 1400, "30", "center", "value", fill=1),
         Text(7150, 700, 1050, LABEL_HEIGHT, "40", "left", "total"),
         Text(0, 0, 2850, 2000, "X", "right", "category"),
     )

@@ -9,8 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-TextRole = Literal["value", "total", "category", "series", "annotation"]
-LineRole = Literal["baseline", "connector", "annotation", "helper"]
+TextRole = Literal["value", "total", "category", "series", "annotation", "axis"]
+LineRole = Literal["baseline", "connector", "annotation", "helper", "axis", "grid"]
 Align = Literal["left", "center", "right"]
 
 
@@ -44,7 +44,11 @@ class Line:
 
 @dataclass(frozen=True, slots=True)
 class Text:
-    """A text box; the renderer centres the text vertically inside it."""
+    """A text box; the renderer centres the text vertically inside it.
+
+    ``fill`` is the series index of the rectangle behind the text, if any. The renderer then picks
+    black or white text for contrast (``core/style.py``).
+    """
 
     x: float
     y: float
@@ -53,6 +57,7 @@ class Text:
     text: str
     align: Align
     role: TextRole
+    fill: int | None = None
 
 
 Primitive = Rect | Line | Text

@@ -33,17 +33,17 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
         order = sorting.order(data, state.grouping, state.sort)
         data = sorting.sorted_data(data, order)
         annotations = sorting.remap(state.annotations, order)
-        target = column_at(data, state.grouping, width, annotations, x, y)
+        target = column_at(data, state.grouping, width, annotations, x, y, state.format)
         return _to_data_index(target, order)
     if state.kind == "bar":
         data = parse(state)
         order = sorting.order(data, state.grouping, state.sort)
         data = sorting.sorted_data(data, order)
         annotations = sorting.remap(state.annotations, order)
-        target = bar_at(data, state.grouping, width, height, annotations, x, y)
+        target = bar_at(data, state.grouping, width, height, annotations, x, y, state.format)
         return _to_data_index(target, order)
     if state.kind == "waterfall":
-        return step_at(parse_waterfall(state), width, state.annotations, x, y)
+        return step_at(parse_waterfall(state), width, state.annotations, x, y, state.format)
     return None
 
 

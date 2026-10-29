@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import replace
 
 from librecharts.core.datasheet import ChartData
+from librecharts.core.layout.common import format_share
+from librecharts.core.model import Format
 
 
 def positive_only(data: ChartData) -> ChartData:
@@ -35,15 +37,10 @@ def share(value: float | None, total: float) -> float | None:
     return value / total * 100
 
 
-def share_label(value: float | None, total: float) -> str:
+def share_label(value: float | None, total: float, fmt: Format | None = None) -> str:
     """The label of a segment in a 100 % chart, e.g. ``"33.3%"``."""
     percentage = share(value, total)
-    return "" if percentage is None else f"{_format(percentage)}%"
-
-
-def _format(value: float) -> str:
-    text = f"{value:.1f}".rstrip("0").rstrip(".")
-    return text or "0"
+    return "" if percentage is None else format_share(percentage, fmt)
 
 
 def shares(data: ChartData) -> ChartData:

@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 
 from librecharts.core import state_io
-from librecharts.core.model import SCHEMA_VERSION, Annotation, ChartState
+from librecharts.core.model import SCHEMA_VERSION, Annotation, ChartState, Format
 from librecharts.core.state_io import StateError, from_json, to_json
 
 
@@ -27,6 +27,7 @@ ARROW = {
     "label": "percent",
     "lower": None,
     "upper": None,
+    "value": None,
 }
 
 
@@ -74,6 +75,50 @@ def test_round_trip_preserves_the_mekko_variant() -> None:
 def test_round_trip_preserves_the_sort_order() -> None:
     for sort in ("none", "descending", "ascending"):
         assert from_json(to_json(make_state(sort=sort))).sort == sort
+
+
+def test_round_trip_preserves_the_format() -> None:
+    fmt = Format(
+        axis=True,
+        gridlines=True,
+        series_names="legend",
+        decimals=3,
+        magnitude=6,
+        unit="€",
+        separator=",",
+        language="de",
+    )
+    assert from_json(to_json(make_state(format=fmt))).format == fmt
+
+
+def test_a_value_line_round_trips() -> None:
+    line = Annotation("value_line", 0, 0, value=12.5)
+    average = Annotation("value_line", 0, 0)
+    state = make_state(annotations=(line, average))
+    assert from_json(to_json(state)).annotations == (line, average)
+
+
+@pytest.mark.parametrize(
+    ("kind", "names"),
+    [("column", "none"), ("bar", "none"), ("waterfall", "none"), ("mekko", "labels")],
+)
+def test_version_5_state_gets_the_default_format(kind: str, names: str) -> None:
+    raw = valid_raw()
+    del raw["format"]
+    raw["kind"] = kind
+    raw["annotations"] = [ARROW]
+    raw["v"] = 5
+    restored = from_json(json.dumps(raw))
+    assert restored.version == SCHEMA_VERSION
+    assert restored.format == Format(series_names=names)  # pyright: ignore[reportArgumentType]
+    assert restored.annotations[0].value is None
+
+
+def test_version_5_state_survives_without_annotations() -> None:
+    raw = valid_raw()
+    del raw["format"]
+    raw["v"] = 5
+    assert from_json(json.dumps(raw)).format == Format()
 
 
 def test_version_4_state_starts_unsorted() -> None:
@@ -143,6 +188,20 @@ def test_integers_in_values_become_floats() -> None:
         lambda r: r.update(kind="waterfall", sort="descending"),
         lambda r: r.update(sort="sideways"),
         lambda r: r.pop("sort"),
+        lambda r: r.pop("format"),
+        lambda r: r.update(format=[]),
+        lambda r: r.update(format={**r["format"], "axis": "yes"}),
+        lambda r: r.update(format={**r["format"], "gridlines": 1}),
+        lambda r: r.update(format={**r["format"], "series_names": "pie"}),
+        lambda r: r.update(format={**r["format"], "decimals": 5}),
+        lambda r: r.update(format={**r["format"], "decimals": True}),
+        lambda r: r.update(format={**r["format"], "magnitude": 4}),
+        lambda r: r.update(format={**r["format"], "unit": 5}),
+        lambda r: r.update(format={**r["format"], "separator": ";"}),
+        lambda r: r.update(format={**r["format"], "language": "deu"}),
+        lambda r: r.update(annotations=[{**ARROW, "value": "1"}]),
+        lambda r: r.update(annotations=[{**BREAK, "value": 1.0}]),
+        lambda r: r.update(annotations=[{**ARROW, "kind": "value_line", "value": True}]),
         lambda r: r.pop("annotations"),
         lambda r: r.update(annotations={}),
         lambda r: r.update(annotations=[5]),
