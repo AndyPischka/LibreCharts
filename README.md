@@ -23,6 +23,8 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
    Marimekko chart; double-click a chart (or select it and choose *Edit chart data*) to change its
    data in Calc. The **LibreCharts** deck in the sidebar (icon with the difference arrow; *View →
    Sidebar*) offers the same commands, shows the selected chart and lists its annotations.
+   A Marimekko chart can be switched between percent (every column 100 % high) and units (column
+   heights follow their sums) from its context menu or the sidebar.
 4. To annotate a column, bar or waterfall chart, select it and choose *Add difference arrow*, *Add level difference*
    or *Add CAGR arrow* (menu, toolbar or the chart's context menu), then click the columns as the
    bar above the slide says; `Esc` cancels. *Add axis break* opens a dialog: automatic, or the lower

@@ -1,6 +1,6 @@
 # 0009. Percent Marimekko with an optional width row
 
-- Status: accepted
+- Status: accepted; the units variant followed in [0012](0012-chart-options-and-units-mekko.md)
 - Date: 2026-10-28
 
 ## Context

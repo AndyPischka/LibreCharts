@@ -6,6 +6,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- Marimekko charts can be switched between percent and units: *Show with units* / *Show as 100 %*
+  in the chart's context menu and the sidebar (one undo step). The units variant scales column
+  heights by their sums, shows absolute values, the column sum above and the width below each column.
 - A LibreCharts deck in the Impress sidebar: buttons to insert charts, edit the selected
   chart's data and add annotations, and the list of the chart's annotations with a remove button
   each. It follows the selection.
