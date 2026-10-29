@@ -25,9 +25,10 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 
 | Module | Role |
 |---|---|
-| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, `format`, line series `lines`/`secondary`, schema version) |
-| `format.py` | Chart format options: defaults for a new chart, `ChangeFormat` arguments, which chart kind supports what, number-format parsing and validation, locale rules (ADR 0014) |
-| `style.py` | Series palette and the black/white text colour for a fill, by WCAG relative luminance (ADR 0014) |
+| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, `format`, line series `lines`/`secondary`, series palette overrides `colors`, same-scale group `scale_group`, schema version) |
+| `format.py` | Chart format options: defaults for a new chart, `ChangeFormat` arguments, which chart kind supports what, number-format parsing and validation, locale rules, `apply` for "copy chart format" (ADR 0014) |
+| `style.py` | Colour schemes (palette, text, line, background, font), the built-ins, scheme JSON and the black/white text colour for a fill by WCAG relative luminance (ADRs 0014, 0016) |
+| `samescale.py` | Same-scale groups: orientation, joinability, the natural length per value unit of every layout and the smallest common one (ADR 0017) |
 | `value_line.py` | Value lines: the average of a chart, the level a line marks, validation of the dialog's value |
 | `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows, command arguments (ADR 0010) |
 | `axis_break.py` | The axis break: automatic or manual value range to remove from the scale, `fold`, validation of the dialog's input |
@@ -50,7 +51,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `mekko.py` | Mekko data sheet rules (optional "Width" row, negatives ignored) -> segments and column widths |
 | `layout/mekko.py` | Variable-width columns, 100 % high (percent) or scaled by their sums (units); value, total and width labels, series names |
 | `layout/common.py` | Number format, value axis and gridlines, series labels and legend, value-line lanes shared by the layouts |
-| `layout/chart.py` | `layout_chart(state, w, h)`: applies sorting and picks the layout by chart kind |
+| `layout/chart.py` | `layout_chart(state, w, h, length_per_unit=None)`: applies sorting, picks the layout by chart kind and passes the shared scale of a same-scale group (ADR 0017) |
 
 Data flow: Calc cells -> `ChartState` (stored in the document) -> `datasheet.parse` -> `ChartData`
 -> `layout_column` -> primitives -> `lo/` draws shapes. Stored state is part of the user's files,
@@ -64,8 +65,9 @@ so every released schema version must stay readable (`state_io.py`).
    Python (ADR 0001).
 3. **A chart is a group of native Draw shapes** (ADR 0002); the slide still looks right if the
    extension is not installed.
-4. **Layout is a pure function** of chart data and available size: same input, same geometry.
-   The kinds and order of primitives depend on the data only, never on the size (ADR 0007).
+4. **Layout is a pure function** of chart data, available size and the optional shared scale: same
+   input, same geometry. The kinds and order of primitives depend on the data only, never on the
+   size (ADR 0007).
 5. **The chart state in the document is the truth; the Calc data sheet is a view** (ADRs 0003, 0005).
    State lives in a document property anchored by the group name (ADR 0004, schema in ADR 0006).
 
@@ -73,13 +75,15 @@ so every released schema version must stay readable (`state_io.py`).
 
 | Module | Role |
 |---|---|
-| `store.py` | Chart id anchor (group name `librecharts:<id>`), state in a document custom property, `claim` forks renamed copies; no `uno` import, unit-tested with fakes |
-| `render.py` | Primitives -> shapes in a group; `rerender` replaces children in place, `sync_geometry` moves them for a resize (poly shapes through `PolyPolygon`) |
+| `store.py` | Chart id anchor (group name `librecharts:<id>`), state in a document custom property, the document's colour scheme property, `claim` forks renamed copies; no `uno` import, unit-tested with fakes |
+| `render.py` | Primitives -> shapes in a group with a `Look` (scheme plus series colours); `rerender` replaces children in place, `sync_geometry` moves them for a resize (poly shapes through `PolyPolygon`) |
+| `scheme.py` | Reads and writes the document's colour scheme; the configured default for new documents; builds the renderer's `Look` (ADR 0016) |
+| `samescale.py` | Collects a scale group's charts and sizes, redraws every affected chart in one lock (ADR 0017) |
 | `undo.py` | One explicit undo action per chart operation |
-| `chart.py` | Insert (with the UI locale for number formats), `redraw`, `add_annotation`: chart operations on a presentation |
+| `chart.py` | Insert (with the UI locale for number formats), `redraw`, `add_annotation`, `apply_changes`, `set_scheme`, `fit_to_size`: chart operations on a presentation |
 | `datasheet.py` | Calc window as a transient view: write stored cells, sync every committed edit back |
-| `commands.py` | Menu commands (selection handling, messages); called by `extension/entry.py` |
-| `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place (ADR 0007) |
+| `commands.py` | Menu commands (selection handling, messages, same scale, copy format, scheme files); called by `extension/entry.py` |
+| `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place, including their scale group (ADRs 0007, 0017) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
 | `axisdialog.py` | The axis break dialog (modal, built in code); asks, then adds or changes the break |
 | `formatdialog.py` | The number-format and value-line dialogs (modal, built in code); validation lives in `core/format.py` and `core/value_line.py` |

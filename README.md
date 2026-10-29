@@ -3,14 +3,16 @@
 think-cell-style charts for **LibreOffice Impress**, as an open-source extension.
 Charts are drawn as native shapes and fed from a Calc data sheet.
 
-> **Status: M1 to M7 done.** Stacked, clustered and 100 % **column and bar charts**,
+> **Status: M1 to M8 done.** Stacked, clustered and 100 % **column and bar charts**,
 > **line, stacked and 100 % area charts**, **waterfall** and **Marimekko charts** work: edit the
 > data in a Calc window (formulas included), resize charts freely, undo everything, save as ODP or
 > PPTX. Column charts can draw single series as **lines on a secondary axis**.
 > Column, bar and waterfall charts take **difference arrows, CAGR arrows and axis breaks**; column
 > and bar charts switch their variant and sort their categories. Charts can show a **value axis**
 > with gridlines, a **number format** per chart, **series labels or a legend** and **value lines**.
-> Next: consistency and styling, see [ROADMAP.md](ROADMAP.md).
+> A **colour scheme** styles the whole deck, single series can take another palette colour, charts
+> can share a **same scale** across slides, and a **chart format** can be copied to other charts.
+> Next: the 1.0 release, see [ROADMAP.md](ROADMAP.md).
 > LibreCharts is inspired by think-cell and empower charts but is not affiliated with them and
 > does not read or write their files.
 
@@ -35,6 +37,11 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
    The chart's context menu and the sidebar have a *Format* section: show or hide the value axis and
    gridlines, switch between series labels, a legend or no names, hide the point markers of a line,
    and set the number format. *Add value line...* draws a target or the average across the plot.
+   The context menu's *Series colour* submenu gives a series another palette colour. The sidebar's
+   *Document* section switches the document-wide colour scheme (*Default*, *Grey*, *High contrast*)
+   or loads/saves a scheme file. Select several charts and choose *Use the same scale* to compare
+   their values across slides; *Copy chart format* / *Apply chart format* transfer the look of one
+   chart to others.
 4. To annotate a column, bar, line or waterfall chart, select it and choose *Add difference arrow*,
    *Add level difference* or *Add CAGR arrow* (menu, toolbar or the chart's context menu), then
    click the columns as the bar above the slide says; `Esc` cancels. *Add axis break* opens a

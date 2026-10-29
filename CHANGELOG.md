@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- **Colour schemes** for the whole document: built-in *Default*, *Grey* and *High contrast* buttons
+  in the sidebar's *Document* section, plus *Load scheme...* and *Save scheme...* for a corporate
+  design file (JSON). The scheme sets the series palette, text, line and background colours and the
+  font of every chart; new presentations use the scheme configured in the extension
+  (`DefaultScheme`, default *Default*). A scheme change is one undo step and survives ODP/PPTX.
+- **Series colours**: the context menu's *Series colour* submenu gives one series another palette
+  colour or its default colour back (one undo step). The choice follows a later scheme change.
+- **Same scale**: select several charts and choose *Use the same scale* (LibreCharts menu, toolbar
+  or sidebar) so that one value has the same length in all of them, across slides. *Use own scale*
+  releases the group. The shared scale is the tightest chart's natural scale, is recomputed after a
+  resize or data edit, and treats an axis break as hidden while the chart is grouped.
+- **Copy chart format**: *Copy chart format* remembers the selected chart's format (axis,
+  gridlines, series names, number format and series colours) and *Apply chart format* applies it to
+  all selected charts in one undo step.
 - **Line charts** (*Insert line chart*): one line per series with a marker and a value label at every
   point and the series name right of the last point; an empty value splits the line. Markers can be
   hidden from the *Format* section.

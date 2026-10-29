@@ -32,6 +32,12 @@ Use these terms consistently in code, UI strings and docs.
 | **Marker** | The fixed-size dot on a line point; switched on or off per chart in the format (ADR 0015). |
 | **Sort order** | Display order of the categories of a column or bar chart by value: data sheet order, descending or ascending. It never changes the data sheet or the stored annotation indices (ADR 0013). |
 | **Chart format** | The per-chart look stored in `ChartState.format`: value axis, gridlines, series names, decimals, magnitude, unit, decimal separator and language (ADR 0014). |
+| **Colour scheme** | The document-wide look stored as `librecharts:scheme`: series palette, text, line and background colour, font name and size. Built-in Default, Grey and High contrast, or a JSON file (ADR 0016). |
+| **Palette** | The list of series colours in a colour scheme; a series index wraps around it. |
+| **Series colour** | A per-series palette index in `ChartState.colors` (`None`: the series' own palette entry), set through the context menu (ADR 0016). |
+| **Copy chart format** | Take one chart's `Format` and series colours and apply them to other selected charts, without touching their data (ADR 0016). |
+| **Same-scale group** | Charts tied together by `ChartState.scale_group` so that one value unit has the same length in all of them, across the document (ADR 0017). |
+| **Length per unit** | How many 1/100 mm one value unit gets; a same-scale group uses the smallest natural length of its charts (ADR 0017). |
 | **Value axis** | The scale beside (below, for bar charts) the plot with one tick label per tick. Optional; a 100 % chart uses 0..100, a percent Mekko has none (ADR 0014). |
 | **Gridlines** | One light line per axis tick across the plot, behind the segments; only drawn together with the value axis. |
 | **Series labels** | The series names right of the last column, each level with its segment (think-cell style). |

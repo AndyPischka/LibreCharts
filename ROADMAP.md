@@ -28,7 +28,7 @@ each milestone gets a plan in `docs/plans/` before work starts.
 | M5 | Chart options | Switching column and bar charts between stacked, clustered and 100 % after inserting; sorting categories by value (ADR 0013) | done |
 | M6 | Axes, labels and legend | Value axis and gridlines, number formats (decimals, thousands/millions, unit suffix), series labels or legend, value lines (target, average), label colour contrast (ADR 0014) | done |
 | M7 | Line, area and combination | Line charts, stacked and 100 % area charts, column + line combination with a secondary axis (ADR 0015) | done |
-| M8 | Consistency and styling | Same scale across charts, colour schemes and corporate design files, series colours, copying the format of one chart to others. Plan: [consistency-styling](docs/plans/consistency-styling.md) | open |
+| M8 | Consistency and styling | Same scale across charts, colour schemes and corporate design files, series colours, copying the format of one chart to others (ADRs 0016, 0017) | done |
 
 M5 extends the option mechanism of ADR 0012 (per-chart switches in the context menu and sidebar)
 that the later milestones use; M6 then gives every chart type the same axis and label options.
