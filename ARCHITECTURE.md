@@ -25,7 +25,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 
 | Module | Role |
 |---|---|
-| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, `format`, line series `lines`/`secondary`, series palette overrides `colors`, same-scale group `scale_group`, schema version) |
+| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, `format`, line series `lines`/`secondary`, series palette overrides `colors`, same-scale group `scale_group`, data `link`, schema version) |
 | `format.py` | Chart format options: defaults for a new chart, `ChangeFormat` arguments, which chart kind supports what, number-format parsing and validation, locale rules, `apply` for "copy chart format" (ADR 0014) |
 | `style.py` | Colour schemes (palette, text, line, background, font), the built-ins, scheme JSON and the black/white text colour for a fill by WCAG relative luminance (ADRs 0014, 0016) |
 | `samescale.py` | Same-scale groups: orientation, joinability, the natural length per value unit of every layout and the smallest common one (ADR 0017) |
@@ -36,6 +36,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `percent.py` | Shares and the "negatives count as empty" rule for 100 % charts and the Mekko |
 | `sorting.py` | Display permutation of the categories, reordered data and annotation indices (ADR 0013) |
 | `picking.py` | Pick mode: chart point -> column or line point, `PickSession` collects the picks for one annotation |
+| `links.py` | Data links: range addresses and names, relative and absolute source URLs, the fetched grid (names as shown, values as numbers), the read-only view, update reports (ADR 0020) |
 | `menu.py` | Contents of the chart's context menu as plain data |
 | `panel.py` | Contents of the sidebar panel (buttons, status, annotation list) as plain data |
 | `state_io.py` | `ChartState` <-> JSON with schema migrations; malformed input raises `StateError` |
@@ -89,8 +90,10 @@ so every released schema version must stay readable (`state_io.py`).
 | `samescale.py` | Collects a scale group's charts and sizes, redraws every affected chart in one lock (ADR 0017) |
 | `undo.py` | One explicit undo action per chart operation |
 | `chart.py` | Insert (with the UI locale for number formats), `redraw`, `add_annotation`, `apply_changes`, `set_scheme`, `fit_to_size`: chart operations on a presentation |
-| `datasheet.py` | Calc window as a transient view: write stored cells (Gantt date columns in a date format), sync every committed edit back |
-| `commands.py` | Menu commands (selection handling, messages, same scale, copy format, scheme files); called by `extension/entry.py` |
+| `datasheet.py` | Calc window as a transient view: write stored cells (Gantt date columns in a date format), sync every committed edit back; a protected read-only view for linked charts |
+| `links.py` | Data links: find, open (hidden, read-only, no macros) and read the sources of linked charts, each once per update; the info bar when sources changed (ADR 0020) |
+| `linkdialog.py` | The link dialog (modal, built in code): file, sheet, range or name; reads the range before it links |
+| `commands.py` | Menu commands (selection handling, messages, same scale, copy format, scheme files, data links); called by `extension/entry.py` |
 | `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place, including their scale group (ADRs 0007, 0017) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
 | `axisdialog.py` | The axis break dialog (modal, built in code); asks, then adds or changes the break |

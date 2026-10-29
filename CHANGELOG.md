@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- **Data links** (*Link data...* in the context menu, the sidebar or the LibreCharts menu): a chart
+  takes its data from a range or a named range of a Calc, Excel or CSV file. *Update link* reads
+  the selected charts' files again, *Update all links* every linked chart of the presentation, in
+  one undo step and opening each file once; a file you have open is read with its unsaved edits.
+  The chart keeps the fetched values, so it still shows (and saves as ODP or PPTX) without the
+  file. Files are opened hidden, read-only and without running macros. A deck moved together with
+  its workbooks keeps its links. The data sheet of a linked chart is read-only (*Show chart
+  data*); *Remove link* makes the chart's data editable again, *Open source* opens the file at the
+  linked range. When a presentation is opened and a linked file changed since its last update, an
+  info bar offers *Update now*; nothing is updated without asking.
 - **Gantt charts** (*Insert Gantt chart*): a project timeline with one row per activity. The data
   sheet has the columns Activity, Start, End, Remark and Phase; its date columns show dates, and
   formulas work. Two dates give a bar, one date a milestone (a diamond with its date), any text in

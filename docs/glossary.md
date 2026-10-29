@@ -38,6 +38,9 @@ Use these terms consistently in code, UI strings and docs.
 | **Heading row** | A Gantt row with a label but no dates: a bold label only. |
 | **Time scale** | The two-level date header of a Gantt chart, e.g. weeks under months; chosen from the date range alone (ADR 0019). |
 | **Date line** | A value line on a Gantt chart: a dashed vertical line at a date (a Calc serial number); the *today line* is one set to the day it was added. |
+| **Data link** | A chart's tie to a range of an external spreadsheet (`ChartState.link`); the chart stores the fetched values and is updated on demand (ADR 0020). |
+| **Source** | The spreadsheet file (`.ods`, `.xlsx`, `.xls`, `.csv`) a linked chart takes its data from. |
+| **Update (a link)** | Read the linked range of the source again and redraw the chart if its data changed; *Update all links* does it for every linked chart of the presentation in one undo step. |
 | **Combination chart** | A column chart with single series drawn as lines (`ChartState.lines`), optionally on a secondary axis (`secondary`); line series are left out of stacking, clustering and picking (ADR 0015). |
 | **Secondary axis** | The right-hand value axis of a combination chart, scaled to its line series only. It is always drawn, even when the chart's value axis is off (ADR 0015). |
 | **Marker** | The fixed-size dot on a line point; switched on or off per chart in the format (ADR 0015). |

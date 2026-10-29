@@ -3,7 +3,7 @@
 think-cell-style charts for **LibreOffice Impress**, as an open-source extension.
 Charts are drawn as native shapes and fed from a Calc data sheet.
 
-> **Status: M1 to M10 done.** Stacked, clustered and 100 % **column and bar charts**,
+> **Status: M1 to M11 done.** Stacked, clustered and 100 % **column and bar charts**,
 > **line, stacked and 100 % area charts**, **pie, doughnut, scatter, bubble and butterfly
 > charts**, **waterfall**, **Marimekko** and **Gantt charts** work: edit the
 > data in a Calc window (formulas included), resize charts freely, undo everything, save as ODP or
@@ -13,6 +13,7 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 > with gridlines, a **number format** per chart, **series labels or a legend** and **value lines**.
 > A **colour scheme** styles the whole deck, single series can take another palette colour, charts
 > can share a **same scale** across slides, and a **chart format** can be copied to other charts.
+> A chart can take its data from a **linked Calc or Excel file** and be updated in one step.
 > Next: the 1.0 release, see [ROADMAP.md](ROADMAP.md).
 > LibreCharts is inspired by think-cell and empower charts but is not affiliated with them and
 > does not read or write their files.
@@ -46,6 +47,10 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
    A Gantt chart's data sheet has one row per activity (Activity, Start, End, Remark, Phase): two
    dates give a bar, one date a milestone, text in *Phase* makes a phase over the rows below it.
    *Add date line...* and *Add today line* mark a date; the rows can be sorted by start date.
+   *Link data...* takes a chart's data from a range (or named range) of a Calc, Excel or CSV
+   file instead of its data sheet; *Update link* or *Update all links* reads the file again,
+   *Open source* opens it. A presentation whose linked files changed says so in an info bar
+   when it is opened. Keep deck and workbook in one folder to move them together.
 4. To annotate a column, bar, line or waterfall chart, select it and choose *Add difference arrow*,
    *Add level difference* or *Add CAGR arrow* (menu, toolbar or the chart's context menu), then
    click the columns as the bar above the slide says; `Esc` cancels. *Add axis break* opens a

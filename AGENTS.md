@@ -86,6 +86,11 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 - In `tests/lo`, trigger undo/redo with `helpers.uno_command(ctx, doc, ".uno:Undo")`, never
   `XUndoManager.undo()` (aborted LibreOffice; enforced by `tests/test_lo_conventions.py`).
 - Document-open jobs run for visible documents only; reload with `hidden=False` to test them.
+  They run before the view is complete: `appendInfobar` raises "Could not create Infobar" for
+  about a second. Add info bars asynchronously and retry (`lo/links.py`, `offer_update`).
+- Commands dispatched from `tests/lo` run on a UNO bridge thread, beside the resize watcher on the
+  main thread. Store chart states before redrawing (`lo/samescale.py`), or the watcher lays out a
+  chart from its stale state.
 - Layout output must have the same primitive structure for every size (resize re-layout, ADR 0007).
 - In `tests/lo`, read a shape's geometry in one pass (`child = group.getByIndex(i)`, read, move
   on). Proxies collected in a list and read later intermittently returned default geometry
