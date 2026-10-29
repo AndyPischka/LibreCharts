@@ -46,13 +46,24 @@ MIN_OUTSIDE_LABEL_WIDTH = 1800.0  # width and category labels of narrow columns 
 
 
 def layout_mekko(
-    data: MekkoData, width: float, height: float, percent: bool = True, fmt: Format | None = None
+    data: MekkoData,
+    width: float,
+    height: float,
+    percent: bool = True,
+    fmt: Format | None = None,
+    length_per_unit: float | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box, as percent or units Mekko.
+
+    ``length_per_unit`` (same-scale group, ADR 0017) draws one value unit as that many 1/100 mm in
+    the units variant, so a shorter column leaves empty space above it. A percent Mekko has a fixed
+    0..100 scale and ignores it.
 
     Raises ``ValueError`` if the box leaves no room for the plot.
     """
     fmt = fmt or Format(series_names="labels")
+    if percent:
+        length_per_unit = None
     categories, series = data.data.categories, data.data.series
     gaps = COLUMN_GAP * max(len(categories) - 1, 0)
     legend_band = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
@@ -78,14 +89,24 @@ def layout_mekko(
         out.extend(legend([s.name for s in series], width))
     if fmt.axis and not percent:
         if fmt.gridlines:
-            out.extend(_grid(axis, plot_bottom, plot_height, plot_left, plot_width))
-        out.extend(_axis(axis, plot_bottom, plot_height, plot_left, fmt))
+            out.extend(
+                _grid(axis, plot_bottom, plot_height, plot_left, plot_width, length_per_unit)
+            )
+        out.extend(_axis(axis, plot_bottom, plot_height, plot_left, fmt, length_per_unit))
     column_x = plot_left
     last_segments: list[tuple[float, float]] = []  # (top, bottom) per series in the last column
     for c, category in enumerate(categories):
         column_width = plot_width * data.widths[c] / total_width if total_width > 0 else 0.0
         column_sum = sums[c]
-        column_height = plot_height if percent else plot_height * column_sum / axis.maximum
+        column_height = (
+            plot_height
+            if percent
+            else (
+                column_sum * length_per_unit
+                if length_per_unit is not None
+                else plot_height * column_sum / axis.maximum
+            )
+        )
         level = plot_bottom
         last_segments = []
         for i, s in enumerate(series):
@@ -161,8 +182,11 @@ def _axis(
     plot_height: float,
     plot_left: float,
     fmt: Format,
+    length_per_unit: float | None = None,
 ) -> list[Primitive]:
     def y(value: float) -> float:
+        if length_per_unit is not None:
+            return plot_bottom - length_per_unit * value
         return plot_bottom - plot_height * value / axis.maximum
 
     out: list[Primitive] = [Line(plot_left, y(axis.maximum), plot_left, y(0), "axis")]
@@ -187,18 +211,51 @@ def _grid(
     plot_height: float,
     plot_left: float,
     plot_width: float,
+    length_per_unit: float | None = None,
 ) -> list[Primitive]:
+    def y(value: float) -> float:
+        if length_per_unit is not None:
+            return plot_bottom - length_per_unit * value
+        return plot_bottom - plot_height * value / axis.maximum
+
     return [
-        Line(
-            plot_left,
-            plot_bottom - plot_height * tick / axis.maximum,
-            plot_left + plot_width,
-            plot_bottom - plot_height * tick / axis.maximum,
-            "grid",
-        )
+        Line(plot_left, y(tick), plot_left + plot_width, y(tick), "grid")
         for tick in visible_ticks(axis)
         if tick != 0
     ]
+
+
+def natural_length_per_unit(
+    data: MekkoData,
+    width: float,
+    height: float,
+    percent: bool = True,
+    fmt: Format | None = None,
+) -> float | None:
+    """How many 1/100 mm one value unit gets when the chart is drawn alone at this size.
+
+    ``None`` for the percent variant (fixed 0..100 scale) or a box that is too small.
+    """
+    if percent:
+        return None
+    fmt = fmt or Format(series_names="labels")
+    categories, series = data.data.categories, data.data.series
+    gaps = COLUMN_GAP * max(len(categories) - 1, 0)
+    legend_band = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    top_band = TOP_BAND + legend_band
+    labels = fmt.series_names == "labels"
+    plot_left = AXIS_BAND if fmt.axis else 0.0
+    plot_width = width - plot_left - (RIGHT_BAND if labels else 0.0) - gaps
+    plot_height = height - top_band - CATEGORY_BAND - WIDTH_BAND
+    if plot_width <= 0 or plot_height <= 0 or not categories or not series:
+        return None
+    sums = [
+        sum(v for s in series if (v := s.values[c]) is not None) for c in range(len(categories))
+    ]
+    axis = nice_axis(0.0, max(sums))
+    if axis.maximum <= 0:
+        return None
+    return plot_height / axis.maximum
 
 
 def _spread(tops: list[float]) -> list[float]:

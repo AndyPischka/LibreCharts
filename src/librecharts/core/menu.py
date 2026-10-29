@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
 from librecharts.core import format as formats
-from librecharts.core import options
+from librecharts.core import options, style
 from librecharts.core.axis_break import describe
 from librecharts.core.datasheet import ChartData
 from librecharts.core.layout.common import format_value
@@ -33,8 +33,10 @@ class MenuItem:
 SEPARATOR = MenuItem()
 
 
-def chart_menu(state: ChartState, locale: str) -> MenuItem:
-    """The "LibreCharts" submenu for a chart with ``state``."""
+def chart_menu(
+    state: ChartState, locale: str, palette: tuple[int, ...] = style.PALETTE
+) -> MenuItem:
+    """The "LibreCharts" submenu for a chart with ``state`` and the document's scheme palette."""
     data = notes.measured(state)
     items = [MenuItem(text("menu_edit_data", locale), PROTOCOL + "EditData")]
     items += [
@@ -45,6 +47,9 @@ def chart_menu(state: ChartState, locale: str) -> MenuItem:
     line_menu = _line_menu(state, data, locale)
     if line_menu.children:
         items.append(line_menu)
+    colour_menu = _colour_menu(state, data, palette, locale)
+    if colour_menu.children:
+        items.append(colour_menu)
     sorts = tuple(
         _command(switch.title, switch.command, locale)
         for switch in options.sort_options(state)
@@ -55,6 +60,13 @@ def chart_menu(state: ChartState, locale: str) -> MenuItem:
     formats_menu = _format_menu(state, locale)
     if formats_menu.children:
         items.append(formats_menu)
+    items += [
+        SEPARATOR,
+        _command("menu_copy_format", "CopyChartFormat", locale),
+        _command("menu_apply_format", "ApplyChartFormat", locale),
+    ]
+    if state.scale_group is not None:
+        items.append(_command("menu_remove_same_scale", "RemoveSameScale", locale))
     if supports(state, "difference"):
         items += [
             SEPARATOR,
@@ -120,6 +132,36 @@ def _line_menu(state: ChartState, data: ChartData, locale: str) -> MenuItem:
                     )
                 )
     return MenuItem(text("menu_line_series", locale), children=tuple(entries))
+
+
+def _colour_menu(
+    state: ChartState, data: ChartData, palette: tuple[int, ...], locale: str
+) -> MenuItem:
+    """The "Series colour" submenu: per series, its default colour and every palette entry."""
+    if state.kind == "waterfall":  # its colours mean increase, decrease and total, not series
+        return MenuItem(text("menu_series_color", locale))
+    series_items: list[MenuItem] = []
+    for index, series in enumerate(data.series):
+        current = state.colors[index] if index < len(state.colors) else None
+        entries: list[MenuItem] = []
+        if current is not None:
+            entries.append(
+                MenuItem(
+                    text("menu_color_default", locale),
+                    PROTOCOL + options.color_query(index, None),
+                )
+            )
+        entries += [
+            MenuItem(
+                text("menu_color", locale, index=str(entry + 1)),
+                PROTOCOL + options.color_query(index, entry),
+            )
+            for entry in range(len(palette))
+            if entry != current
+        ]
+        if entries:
+            series_items.append(MenuItem(series.name, children=tuple(entries)))
+    return MenuItem(text("menu_series_color", locale), children=tuple(series_items))
 
 
 def _format_menu(state: ChartState, locale: str) -> MenuItem:

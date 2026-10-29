@@ -62,8 +62,12 @@ def layout_waterfall(
     height: float,
     annotations: tuple[Annotation, ...] = (),
     fmt: Format | None = None,
+    length_per_unit: float | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
+
+    ``length_per_unit`` (same-scale group, ADR 0017) draws one value unit as that many 1/100 mm and
+    anchors the scale at the plot bottom; an axis break is then ignored.
 
     Raises ``ValueError`` if the box leaves no room for the plot.
     """
@@ -83,13 +87,15 @@ def layout_waterfall(
     if not data.steps:
         return ()
 
-    cut = resolve_waterfall(annotations, data)
+    cut = None if length_per_unit is not None else resolve_waterfall(annotations, data)
     fold = cut.fold if cut else _same
     shown = [fold(level) for level in [0.0] + [v for s in data.steps for v in (s.start, s.end)]]
     axis = nice_axis(min(shown), max(shown))
     span = axis.maximum - axis.minimum
 
     def y(value: float) -> float:
+        if length_per_unit is not None:
+            return top_band + scale_height - (value - axis.minimum) * length_per_unit
         return top_band + (axis.maximum - fold(value)) / span * scale_height
 
     slot = plot_width / len(data.steps)
@@ -160,6 +166,35 @@ def layout_waterfall(
             )
         )
     return tuple(out)
+
+
+def natural_length_per_unit(
+    data: WaterfallData,
+    width: float,
+    height: float,
+    annotations: tuple[Annotation, ...] = (),
+    fmt: Format | None = None,
+) -> float | None:
+    """How many 1/100 mm one value unit gets when the chart is drawn alone at this size."""
+    fmt = fmt or Format()
+    measured = levels(data)
+    brackets, level_arrows = notes.arrows(annotations, measured, "waterfall")
+    lines = notes.value_lines(annotations, measured, "waterfall")
+    top_band = len(brackets) * LANE_HEIGHT + TOP_BAND
+    plot_left = AXIS_BAND if fmt.axis else 0.0
+    plot_width = width - plot_left - (len(level_arrows) + len(lines)) * LEVEL_LANE_WIDTH
+    plot_height = height - top_band - CATEGORY_BAND
+    scale_height = plot_height - (LABEL_HEIGHT if any(_label_below(s) for s in data.steps) else 0.0)
+    if plot_width <= 0 or scale_height <= 0 or not data.steps:
+        return None
+    cut = resolve_waterfall(annotations, data)
+    fold = cut.fold if cut else _same
+    shown = [fold(level) for level in [0.0] + [v for s in data.steps for v in (s.start, s.end)]]
+    axis = nice_axis(min(shown), max(shown))
+    span = axis.maximum - axis.minimum
+    if span <= 0:
+        return None
+    return scale_height / span
 
 
 def _axis(

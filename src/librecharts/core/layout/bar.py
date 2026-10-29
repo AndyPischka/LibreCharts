@@ -76,11 +76,16 @@ def layout_bar(
     annotations: tuple[Annotation, ...] = (),
     percent: bool = False,
     fmt: Format | None = None,
+    length_per_unit: float | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
     With ``percent`` the bars are 100 % long and the segments show their share; such a chart has
     no annotations (they stay stored but are neither drawn nor offered).
+
+    ``length_per_unit`` (same-scale group, ADR 0017) draws one value unit as that many 1/100 mm and
+    anchors the scale at the plot's left edge, so a shallower chart leaves empty space on the right.
+    Such a chart ignores an axis break.
 
     Raises ``ValueError`` if the box leaves no room for the plot.
     """
@@ -98,7 +103,7 @@ def layout_bar(
     if not data.categories or not data.series:
         return ()
 
-    cut = None if percent else resolve(annotations, data, grouping)
+    cut = None if percent or length_per_unit is not None else resolve(annotations, data, grouping)
     axis = (
         PERCENT_AXIS
         if percent
@@ -108,6 +113,8 @@ def layout_bar(
     fold = cut.fold if cut else _same
 
     def x(value: float) -> float:
+        if length_per_unit is not None:
+            return plot_left + (value - axis.minimum) * length_per_unit
         return plot_left + (fold(value) - axis.minimum) / span * plot_width
 
     slot = plot_height / len(data.categories)
@@ -198,6 +205,34 @@ def layout_bar(
             )
         )
     return tuple(out)
+
+
+def natural_length_per_unit(
+    data: ChartData,
+    grouping: Grouping,
+    width: float,
+    height: float,
+    annotations: tuple[Annotation, ...] = (),
+    percent: bool = False,
+    fmt: Format | None = None,
+) -> float | None:
+    """How many 1/100 mm one value unit gets when the chart is drawn alone at this size."""
+    if percent:
+        return None
+    fmt = fmt or Format()
+    brackets, levels = notes.arrows(annotations, data, "bar")
+    lines = notes.value_lines(annotations, data, "bar")
+    _, _, plot_width, plot_height = _plot(
+        data, width, height, len(brackets), len(levels) + len(lines), fmt, False
+    )
+    if plot_width <= 0 or plot_height <= 0 or not data.categories or not data.series:
+        return None
+    cut = resolve(annotations, data, grouping)
+    axis = shortened_axis(data, grouping, cut) if cut else value_axis(data, grouping)
+    span = axis.maximum - axis.minimum
+    if span <= 0:
+        return None
+    return plot_width / span
 
 
 def _same(value: float) -> float:

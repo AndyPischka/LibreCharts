@@ -10,6 +10,7 @@ from librecharts.core.options import (
     Switch,
     can_draw_lines,
     changed,
+    color_query,
     line_query,
     secondary_query,
     sort_options,
@@ -215,3 +216,31 @@ def test_other_kinds_reject_line_series(kind: str) -> None:
 def test_a_100_percent_chart_rejects_line_series() -> None:
     with pytest.raises(ValueError, match="100 %"):
         changed(changed(sample_state(), "percent=true"), "line=0&on=true")
+
+
+def test_a_series_colour_is_one_option_with_a_palette_entry_or_default() -> None:
+    assert color_query(1, 3) == "ChangeChart?color=1&palette=3"
+    assert color_query(1, None) == "ChangeChart?color=1&palette=default"
+
+
+def test_changing_a_series_colour_extends_the_override_list() -> None:
+    state = changed(sample_state(), "color=2&palette=4")
+    assert state.colors == (None, None, 4)
+    back = changed(state, "color=2&palette=default")
+    assert back.colors == (None, None, None)
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "color=9&palette=1",
+        "color=x&palette=1",
+        "color=0&palette=-1",
+        "color=0&palette=red",
+        "color=0",
+        "color=0&palette=1&on=true",
+    ],
+)
+def test_invalid_colour_queries_raise(query: str) -> None:
+    with pytest.raises(ValueError, match=r"[A-Za-z]"):
+        changed(sample_state(), query)

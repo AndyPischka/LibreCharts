@@ -16,23 +16,33 @@ from librecharts.core.primitives import Primitive
 from librecharts.core.waterfall import parse_waterfall
 
 
-def layout_chart(state: ChartState, width: float, height: float) -> tuple[Primitive, ...]:
+def layout_chart(
+    state: ChartState, width: float, height: float, length_per_unit: float | None = None
+) -> tuple[Primitive, ...]:
     """Primitives for ``state`` in a ``width`` x ``height`` box (1/100 mm).
 
     Sorting applies to the display only: the layout gets the categories in display order and the
-    annotations with their indices moved along, so the stored state never changes.
+    annotations with their indices moved along, so the stored state never changes. A chart in a
+    same-scale group passes the group's ``length_per_unit`` (ADR 0017).
 
     Raises ``ValueError`` if the box is too small for the chart.
     """
     if state.kind == "waterfall":
         return layout_waterfall(
-            parse_waterfall(state), width, height, state.annotations, state.format
+            parse_waterfall(state),
+            width,
+            height,
+            state.annotations,
+            state.format,
+            length_per_unit,
         )
     if state.kind == "mekko":
-        return layout_mekko(parse_mekko(state), width, height, state.percent, state.format)
+        return layout_mekko(
+            parse_mekko(state), width, height, state.percent, state.format, length_per_unit
+        )
     data, annotations = display_data(state)
     if state.kind == "line":
-        return layout_line(data, width, height, annotations, state.format)
+        return layout_line(data, width, height, annotations, state.format, length_per_unit)
     if state.kind == "area":
         return layout_area(
             data,
@@ -42,6 +52,7 @@ def layout_chart(state: ChartState, width: float, height: float) -> tuple[Primit
             annotations,
             percent=state.percent,
             fmt=state.format,
+            length_per_unit=length_per_unit,
         )
     if state.kind == "bar":
         return layout_bar(
@@ -52,6 +63,7 @@ def layout_chart(state: ChartState, width: float, height: float) -> tuple[Primit
             annotations,
             percent=state.percent,
             fmt=state.format,
+            length_per_unit=length_per_unit,
         )
     return layout_column(
         data,
@@ -63,6 +75,7 @@ def layout_chart(state: ChartState, width: float, height: float) -> tuple[Primit
         fmt=state.format,
         lines=state.lines,
         secondary=state.secondary,
+        length_per_unit=length_per_unit,
     )
 
 

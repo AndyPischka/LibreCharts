@@ -74,6 +74,11 @@ def _v6_to_v7(raw: _Raw) -> _Raw:
     }
 
 
+def _v7_to_v8(raw: _Raw) -> _Raw:
+    """Version 8 added per-series palette entries and same-scale groups."""
+    return {**raw, "colors": [], "scale_group": None}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -82,6 +87,7 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     4: _v4_to_v5,
     5: _v5_to_v6,
     6: _v6_to_v7,
+    7: _v7_to_v8,
 }
 
 
@@ -103,6 +109,8 @@ def to_json(state: ChartState) -> str:
             "format": _format_to_raw(state.format),
             "lines": list(state.lines),
             "secondary": list(state.secondary),
+            "colors": list(state.colors),
+            "scale_group": state.scale_group,
         },
         separators=(",", ":"),
         ensure_ascii=False,
@@ -129,6 +137,8 @@ def from_json(text: str) -> ChartState:
             format=_as_format(_get(raw, "format")),
             lines=_as_indices(_get(raw, "lines"), "line series"),
             secondary=_as_indices(_get(raw, "secondary"), "secondary series"),
+            colors=_as_colors(_get(raw, "colors")),
+            scale_group=_as_optional_text(_get(raw, "scale_group")),
             version=raw["v"],
         )
     except ValueError as exc:
@@ -281,3 +291,20 @@ def _as_indices(value: object, name: str) -> tuple[int, ...]:
     if not isinstance(value, list):
         raise StateError(f"{name} must be a list")
     return tuple(_as_index(item, name) for item in cast("list[object]", value))
+
+
+def _as_colors(value: object) -> tuple[int | None, ...]:
+    if not isinstance(value, list):
+        raise StateError("colors must be a list")
+    return tuple(
+        None if item is None else _as_index(item, "palette indices")
+        for item in cast("list[object]", value)
+    )
+
+
+def _as_optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise StateError("the scale group must be a string or null")
+    return value

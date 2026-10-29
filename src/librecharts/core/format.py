@@ -132,6 +132,14 @@ def settled(state: ChartState, current: Format, query: str) -> Format:
     return changed(current, query)
 
 
+def apply(target: ChartState, source: ChartState) -> ChartState:
+    """``target`` with the format and the series colours of ``source`` (copy chart format).
+
+    Only the look is copied, never the data, the chart kind or the annotations.
+    """
+    return replace(target, format=source.format, colors=source.colors)
+
+
 def format_options(state: ChartState) -> tuple[Switch, ...]:
     """The format switches the menu and the panel offer, the current values included."""
     switches: list[Switch] = []

@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 ChartKind = Literal["column", "bar", "waterfall", "mekko", "line", "area"]
 Grouping = Literal["stacked", "clustered"]
@@ -133,6 +133,11 @@ class ChartState:
     ``lines`` holds the series of a column chart that are drawn as lines instead of columns;
     ``secondary`` is the subset of them on the right-hand axis. Series indices are data sheet rows,
     like annotation indices: after a data edit a dangling index is ignored.
+
+    ``colors`` overrides the palette entry of single series (``None``: the default entry of that
+    series), indexed like annotation series indices: after a data edit a dangling index is ignored.
+    ``scale_group`` ties charts together so that they draw the same value with the same length
+    (ADR 0017); ``None`` is the chart's own scale.
     """
 
     kind: ChartKind
@@ -145,6 +150,8 @@ class ChartState:
     format: Format = Format()
     lines: tuple[int, ...] = ()
     secondary: tuple[int, ...] = ()
+    colors: tuple[int | None, ...] = ()
+    scale_group: str | None = None
     version: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -178,6 +185,10 @@ class ChartState:
             raise ValueError("series indices must not be negative")
         if not set(self.secondary) <= set(self.lines):
             raise ValueError("the series on the secondary axis must be lines")
+        if any(colour is not None and colour < 0 for colour in self.colors):
+            raise ValueError("palette indices must not be negative")
+        if self.scale_group is not None and not self.scale_group.strip():
+            raise ValueError("a scale group needs a non-empty id")
         if len(self.cells) != len(self.values):
             raise ValueError("cells and values must have the same number of rows")
         widths = {len(row) for row in (*self.cells, *self.values)}

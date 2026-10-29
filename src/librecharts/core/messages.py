@@ -472,6 +472,110 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "This chart's data is not in this presentation.",
         "de": "Die Daten dieses Diagramms sind nicht in dieser Präsentation.",
     },
+    "menu_same_scale": {
+        "en": "Same scale",
+        "de": "Gleicher Maßstab",
+    },
+    "menu_remove_same_scale": {
+        "en": "Own scale",
+        "de": "Eigener Maßstab",
+    },
+    "menu_series_color": {
+        "en": "Series colour",
+        "de": "Reihenfarbe",
+    },
+    "menu_color_default": {
+        "en": "Default colour",
+        "de": "Standardfarbe",
+    },
+    "menu_color": {
+        "en": "Colour {index}",
+        "de": "Farbe {index}",
+    },
+    "menu_copy_format": {
+        "en": "Copy chart format",
+        "de": "Diagrammformat kopieren",
+    },
+    "menu_apply_format": {
+        "en": "Apply chart format",
+        "de": "Diagrammformat übernehmen",
+    },
+    "menu_scheme": {
+        "en": "Colour scheme",
+        "de": "Farbschema",
+    },
+    "same_scale_need_two": {
+        "en": "Select at least two LibreCharts charts for a shared scale.",
+        "de": (
+            "Bitte mindestens zwei LibreCharts-Diagramme für einen gemeinsamen Maßstab auswählen."
+        ),
+    },
+    "same_scale_incompatible": {
+        "en": (
+            "These charts cannot share a scale: percent charts and charts with a different "
+            "orientation (columns and bars) cannot be combined."
+        ),
+        "de": (
+            "Diese Diagramme können keinen Maßstab teilen: Prozentdiagramme und Diagramme mit "
+            "anderer Ausrichtung (Säulen und Balken) lassen sich nicht kombinieren."
+        ),
+    },
+    "format_copied": {
+        "en": "Chart format copied. Select other charts and apply it.",
+        "de": "Diagrammformat kopiert. Andere Diagramme auswählen und übernehmen.",
+    },
+    "format_not_copied": {
+        "en": "Copy a chart format first.",
+        "de": "Bitte zuerst ein Diagrammformat kopieren.",
+    },
+    "panel_document": {
+        "en": "Document",
+        "de": "Dokument",
+    },
+    "panel_scheme": {
+        "en": "Colour scheme",
+        "de": "Farbschema",
+    },
+    "panel_scheme_load": {
+        "en": "Load scheme...",
+        "de": "Schema laden...",
+    },
+    "panel_scheme_save": {
+        "en": "Save scheme...",
+        "de": "Schema speichern...",
+    },
+    "scheme_title_load": {
+        "en": "Load colour scheme",
+        "de": "Farbschema laden",
+    },
+    "scheme_title_save": {
+        "en": "Save colour scheme",
+        "de": "Farbschema speichern",
+    },
+    "scheme_filter": {
+        "en": "LibreCharts colour scheme (*.json)",
+        "de": "LibreCharts-Farbschema (*.json)",
+    },
+    "scheme_unknown": {
+        "en": "Unknown colour scheme.",
+        "de": "Unbekanntes Farbschema.",
+    },
+    "scheme_load_failed": {
+        "en": "The colour scheme could not be loaded: {detail}",
+        "de": "Das Farbschema konnte nicht geladen werden: {detail}",
+    },
+    "scheme_save_failed": {
+        "en": "The colour scheme could not be saved: {detail}",
+        "de": "Das Farbschema konnte nicht gespeichert werden: {detail}",
+    },
+    "scheme_loaded": {
+        "en": "Colour scheme '{name}' loaded.",
+        "de": "Farbschema '{name}' geladen.",
+    },
+    "scheme_saved": {
+        "en": "Colour scheme saved to {path}.",
+        "de": "Farbschema gespeichert unter {path}.",
+    },
 }
 
 

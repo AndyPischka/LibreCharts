@@ -1,5 +1,6 @@
 from dataclasses import replace
 
+from librecharts.core import style
 from librecharts.core.datasheet import (
     sample_mekko_state,
     sample_state,
@@ -60,6 +61,31 @@ ADD = (
     MenuItem("Add axis break", PROTOCOL + "AxisBreak"),
     MenuItem("Add value line...", PROTOCOL + "ValueLine"),
 )
+FORMAT_TOOLS = (
+    SEPARATOR,
+    MenuItem("Copy chart format", PROTOCOL + "CopyChartFormat"),
+    MenuItem("Apply chart format", PROTOCOL + "ApplyChartFormat"),
+)
+
+
+def colour_menu(*names: str) -> MenuItem:
+    """The "Series colour" submenu with every palette entry per series."""
+    return MenuItem(
+        "Series colour",
+        children=tuple(
+            MenuItem(
+                name,
+                children=tuple(
+                    MenuItem(
+                        f"Colour {index}",
+                        PROTOCOL + f"ChangeChart?color={series}&palette={index - 1}",
+                    )
+                    for index in range(1, len(style.PALETTE) + 1)
+                ),
+            )
+            for series, name in enumerate(names)
+        ),
+    )
 
 
 def commands(item: MenuItem) -> list[str]:
@@ -68,7 +94,17 @@ def commands(item: MenuItem) -> list[str]:
 
 def test_column_chart_without_annotations_offers_data_variants_sort_format_and_arrows() -> None:
     assert chart_menu(sample_state(), "en-US") == MenuItem(
-        "LibreCharts", children=(EDIT, *VARIANTS, LINES, SORT, FORMAT, *ADD)
+        "LibreCharts",
+        children=(
+            EDIT,
+            *VARIANTS,
+            LINES,
+            colour_menu("Product A", "Product B", "Product C"),
+            SORT,
+            FORMAT,
+            *FORMAT_TOOLS,
+            *ADD,
+        ),
     )
 
 
@@ -76,8 +112,10 @@ def test_bar_charts_offer_the_same_variants_and_annotations() -> None:
     assert chart_menu(replace(sample_state(), kind="bar"), "en-US").children == (
         EDIT,
         *VARIANTS,
+        colour_menu("Product A", "Product B", "Product C"),
         SORT,
         FORMAT,
+        *FORMAT_TOOLS,
         *ADD,
     )
 
@@ -114,6 +152,7 @@ def test_waterfall_charts_have_no_variants_or_sort() -> None:
     assert chart_menu(sample_waterfall_state(), "en-US").children == (
         EDIT,
         FORMAT_WATERFALL,
+        *FORMAT_TOOLS,
         *ADD,
     )
 
@@ -126,15 +165,22 @@ def test_waterfall_annotations_are_titled_with_the_step_names() -> None:
 
 def test_a_percent_mekko_offers_the_data_the_switch_to_units_and_the_format() -> None:
     units = MenuItem("Show with units", PROTOCOL + "ChangeChart?percent=false")
-    assert chart_menu(sample_mekko_state(), "en-US").children == (EDIT, units, FORMAT_MEKKO)
+    assert chart_menu(sample_mekko_state(), "en-US").children == (
+        EDIT,
+        units,
+        colour_menu("Product A", "Product B", "Product C"),
+        FORMAT_MEKKO,
+        *FORMAT_TOOLS,
+    )
 
 
 def test_a_units_mekko_offers_the_switch_back_to_percent_and_an_axis() -> None:
     state = replace(sample_mekko_state(), percent=False)
     percent = MenuItem("Als 100 % anzeigen", PROTOCOL + "ChangeChart?percent=true")
     edit = MenuItem("Diagrammdaten bearbeiten", EDIT.command)
-    format_menu = chart_menu(state, "de-DE").children[-1]
-    assert chart_menu(state, "de-DE").children[:2] == (edit, percent)
+    items = chart_menu(state, "de-DE").children
+    format_menu = next(item for item in items if item.title == "Format")
+    assert items[:2] == (edit, percent)
     assert format_menu.title == "Format"
     assert "Wertachse anzeigen" in [child.title for child in format_menu.children]
 
@@ -183,7 +229,8 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
     annotation_items = [
         item
         for item in items
-        if item.children and item.title not in ("Series as lines", "Sort categories", "Format")
+        if item.children
+        and item.title not in ("Series as lines", "Series colour", "Sort categories", "Format")
     ]
     assert [item.title for item in annotation_items] == [
         "Difference 2023 → 2025",
@@ -218,7 +265,8 @@ def test_hidden_annotations_are_not_listed_but_keep_their_index() -> None:
     listed = [
         item
         for item in chart_menu(state, "en-US").children
-        if item.children and item.title not in ("Series as lines", "Sort categories", "Format")
+        if item.children
+        and item.title not in ("Series as lines", "Series colour", "Sort categories", "Format")
     ]
     assert len(listed) == 1
     assert commands(listed[0])[-1] == PROTOCOL + "RemoveAnnotation?index=1"

@@ -70,13 +70,17 @@ def layout_line(
     height: float,
     annotations: tuple[Annotation, ...] = (),
     fmt: Format | None = None,
+    length_per_unit: float | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
+
+    ``length_per_unit`` (same-scale group, ADR 0017) draws one value unit as that many 1/100 mm and
+    anchors the scale at the plot bottom; an axis break is then ignored.
 
     Raises ``ValueError`` if the box leaves no room for the plot.
     """
     fmt = fmt or Format()
-    plot = _plot(data, width, height, annotations, fmt)
+    plot = _plot(data, width, height, annotations, fmt, length_per_unit)
     if not data.categories or not data.series:
         return ()
 
@@ -86,6 +90,8 @@ def layout_line(
     scale_height = plot.plot_height - (LABEL_HEIGHT if has_negative else 0.0)
 
     def y(value: float) -> float:
+        if length_per_unit is not None:
+            return plot.top_band + scale_height - (value - axis.minimum) * length_per_unit
         return plot.top_band + (axis.maximum - value) / span * scale_height
 
     fold = cut.fold if cut else _same
@@ -250,6 +256,7 @@ def _plot(
     height: float,
     annotations: tuple[Annotation, ...],
     fmt: Format,
+    length_per_unit: float | None = None,
 ) -> _Plot:
     brackets, levels = notes.arrows(annotations, data, "line")
     value_lines = notes.value_lines(annotations, data, "line")
@@ -265,11 +272,30 @@ def _plot(
     scale_height = plot_height - (LABEL_HEIGHT if has_negative else 0.0)
     if plot_width <= 0 or scale_height <= 0:
         raise ValueError("chart area too small")
-    cut = resolve(annotations, data, "clustered")
+    cut = None if length_per_unit is not None else resolve(annotations, data, "clustered")
     axis = shortened_axis(data, "clustered", cut) if cut else value_axis(data, "clustered")
     return _Plot(
         plot_left, top_band, plot_width, plot_height, axis, cut, brackets, levels, value_lines
     )
+
+
+def natural_length_per_unit(
+    data: ChartData,
+    width: float,
+    height: float,
+    annotations: tuple[Annotation, ...] = (),
+    fmt: Format | None = None,
+) -> float | None:
+    """How many 1/100 mm one value unit gets when the chart is drawn alone at this size."""
+    try:
+        plot = _plot(data, width, height, annotations, fmt or Format())
+    except ValueError:
+        return None
+    span = plot.axis.maximum - plot.axis.minimum
+    if span <= 0 or not data.categories or not data.series:
+        return None
+    has_negative = any(v is not None and v < 0 for s in data.series for v in s.values)
+    return (plot.plot_height - (LABEL_HEIGHT if has_negative else 0.0)) / span
 
 
 def _anchor(

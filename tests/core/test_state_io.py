@@ -137,6 +137,40 @@ def test_round_trip_preserves_line_series_and_markers() -> None:
     assert restored.format == fmt
 
 
+def test_round_trip_preserves_series_colours_and_the_scale_group() -> None:
+    state = make_state(colors=(2, None, 0), scale_group="abc123")
+    restored = from_json(to_json(state))
+    assert restored.colors == (2, None, 0)
+    assert restored.scale_group == "abc123"
+
+
+def test_version_7_state_gets_no_colours_and_its_own_scale() -> None:
+    raw = valid_raw()
+    del raw["colors"]
+    del raw["scale_group"]
+    raw["v"] = 7
+    restored = from_json(json.dumps(raw))
+    assert restored.version == SCHEMA_VERSION
+    assert restored.colors == ()
+    assert restored.scale_group is None
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("colors", "red"),
+        ("colors", [True]),
+        ("colors", ["blue"]),
+        ("scale_group", 3),
+    ],
+)
+def test_invalid_colour_or_group_fields_are_rejected(field: str, value: object) -> None:
+    raw = valid_raw()
+    raw[field] = value
+    with pytest.raises(StateError):
+        from_json(json.dumps(raw))
+
+
 @pytest.mark.parametrize("kind", ["line", "area"])
 def test_line_and_area_charts_round_trip(kind: str) -> None:
     state = make_state(kind=kind)

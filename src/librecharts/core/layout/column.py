@@ -108,6 +108,7 @@ class _Geometry:
     line_series: tuple[int, ...]
     secondary_series: tuple[int, ...]
     columns: int
+    length_per_unit: float | None = None
 
 
 def layout_column(
@@ -120,6 +121,7 @@ def layout_column(
     fmt: Format | None = None,
     lines: tuple[int, ...] = (),
     secondary: tuple[int, ...] = (),
+    length_per_unit: float | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
@@ -129,10 +131,16 @@ def layout_column(
     ``lines`` draws those series as lines instead of columns; ``secondary`` puts a subset of them on
     a right-hand axis, which is drawn even without ``Format.axis``.
 
+    ``length_per_unit`` (same-scale group, ADR 0017) draws one value unit as that many 1/100 mm and
+    anchors the scale at the plot bottom, leaving empty space above the highest column. Such a chart
+    ignores an axis break.
+
     Raises ``ValueError`` if the box leaves no room for the plot.
     """
     fmt = fmt or Format()
-    geo = _geometry(data, grouping, width, height, annotations, percent, fmt, lines, secondary)
+    geo = _geometry(
+        data, grouping, width, height, annotations, percent, fmt, lines, secondary, length_per_unit
+    )
     if not data.categories or not data.series:
         return ()
 
@@ -143,6 +151,8 @@ def layout_column(
 
     def y(value: float) -> float:
         """The y of a value already on the (folded) axis scale."""
+        if geo.length_per_unit is not None:
+            return geo.top_band + geo.scale_height - (value - axis.minimum) * geo.length_per_unit
         return geo.top_band + (axis.maximum - value) / span * geo.scale_height
 
     def y_data(value: float) -> float:
@@ -284,6 +294,34 @@ def layout_column(
     return tuple(out)
 
 
+def natural_length_per_unit(
+    data: ChartData,
+    grouping: Grouping,
+    width: float,
+    height: float,
+    annotations: tuple[Annotation, ...] = (),
+    percent: bool = False,
+    fmt: Format | None = None,
+    lines: tuple[int, ...] = (),
+    secondary: tuple[int, ...] = (),
+) -> float | None:
+    """How many 1/100 mm one value unit gets when the chart is drawn alone at this size.
+
+    ``None`` for a percent chart (it has a fixed 0..100 scale) or a box that is too small.
+    """
+    if percent:
+        return None
+    fmt = fmt or Format()
+    try:
+        geo = _geometry(data, grouping, width, height, annotations, False, fmt, lines, secondary)
+    except ValueError:
+        return None
+    span = geo.axis.maximum - geo.axis.minimum
+    if span <= 0 or not data.categories or not data.series:
+        return None
+    return geo.scale_height / span
+
+
 def _same(value: float) -> float:
     return value
 
@@ -298,6 +336,7 @@ def _geometry(
     fmt: Format,
     lines: tuple[int, ...],
     secondary: tuple[int, ...],
+    length_per_unit: float | None = None,
 ) -> _Geometry:
     """Plot rectangle, axes and drawable annotations of a column chart."""
     line_set: frozenset[int] = (
@@ -332,7 +371,11 @@ def _geometry(
     if plot_width <= 0 or scale_height <= 0:
         raise ValueError("chart area too small")
 
-    cut = None if percent else resolve(annotations, columns_data, grouping)
+    cut = (
+        None
+        if percent or length_per_unit is not None
+        else resolve(annotations, columns_data, grouping)
+    )
     fold = cut.fold if cut else _same
     if percent:
         axis = PERCENT_AXIS
@@ -366,6 +409,7 @@ def _geometry(
         line_series=tuple(sorted(line_set)),
         secondary_series=tuple(sorted(secondary_set)),
         columns=len(data.series) - len(line_set),
+        length_per_unit=length_per_unit,
     )
 
 
@@ -749,6 +793,8 @@ def _line_point_y(geo: _Geometry, value: float, secondary: bool) -> float:
         )
     axis = geo.axis
     value = geo.cut.fold(value) if geo.cut else value
+    if geo.length_per_unit is not None:
+        return geo.top_band + geo.scale_height - (value - axis.minimum) * geo.length_per_unit
     return geo.top_band + (axis.maximum - value) / (axis.maximum - axis.minimum) * (
         geo.scale_height
     )

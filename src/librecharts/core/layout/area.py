@@ -52,11 +52,14 @@ def layout_area(
     annotations: tuple[Annotation, ...] = (),
     percent: bool = False,
     fmt: Format | None = None,
+    length_per_unit: float | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
     ``grouping`` has no meaning for areas and is accepted for a uniform layout signature. With
     ``percent`` the areas are shares of the column sums and no annotations are drawn.
+    ``length_per_unit`` (same-scale group, ADR 0017) draws one value unit as that many 1/100 mm and
+    anchors the scale at the plot bottom.
 
     Raises ``ValueError`` if the box leaves no room for the plot.
     """
@@ -78,6 +81,8 @@ def layout_area(
     span = axis.maximum - axis.minimum
 
     def y(value: float) -> float:
+        if length_per_unit is not None:
+            return top_band + plot_height - (value - axis.minimum) * length_per_unit
         return top_band + (axis.maximum - value) / span * plot_height
 
     slot = plot_width / len(data.categories)
@@ -159,6 +164,34 @@ def layout_area(
     if fmt.series_names == "labels":
         out.extend(_series_names(data, totals, y, plot_left + plot_width, percent))
     return tuple(out)
+
+
+def natural_length_per_unit(
+    data: ChartData,
+    width: float,
+    height: float,
+    annotations: tuple[Annotation, ...] = (),
+    percent: bool = False,
+    fmt: Format | None = None,
+) -> float | None:
+    """How many 1/100 mm one value unit gets when the chart is drawn alone at this size."""
+    if percent:
+        return None
+    fmt = fmt or Format()
+    value_lines = notes.value_lines(annotations, data, "area")
+    lanes_top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    top_band = lanes_top + TOP_BAND
+    plot_left = AXIS_BAND if fmt.axis else 0.0
+    series_band = SERIES_BAND if fmt.series_names == "labels" else 0.0
+    plot_width = width - plot_left - len(value_lines) * LEVEL_LANE_WIDTH - series_band
+    plot_height = height - top_band - CATEGORY_BAND
+    if plot_width <= 0 or plot_height <= 0 or not data.categories or not data.series:
+        return None
+    axis = _value_axis(data)
+    span = axis.maximum - axis.minimum
+    if span <= 0:
+        return None
+    return plot_height / span
 
 
 def _height(value: float | None, total: float, percent: bool) -> float:

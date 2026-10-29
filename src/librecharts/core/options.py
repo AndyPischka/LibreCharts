@@ -91,6 +91,12 @@ def secondary_query(index: int, on: bool) -> str:
     return f"ChangeChart?secondary={index}&on={'true' if on else 'false'}"
 
 
+def color_query(index: int, palette: int | None) -> str:
+    """The command that gives series ``index`` a palette entry, or its default colour."""
+    entry = "default" if palette is None else str(palette)
+    return f"ChangeChart?color={index}&palette={entry}"
+
+
 def changed(state: ChartState, query: str) -> ChartState:
     """``state`` with the option in ``query`` (``grouping=clustered``) applied.
 
@@ -105,6 +111,8 @@ def changed(state: ChartState, query: str) -> ChartState:
         key, value = "line", args["line"]
     elif set(args) == {"secondary", "on"}:
         key, value = "secondary", args["secondary"]
+    elif set(args) == {"color", "palette"}:
+        key, value = "color", args["color"]
     else:
         raise ValueError(f"expected exactly one chart option, got {sorted(args)}")
     if key == "grouping":
@@ -115,6 +123,10 @@ def changed(state: ChartState, query: str) -> ChartState:
         return _sort(state, value)
     if key in ("line", "secondary"):
         return _line(state, key, value, args.get("on", "true"))
+    if key == "color":
+        if "palette" not in args:
+            raise ValueError("a series colour needs a palette entry")
+        return _color(state, value, args["palette"])
     raise ValueError(f"unknown chart option: {key!r}")
 
 
@@ -185,3 +197,28 @@ def _line(state: ChartState, key: str, index_text: str, on_text: str) -> ChartSt
     else:
         secondary.discard(index)
     return replace(state, lines=tuple(sorted(lines)), secondary=tuple(sorted(secondary)))
+
+
+def _color(state: ChartState, index_text: str, palette_text: str) -> ChartState:
+    """Give one series another palette entry, or its default colour (``palette=default``)."""
+    try:
+        index = int(index_text)
+    except ValueError:
+        raise ValueError(f"series index must be a number, not {index_text!r}") from None
+    if not 0 <= index < len(state.values) - 1:
+        raise ValueError(f"no series with index {index}")
+    if palette_text == "default":
+        palette: int | None = None
+    else:
+        try:
+            palette = int(palette_text)
+        except ValueError:
+            raise ValueError(
+                f"palette must be a number or 'default', not {palette_text!r}"
+            ) from None
+        if palette < 0:
+            raise ValueError("palette entries must not be negative")
+    colors = list(state.colors)
+    colors.extend([None] * (index + 1 - len(colors)))
+    colors[index] = palette
+    return replace(state, colors=tuple(colors))

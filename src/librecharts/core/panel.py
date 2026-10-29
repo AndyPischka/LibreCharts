@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
 from librecharts.core import format as formats
-from librecharts.core import options
+from librecharts.core import options, style
 from librecharts.core.menu import PROTOCOL, annotation_title
 from librecharts.core.messages import text
 from librecharts.core.model import AnnotationKind, ChartState
@@ -38,7 +38,7 @@ class Row:
 @dataclass(frozen=True, slots=True)
 class Panel:
     """Sections top to bottom: insert, selected chart (``status``, edit, ``options``, ``format``),
-    annotations, list."""
+    annotations, list, document (``scheme``)."""
 
     insert: tuple[Button, ...]
     status: str
@@ -48,11 +48,22 @@ class Panel:
     add: tuple[Button, ...]
     rows: tuple[Row, ...]
     remove_all: Button
+    schemes: tuple[Button, ...] = ()
+    scheme_files: tuple[Button, ...] = ()
+    scheme: str = ""
 
 
-def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
+def content(
+    state: ChartState | None,
+    selected: bool,
+    locale: str,
+    scheme_name: str = style.DEFAULT.name,
+) -> Panel:
     """The panel for a selection: ``selected`` is whether a LibreCharts chart is selected and
-    ``state`` its stored state (``None`` if the chart is orphaned or nothing is selected)."""
+    ``state`` its stored state (``None`` if the chart is orphaned or nothing is selected).
+
+    ``scheme_name`` is the document's current colour scheme, for the Document section.
+    """
     usable = selected and state is not None
     rows: tuple[Row, ...] = ()
     if state is None:
@@ -132,6 +143,22 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
         ),
         rows=rows,
         remove_all=_button("menu_remove_all", "RemoveAnnotations", "", locale, bool(rows)),
+        schemes=tuple(
+            _button(
+                "",
+                f"SetScheme?name={scheme.name}",
+                "",
+                locale,
+                scheme.name != scheme_name,
+                title=scheme.name,
+            )
+            for scheme in style.BUILT_INS
+        ),
+        scheme_files=(
+            _button("panel_scheme_load", "LoadScheme", "", locale),
+            _button("panel_scheme_save", "SaveScheme", "", locale),
+        ),
+        scheme=scheme_name,
     )
 
 
@@ -159,6 +186,12 @@ def _format(state: ChartState | None, usable: bool, locale: str) -> tuple[Button
         for switch in formats.format_options(state)
         if not switch.current
     )
+    buttons += (
+        _button("menu_copy_format", "CopyChartFormat", "", locale),
+        _button("menu_apply_format", "ApplyChartFormat", "", locale),
+    )
+    if state.scale_group is not None:
+        buttons += (_button("menu_remove_same_scale", "RemoveSameScale", "", locale, usable),)
     return (*buttons, _button("menu_number_format", "NumberFormat", "", locale, usable))
 
 
@@ -166,5 +199,13 @@ def _can_annotate(state: ChartState | None, usable: bool, kind: AnnotationKind) 
     return usable and state is not None and supports(state, kind)
 
 
-def _button(key: str, command: str, icon: str, locale: str, enabled: bool = True) -> Button:
-    return Button(text(key, locale), PROTOCOL + command, icon, enabled)
+def _button(
+    key: str,
+    command: str,
+    icon: str,
+    locale: str,
+    enabled: bool = True,
+    *,
+    title: str | None = None,
+) -> Button:
+    return Button(text(key, locale) if title is None else title, PROTOCOL + command, icon, enabled)

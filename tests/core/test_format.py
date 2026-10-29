@@ -10,6 +10,7 @@ from librecharts.core.datasheet import (
 )
 from librecharts.core.format import (
     MAGNITUDE_SUFFIXES,
+    apply,
     changed,
     default_format,
     format_options,
@@ -210,3 +211,19 @@ def test_number_format_rejects_bad_fields(
 def test_the_unit_may_be_ten_characters() -> None:
     fmt = number_format(Format(), "0", "0", "x" * 10, ".")
     assert isinstance(fmt, Format)
+
+
+def test_copying_a_format_copies_the_look_but_not_the_data() -> None:
+    source = replace(
+        sample_state(),
+        format=Format(axis=True, decimals=2, unit="EUR"),
+        colors=(3, None, 1),
+    )
+    target = replace(sample_state(), annotations=())
+    copied = apply(target, source)
+    assert copied.format == source.format
+    assert copied.colors == (3, None, 1)
+    assert copied.cells == target.cells
+    assert copied.values == target.values
+    assert copied.kind == target.kind
+    assert copied.annotations == target.annotations
