@@ -290,6 +290,136 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="e1" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Insert Harvey ball</value>
+              <value xml:lang="de">Harvey Ball einfügen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:InsertElement?harvey=50</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="e2" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Insert check mark</value>
+              <value xml:lang="de">Häkchen einfügen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:InsertElement?check=tick</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="e3" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Next state of Harvey ball or check mark</value>
+              <value xml:lang="de">Nächster Zustand von Harvey Ball oder Häkchen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:SetElement?next=1</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="a1" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Same width</value>
+              <value xml:lang="de">Gleiche Breite</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:Arrange?op=width</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="a2" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Same height</value>
+              <value xml:lang="de">Gleiche Höhe</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:Arrange?op=height</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="a3" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Same size</value>
+              <value xml:lang="de">Gleiche Größe</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:Arrange?op=size</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="a4" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Arrange in grid, 2 columns</value>
+              <value xml:lang="de">Im Raster anordnen, 2 Spalten</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:Arrange?op=grid&amp;columns=2</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="a5" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Arrange in grid, 3 columns</value>
+              <value xml:lang="de">Im Raster anordnen, 3 Spalten</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:Arrange?op=grid&amp;columns=3</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="a6" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Arrange in grid, 4 columns</value>
+              <value xml:lang="de">Im Raster anordnen, 4 Spalten</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:Arrange?op=grid&amp;columns=4</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="a7" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Swap positions</value>
+              <value xml:lang="de">Positionen tauschen</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:Arrange?op=swap</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
         </node>
       </node>
     </node>

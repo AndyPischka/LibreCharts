@@ -19,6 +19,7 @@ from com.sun.star.awt import XCallback
 from com.sun.star.util import XModifyListener
 
 from librecharts.lo import chart, store
+from librecharts.lo import elements as slide_elements
 
 _watchers: dict[str, _Watcher] = {}
 
@@ -75,6 +76,9 @@ class _Watcher(unohelper.Base, XModifyListener, XCallback):
                     continue
                 chart.fit_to_size(self.doc, group)
                 self._sizes[group.Name] = (group.Size.Width, group.Size.Height)
+            # Elements share their names, so their sizes are not tracked; the check is idempotent.
+            for group, _ in slide_elements.all_elements(self.doc):
+                slide_elements.fit_to_size(group)
         except Exception:
             # Never let an exception escape into the event handling of LibreOffice.
             traceback.print_exc()

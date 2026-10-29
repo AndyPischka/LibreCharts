@@ -15,8 +15,9 @@ import uno
 import unohelper
 from com.sun.star.ui import XContextMenuInterceptor
 
-from librecharts.core.menu import MenuItem, chart_menu
+from librecharts.core.menu import MenuItem, chart_menu, element_menu
 from librecharts.lo import commands, scheme, store, ui
+from librecharts.lo import elements as lo_elements
 
 _IGNORED = uno.Enum("com.sun.star.ui.ContextMenuInterceptorAction", "IGNORED")
 _EXECUTE_MODIFIED = uno.Enum("com.sun.star.ui.ContextMenuInterceptorAction", "EXECUTE_MODIFIED")
@@ -42,7 +43,13 @@ class _Interceptor(unohelper.Base, XContextMenuInterceptor):
         try:
             group = commands.selected_chart(self.controller)
             if group is None:
-                return _IGNORED
+                selected = lo_elements.selected_elements(self.controller)
+                if not selected:
+                    return _IGNORED
+                container = event.ActionTriggerContainer
+                _insert(container, 0, element_menu(selected[0][1], ui.ui_locale(self.ctx)))
+                _insert(container, 1, MenuItem())
+                return _EXECUTE_MODIFIED
             doc = self.controller.getModel()
             chart_id = store.resolve(doc, group)
             state = store.read_state(doc, chart_id) if chart_id else None

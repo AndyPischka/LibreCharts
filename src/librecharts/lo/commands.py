@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs
 
-from librecharts.core import annotations, gantt, options, style
+from librecharts.core import annotations, elements, gantt, options, style
+from librecharts.core import arrange as core_arrange
 from librecharts.core import format as formats
 from librecharts.core import links as core_links
 from librecharts.core import samescale as core_samescale
@@ -17,6 +18,7 @@ from librecharts.core.messages import text
 from librecharts.core.model import Annotation, AnnotationKind, ChartState
 from librecharts.core.picking import PickSession, supports
 from librecharts.core.state_io import StateError
+from librecharts.lo import arrange as lo_arrange
 from librecharts.lo import (
     axisdialog,
     chart,
@@ -31,6 +33,7 @@ from librecharts.lo import (
     store,
     ui,
 )
+from librecharts.lo import elements as lo_elements
 from librecharts.lo.datasheet import OrphanedChartError, open_datasheet
 
 # The format copied by "Copy chart format", shared by the menu and the sidebar in this process.
@@ -85,6 +88,82 @@ def _insert(ctx: Any, frame: Any, insert: Any) -> None:
         doc
     )  # normally done by the document-open job; covers a freshly installed extension
     controller.select(group)
+
+
+def insert_element(ctx: Any, frame: Any, query: str) -> None:
+    """Insert a Harvey ball or check mark (``harvey=50`` or ``check=tick``); one undo step."""
+    try:
+        element = elements.parse_query(query)
+    except ValueError:
+        ui.show_info(ctx, frame, text("element_unsupported", ui.ui_locale(ctx)))
+        return
+    controller = frame.getController()
+    doc = controller.getModel()
+    resize.watch(doc)
+    controller.select(lo_elements.insert(doc, controller.getCurrentPage(), element))
+
+
+def set_element(ctx: Any, frame: Any, query: str) -> None:
+    """Change the state of the selected elements (``harvey=75``, ``check=cross`` or ``next=1``,
+    which cycles each one on); one undo step."""
+    controller = frame.getController()
+    locale = ui.ui_locale(ctx)
+    selected = lo_elements.selected_elements(controller)
+    if not selected:
+        ui.show_info(ctx, frame, text("select_element", locale))
+        return
+    try:
+        changes = {
+            group: (
+                elements.following(element)
+                if query.startswith("next")
+                else elements.parse_query(query)
+            )
+            for group, element in selected
+        }
+    except ValueError:
+        ui.show_info(ctx, frame, text("element_unsupported", locale))
+        return
+    # A ball cannot become a tick: a state of the other kind leaves that element as it is.
+    changes = {g: e for g, e in changes.items() if e.kind == lo_elements.element_of(g).kind}  # type: ignore[union-attr]
+    if changes:
+        lo_elements.change(controller.getModel(), changes)
+
+
+def arrange(ctx: Any, frame: Any, query: str) -> None:
+    """Arrange the selected shapes: ``op=width|height|size|swap`` or ``op=grid&columns=3&gap=500``
+    (``gap`` in 1/100 mm); one undo step."""
+    controller = frame.getController()
+    locale = ui.ui_locale(ctx)
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    shapes = lo_arrange.selected_shapes(controller)
+    if len(shapes) < 2:
+        ui.show_info(ctx, frame, text("arrange_need_two", locale))
+        return
+    rects = [lo_arrange.rect_of(shape) for shape in shapes]
+    op = args.get("op", "")
+    try:
+        if op == "width":
+            wanted = core_arrange.same_width(rects)
+        elif op == "height":
+            wanted = core_arrange.same_height(rects)
+        elif op == "size":
+            wanted = core_arrange.same_size(rects)
+        elif op == "grid":
+            wanted = core_arrange.grid(
+                rects, int(args.get("columns", "")), int(args.get("gap", lo_arrange.DEFAULT_GAP))
+            )
+        elif op == "swap":
+            if len(shapes) != 2:
+                ui.show_info(ctx, frame, text("arrange_need_exactly_two", locale))
+                return
+            wanted = list(core_arrange.swap(rects[0], rects[1]))
+        else:
+            raise ValueError(op)
+    except ValueError:
+        ui.show_info(ctx, frame, text("arrange_unsupported", locale))
+        return
+    lo_arrange.apply(controller.getModel(), shapes, wanted)
 
 
 def edit_data(ctx: Any, frame: Any) -> None:

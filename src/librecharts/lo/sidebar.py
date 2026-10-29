@@ -22,7 +22,8 @@ from com.sun.star.view import XSelectionChangeListener
 from librecharts.core.messages import text
 from librecharts.core.panel import Button, Panel, content
 from librecharts.core.state_io import StateError
-from librecharts.lo import commands, scheme, store, ui
+from librecharts.lo import arrange, commands, scheme, store, ui
+from librecharts.lo import elements as lo_elements
 
 _TOOLPANEL = 7  # com.sun.star.ui.UIElementType.TOOLPANEL
 _POSSIZE = 15  # com.sun.star.awt.PosSize.POSSIZE
@@ -120,7 +121,14 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
                 state = store.read_state(doc, chart_id) if chart_id else None
             except StateError:
                 state = None
-        return content(state, group is not None, self.locale, scheme.load(doc).name)
+        return content(
+            state,
+            group is not None,
+            self.locale,
+            scheme.load(doc).name,
+            bool(lo_elements.selected_elements(controller)),
+            len(arrange.selected_shapes(controller)),
+        )
 
     def draw(self) -> None:
         panel = self.shown
@@ -146,6 +154,10 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
             layout.heading("panel_format")
             for button in panel.format:
                 layout.button(button)
+        layout.heading("panel_elements")
+        layout.flow(panel.elements)
+        layout.heading("panel_arrange")
+        layout.flow(panel.arrange)
         layout.heading("panel_annotations")
         layout.icons(panel.add)
         layout.heading("panel_list")

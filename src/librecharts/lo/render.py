@@ -18,6 +18,8 @@ from librecharts.core import style
 from librecharts.core.primitives import (
     BACKGROUND,
     MARKER_SIZE,
+    NEGATIVE,
+    POSITIVE,
     SHADE,
     Bubble,
     Line,
@@ -36,6 +38,9 @@ ARROW_NAME = "Arrow"  # a line end from LibreOffice's standard arrow list
 ARROW_WIDTH = 250  # 1/100 mm
 DASH_LENGTH = 100  # 1/100 mm, dashes and gaps of helper lines
 BUBBLE_TRANSPARENCY = 30  # percent; overlapping bubbles stay visible
+ELEMENT_LINE_WIDTH = 60  # 1/100 mm, tick and cross of check marks
+TICK_COLOR = 0x2E7D32
+CROSS_COLOR = 0xC62828
 BOLD = 150.0  # com.sun.star.awt.FontWeight.BOLD
 
 _FILL_NONE = uno.Enum("com.sun.star.drawing.FillStyle", "NONE")
@@ -251,9 +256,17 @@ def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
     p = spec.primitive
     if spec.points is not None:  # polyline or polygon: its points define the geometry
         shape.PolyPolygon = spec.points
-        if isinstance(p, Polygon):
+        if isinstance(p, Polygon) and p.outline:
+            shape.FillStyle, shape.FillColor = _FILL_SOLID, look.scheme.background
+            shape.LineStyle, shape.LineColor = _LINE_SOLID, look.color(p.series)
+            shape.LineWidth = LINE_WIDTH
+        elif isinstance(p, Polygon):
             shape.FillStyle, shape.FillColor = _FILL_SOLID, look.color(p.series)
             shape.LineStyle = _LINE_NONE
+        elif isinstance(p, Polyline) and p.series in (POSITIVE, NEGATIVE):
+            shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_SOLID
+            shape.LineColor = TICK_COLOR if p.series == POSITIVE else CROSS_COLOR
+            shape.LineWidth = ELEMENT_LINE_WIDTH
         elif isinstance(p, Polyline):
             shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_SOLID
             shape.LineColor, shape.LineWidth = look.color(p.series), LINE_WIDTH
