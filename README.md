@@ -3,12 +3,13 @@
 think-cell-style charts for **LibreOffice Impress**, as an open-source extension.
 Charts are drawn as native shapes and fed from a Calc data sheet.
 
-> **Status: M1 to M5 done.** Stacked, clustered and 100 % **column and bar charts**,
+> **Status: M1 to M6 done.** Stacked, clustered and 100 % **column and bar charts**,
 > **waterfall** and **Marimekko charts** work: edit the data in
 > a Calc window (formulas included), resize charts freely, undo everything, save as ODP or PPTX.
 > Column, bar and waterfall charts take **difference arrows, CAGR arrows and axis breaks**; column
-> and bar charts switch their variant and sort their categories. Next: axes, labels and a legend,
-> see [ROADMAP.md](ROADMAP.md).
+> and bar charts switch their variant and sort their categories. Charts can show a **value axis**
+> with gridlines, a **number format** per chart, **series labels or a legend** and **value lines**.
+> Next: line, area and combination charts, see [ROADMAP.md](ROADMAP.md).
 > LibreCharts is inspired by think-cell and empower charts but is not affiliated with them and
 > does not read or write their files.
 
@@ -27,6 +28,9 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
    A Marimekko chart can be switched between percent (every column 100 % high) and units (column
    heights follow their sums) from its context menu or the sidebar. Column and bar charts switch
    between stacked, clustered and 100 % the same way, and sort their categories by value.
+   The chart's context menu and the sidebar have a *Format* section: show or hide the value axis and
+   gridlines, switch between series labels, a legend or no names, and set the number format.
+   *Add value line...* draws a target or the average across the plot.
 4. To annotate a column, bar or waterfall chart, select it and choose *Add difference arrow*, *Add level difference*
    or *Add CAGR arrow* (menu, toolbar or the chart's context menu), then click the columns as the
    bar above the slide says; `Esc` cancels. *Add axis break* opens a dialog: automatic, or the lower

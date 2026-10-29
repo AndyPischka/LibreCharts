@@ -25,7 +25,10 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 
 | Module | Role |
 |---|---|
-| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, schema version) |
+| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, `format`, schema version) |
+| `format.py` | Chart format options: defaults for a new chart, `ChangeFormat` arguments, which chart kind supports what, number-format parsing and validation, locale rules (ADR 0014) |
+| `style.py` | Series palette and the black/white text colour for a fill, by WCAG relative luminance (ADR 0014) |
+| `value_line.py` | Value lines: the average of a chart, the level a line marks, validation of the dialog's value |
 | `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows, command arguments (ADR 0010) |
 | `axis_break.py` | The axis break: automatic or manual value range to remove from the scale, `fold`, validation of the dialog's input |
 | `options.py` | Chart options the user can switch after inserting (variants, 100 %, sorting, Mekko percent/units): the switches offered for a chart and the `ChangeChart` command's arguments (ADRs 0012, 0013) |
@@ -44,7 +47,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `layout/waterfall.py` | Steps -> floating bars, totals, connectors and signed labels |
 | `mekko.py` | Mekko data sheet rules (optional "Width" row, negatives ignored) -> segments and column widths |
 | `layout/mekko.py` | Variable-width columns, 100 % high (percent) or scaled by their sums (units); value, total and width labels, series names |
-| `layout/common.py` | Value axis and number format shared by both layouts |
+| `layout/common.py` | Number format, value axis and gridlines, series labels and legend, value-line lanes shared by the layouts |
 | `layout/chart.py` | `layout_chart(state, w, h)`: applies sorting and picks the layout by chart kind |
 
 Data flow: Calc cells -> `ChartState` (stored in the document) -> `datasheet.parse` -> `ChartData`
@@ -71,12 +74,13 @@ so every released schema version must stay readable (`state_io.py`).
 | `store.py` | Chart id anchor (group name `librecharts:<id>`), state in a document custom property, `claim` forks renamed copies; no `uno` import, unit-tested with fakes |
 | `render.py` | Primitives -> shapes in a group; `rerender` replaces children in place |
 | `undo.py` | One explicit undo action per chart operation |
-| `chart.py` | Insert, `redraw`, `add_annotation`: chart operations on a presentation |
+| `chart.py` | Insert (with the UI locale for number formats), `redraw`, `add_annotation`: chart operations on a presentation |
 | `datasheet.py` | Calc window as a transient view: write stored cells, sync every committed edit back |
 | `commands.py` | Menu commands (selection handling, messages); called by `extension/entry.py` |
 | `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place (ADR 0007) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
 | `axisdialog.py` | The axis break dialog (modal, built in code); asks, then adds or changes the break |
+| `formatdialog.py` | The number-format and value-line dialogs (modal, built in code); validation lives in `core/format.py` and `core/value_line.py` |
 | `pick.py` | Pick mode: enters the chart group, turns selected shapes into an annotation (ADR 0010) |
 | `sidebar.py` | The LibreCharts sidebar panel: window with buttons, follows selection and document (ADR 0011) |
 | `contextmenu.py` | One interceptor per presentation: the LibreCharts submenu in a chart's context menu |

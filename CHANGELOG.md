@@ -6,6 +6,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- Charts can show a **value axis** with tick labels and optional **gridlines**; a 100 % chart uses
+  a fixed 0..100 scale, a percent Mekko has no value axis.
+- **Number formats** per chart: decimals, thousands/millions/billions with a localized suffix, and
+  a unit suffix. New charts take the decimal separator and the magnitude language of the UI locale;
+  an existing chart keeps them wherever it is opened.
+- **Series labels** right of the last column (think-cell style) or a **legend** above the plot, so
+  column, bar and Mekko charts can be read without guessing colours. New charts show labels when
+  stacked, a legend when clustered, and nothing on a waterfall.
+- **Value lines**: *Add value line...* draws a target value or the average of the column sums across
+  the plot; a chart can have several, and existing ones are edited from the annotation list.
+- Value labels on dark segments are white, for contrast (WCAG relative luminance).
+- The context menu and the sidebar have a *Format* section with the axis, gridline and series-name
+  switches and the number-format dialog. Every switch is one undo step.
 - Column and bar charts switch between stacked, clustered and 100 % after inserting, from the
   context menu or the sidebar (one undo step each). A 100 % chart shows shares inside the
   segments and the absolute column sum outside.
