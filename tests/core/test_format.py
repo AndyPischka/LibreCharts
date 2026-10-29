@@ -2,7 +2,12 @@ from dataclasses import replace
 
 import pytest
 
-from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
+from librecharts.core.datasheet import (
+    sample_mekko_state,
+    sample_state,
+    sample_waterfall_state,
+    state_from_table,
+)
 from librecharts.core.format import (
     MAGNITUDE_SUFFIXES,
     changed,
@@ -50,6 +55,8 @@ def test_magnitude_suffixes_are_localized() -> None:
         ("bar", "clustered", "legend"),
         ("mekko", "stacked", "labels"),
         ("waterfall", "stacked", "none"),
+        ("line", "stacked", "labels"),
+        ("area", "stacked", "labels"),
     ],
 )
 def test_new_charts_get_think_cell_series_names(kind: str, grouping: str, names: str) -> None:
@@ -72,14 +79,28 @@ def test_which_chart_kinds_have_which_format_option() -> None:
     waterfall = sample_waterfall_state()
     percent_mekko = sample_mekko_state()
     units_mekko = replace(sample_mekko_state(), percent=False)
+    line = state_from_table("line", "stacked", [[None, "2024"], ["Sales", 10]])
+    area = state_from_table("area", "stacked", [[None, "2024"], ["Sales", 10]])
     for option in ("axis", "gridlines", "series_names"):
         assert supports(column, option)
         assert supports(units_mekko, option)
+        assert supports(line, option)
+        assert supports(area, option)
     assert supports(waterfall, "axis")
     assert not supports(waterfall, "series_names")
     assert not supports(percent_mekko, "axis")
     assert supports(percent_mekko, "series_names")
     assert not supports(column, "decimals")
+
+
+def test_markers_are_offered_for_lines_and_line_series_only() -> None:
+    column = sample_state()
+    line = state_from_table("line", "stacked", [[None, "2024"], ["Sales", 10]])
+    area = state_from_table("area", "stacked", [[None, "2024"], ["Sales", 10]])
+    assert supports(line, "markers")
+    assert supports(replace(column, lines=(0,)), "markers")
+    assert not supports(column, "markers")
+    assert not supports(area, "markers")
 
 
 def test_changed_applies_one_boolean_option() -> None:
@@ -92,6 +113,16 @@ def test_changed_applies_one_boolean_option() -> None:
 def test_changed_applies_the_series_names() -> None:
     assert changed(Format(), "series_names=legend").series_names == "legend"
     assert changed(Format(), "series_names=none").series_names == "none"
+
+
+def test_changed_switches_markers() -> None:
+    assert changed(Format(), "markers=false").markers is False
+    assert changed(Format(markers=False), "markers=true").markers is True
+
+
+def test_the_format_rejects_a_non_boolean_markers_flag() -> None:
+    with pytest.raises(ValueError, match="markers"):
+        Format(markers="no")  # pyright: ignore[reportArgumentType]
 
 
 @pytest.mark.parametrize(
@@ -126,6 +157,18 @@ def test_format_options_offer_the_axis_and_series_names() -> None:
         ("menu_series_none", "ChangeFormat?series_names=none"),
         ("menu_series_labels", "ChangeFormat?series_names=labels"),
         ("menu_series_legend", "ChangeFormat?series_names=legend"),
+    ]
+
+
+def test_format_options_offer_the_marker_toggle_for_line_series() -> None:
+    state = state_from_table("line", "stacked", [[None, "2024"], ["Sales", 10]])
+    switches = format_options(state)
+    assert [(s.title, s.command) for s in switches[-1:]] == [
+        ("menu_markers_hide", "ChangeFormat?markers=false"),
+    ]
+    hidden = format_options(replace(state, format=Format(markers=False)))
+    assert ("menu_markers_show", "ChangeFormat?markers=true") in [
+        (s.title, s.command) for s in hidden
     ]
 
 

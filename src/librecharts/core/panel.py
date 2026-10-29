@@ -59,9 +59,13 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
         status = text("status_orphaned" if selected else "status_none", locale)
     else:
         data = notes.measured(state)
-        kind = "mekko_units" if state.kind == "mekko" and not state.percent else state.kind
-        if kind in ("column", "bar") and state.percent:
+        kind = state.kind
+        if kind == "mekko" and not state.percent:
+            kind = "mekko_units"
+        elif kind in ("column", "bar", "area") and state.percent:
             kind += "_percent"
+        elif kind == "column" and state.lines:
+            kind = "column_lines"
         status = text(
             "status_chart",
             locale,
@@ -80,6 +84,8 @@ def content(state: ChartState | None, selected: bool, locale: str) -> Panel:
         insert=(
             _button("insert_column", "InsertColumnChart", "insert", locale),
             _button("insert_bar", "InsertBarChart", "insert_bar", locale),
+            _button("insert_line", "InsertLineChart", "insert_line", locale),
+            _button("insert_area", "InsertAreaChart", "insert_area", locale),
             _button("insert_waterfall", "InsertWaterfallChart", "insert_waterfall", locale),
             _button("insert_mekko", "InsertMekkoChart", "insert_mekko", locale),
         ),

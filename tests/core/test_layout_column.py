@@ -18,7 +18,15 @@ from librecharts.core.layout.column import (
     layout_column,
 )
 from librecharts.core.model import Annotation, Grouping
-from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
+from librecharts.core.primitives import (
+    BACKGROUND,
+    Line,
+    Marker,
+    Polyline,
+    Primitive,
+    Rect,
+    Text,
+)
 
 
 def data(*series: tuple[str, tuple[float | None, ...]], categories: tuple[str, ...]) -> ChartData:
@@ -241,6 +249,7 @@ def test_arrow_geometry_stays_inside_the_box() -> None:
             assert p.y >= 0
             assert p.y + p.height <= 12000 + 1e-9
         else:
+            assert isinstance(p, Line)
             assert min(p.y1, p.y2) >= 0
             assert max(p.y1, p.y2) <= 12000
 
@@ -454,3 +463,138 @@ def test_100_percent_structure_does_not_depend_on_size() -> None:
         ]
 
     assert shape(3000, 4000) == shape(30000, 20000) == shape(9000, 2500)
+
+
+def test_a_combination_chart_draws_one_series_as_a_line() -> None:
+    # columns: A only, axis 0..20 over 8200; line B at the slot centres
+    chart = data(("A", (10.0, 20.0)), ("B", (5.0, 8.0)), categories=("X", "Y"))
+    primitives = layout_column(chart, "clustered", 2000, 10000, lines=(1,))
+    assert primitives == (
+        Line(0, 9000, 2000, 9000, "baseline"),
+        Rect(150, 4900, 700, 4100, 0),
+        Text(150, 4300, 700, LABEL_HEIGHT, "10", "center", "value"),
+        Text(0, 9000, 1000, CATEGORY_BAND, "X", "center", "category"),
+        Rect(1150, 800, 700, 8200, 0),
+        Text(1150, 200, 700, LABEL_HEIGHT, "20", "center", "value"),
+        Text(1000, 9000, 1000, CATEGORY_BAND, "Y", "center", "category"),
+        Polyline(((500, 6950), (1500, 5720)), 1),
+        Marker(500, 6950, 1),
+        Marker(1500, 5720, 1),
+        Text(0, 6250, 1000, LABEL_HEIGHT, "5", "center", "value"),
+        Text(1000, 5020, 1000, LABEL_HEIGHT, "8", "center", "value"),
+    )
+
+
+def test_line_series_do_not_count_as_clustered_bars() -> None:
+    chart = data(("A", (10.0,)), ("B", (5.0,)), ("C", (7.0,)), categories=("X",))
+    primitives = layout_column(chart, "clustered", 1000, 10000, lines=(1,))
+    bars = [p for p in primitives if isinstance(p, Rect)]
+    assert [p.width for p in bars] == [350, 350]  # the slot splits in two, not three
+    assert not any(p.series == 1 for p in bars)
+    assert any(isinstance(p, Polyline) and p.series == 1 for p in primitives)
+
+
+def test_a_secondary_axis_is_drawn_even_without_the_value_axis() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (100.0, 200.0)), categories=("X", "Y"))
+    primitives = layout_column(chart, "clustered", 3000, 10000, lines=(1,), secondary=(1,))
+    axes = [p for p in primitives if isinstance(p, Line) and p.role == "axis"]
+    assert axes == [Line(1400, 800, 1400, 9000, "axis")]  # one band right of the plot
+    ticks = [p for p in primitives if isinstance(p, Text) and p.role == "axis"]
+    assert [p.text for p in ticks] == ["0", "50", "100", "150", "200"]
+    # the line sits on the secondary scale: 100 halfway, 200 at the top
+    assert any(
+        isinstance(p, Polyline) and p.points == ((350, 4900), (1050, 800)) for p in primitives
+    )
+
+
+def test_the_secondary_axis_keeps_the_columns_on_their_own_scale() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (100.0, 200.0)), categories=("X", "Y"))
+    with_secondary = layout_column(chart, "clustered", 3000, 10000, lines=(1,), secondary=(1,))
+    without = layout_column(chart, "clustered", 3000, 10000, lines=(1,))
+    tall = [p for p in with_secondary if isinstance(p, Rect) and p.height > 1000]
+    short = [p for p in without if isinstance(p, Rect) and p.height > 0]
+    assert max(p.height for p in tall) > 4 * max(p.height for p in short)
+
+
+def test_a_primary_line_widens_the_column_axis() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (50.0, 80.0)), categories=("X", "Y"))
+    primitives = layout_column(chart, "clustered", 2000, 10000, lines=(1,))
+    # the axis now runs 0..80, so A's taller column is much shorter than alone
+    bar = next(p for p in primitives if isinstance(p, Rect) and p.height > 0)
+    plain = next(
+        p
+        for p in layout_column(
+            data(("A", (10.0, 20.0)), categories=("X", "Y")), "clustered", 2000, 10000
+        )
+        if isinstance(p, Rect)
+    )
+    assert bar.height < plain.height / 3
+    assert any(isinstance(p, Text) and p.text == "80" for p in primitives)
+
+
+def test_an_arrow_can_measure_a_line_series() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (5.0, 8.0)), categories=("X", "Y"))
+    arrow = Annotation("difference", 0, 1, series=1)
+    primitives = layout_column(chart, "clustered", 2000, 10000, (arrow,), lines=(1,))
+    head = next(p for p in primitives if isinstance(p, Line) and p.arrow)
+    assert head.x1 == head.x2 == 1500
+    # one arrow lane: axis 0..20 over 7400 from y=1600; B's 8 is at 6040
+    assert head.y2 == pytest.approx(6040 - LABEL_HEIGHT - LANE_LINE_GAP)
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.text == "+60%"
+
+
+def test_a_level_arrow_measures_a_line_series_at_its_point() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (5.0, 8.0)), categories=("X", "Y"))
+    arrow = Annotation("difference", 0, 1, series=1, style="level")
+    primitives = layout_column(chart, "clustered", 4000, 10000, (arrow,), lines=(1,))
+    helpers = [p for p in primitives if isinstance(p, Line) and p.role == "helper"]
+    assert [(p.x1, round(p.y1)) for p in helpers] == [(500, 6950), (1500, 5720)]
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.text == "+60%"
+
+
+def test_a_100_percent_chart_ignores_line_series() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (5.0, 8.0)), categories=("X", "Y"))
+    assert layout_column(chart, "stacked", 2000, 10000, percent=True, lines=(1,)) == layout_column(
+        chart, "stacked", 2000, 10000, percent=True
+    )
+
+
+def test_a_dangling_line_index_is_ignored() -> None:
+    chart = data(("A", (10.0, 20.0)), categories=("X", "Y"))
+    assert layout_column(chart, "clustered", 2000, 10000, lines=(5,)) == layout_column(
+        chart, "clustered", 2000, 10000
+    )
+
+
+def test_combination_structure_does_not_depend_on_size() -> None:
+    chart = data(("A", (1.0, -2.0, None)), ("B", (30.0, 5.0, 0.0)), categories=("X", "Y", "Z"))
+
+    def shape(width: float, height: float) -> list[tuple[str, str]]:
+        return [
+            (type(p).__name__, getattr(p, "role", ""))
+            for p in layout_column(chart, "clustered", width, height, lines=(1,), secondary=(1,))
+        ]
+
+    assert shape(3000, 6000) == shape(30000, 20000) == shape(9000, 4500)
+
+
+def test_combination_geometry_stays_inside_the_box() -> None:
+    chart = parse(sample_state())
+    primitives = layout_column(chart, "clustered", 24000, 12000, lines=(1,), secondary=(1,))
+    for p in primitives:
+        if isinstance(p, Marker):
+            assert 0 <= p.x <= 24000
+            assert 0 <= p.y <= 12000
+        elif isinstance(p, Polyline):
+            assert all(0 <= x <= 24000 and 0 <= y <= 12000 for x, y in p.points)
+        elif isinstance(p, Rect | Text):
+            assert p.x >= 0
+            assert p.x + p.width <= 24000 + 1e-9
+            assert p.y >= 0
+            assert p.y + p.height <= 12000 + 1e-9
+        else:
+            assert isinstance(p, Line)
+            assert min(p.y1, p.y2) >= 0
+            assert max(p.y1, p.y2) <= 12000

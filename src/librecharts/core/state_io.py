@@ -64,6 +64,16 @@ def _v5_to_v6(raw: _Raw) -> _Raw:
     return {**raw, "annotations": annotations, "format": format_raw}
 
 
+def _v6_to_v7(raw: _Raw) -> _Raw:
+    """Version 7 added line and area charts, line series and point markers."""
+    return {
+        **raw,
+        "lines": [],
+        "secondary": [],
+        "format": {**_as_object(raw.get("format", {})), "markers": True},
+    }
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -71,6 +81,7 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     3: _v3_to_v4,
     4: _v4_to_v5,
     5: _v5_to_v6,
+    6: _v6_to_v7,
 }
 
 
@@ -90,6 +101,8 @@ def to_json(state: ChartState) -> str:
             "percent": state.percent,
             "sort": state.sort,
             "format": _format_to_raw(state.format),
+            "lines": list(state.lines),
+            "secondary": list(state.secondary),
         },
         separators=(",", ":"),
         ensure_ascii=False,
@@ -114,6 +127,8 @@ def from_json(text: str) -> ChartState:
             percent=_as_bool(_get(raw, "percent")),
             sort=_get(raw, "sort"),
             format=_as_format(_get(raw, "format")),
+            lines=_as_indices(_get(raw, "lines"), "line series"),
+            secondary=_as_indices(_get(raw, "secondary"), "secondary series"),
             version=raw["v"],
         )
     except ValueError as exc:
@@ -144,6 +159,7 @@ def _format_to_raw(fmt: Format) -> _Raw:
         "unit": fmt.unit,
         "separator": fmt.separator,
         "language": fmt.language,
+        "markers": fmt.markers,
     }
 
 
@@ -241,6 +257,7 @@ def _as_format(value: object) -> Format:
         unit=_as_str(_get(raw, "unit")),
         separator=_get(raw, "separator"),
         language=_as_str(_get(raw, "language")),
+        markers=_as_flag(_get(raw, "markers"), "markers"),
     )
 
 
@@ -258,3 +275,9 @@ def _as_index(value: object, name: str = "annotation indices") -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise StateError(f"{name} must be integers")
     return value
+
+
+def _as_indices(value: object, name: str) -> tuple[int, ...]:
+    if not isinstance(value, list):
+        raise StateError(f"{name} must be a list")
+    return tuple(_as_index(item, name) for item in cast("list[object]", value))

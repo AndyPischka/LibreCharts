@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from librecharts.core import sorting
 from librecharts.core.datasheet import ChartData, parse
+from librecharts.core.layout.area import layout_area
 from librecharts.core.layout.bar import layout_bar
 from librecharts.core.layout.column import layout_column
+from librecharts.core.layout.line import layout_line
 from librecharts.core.layout.mekko import layout_mekko
 from librecharts.core.layout.waterfall import layout_waterfall
 from librecharts.core.mekko import parse_mekko
@@ -29,6 +31,18 @@ def layout_chart(state: ChartState, width: float, height: float) -> tuple[Primit
     if state.kind == "mekko":
         return layout_mekko(parse_mekko(state), width, height, state.percent, state.format)
     data, annotations = display_data(state)
+    if state.kind == "line":
+        return layout_line(data, width, height, annotations, state.format)
+    if state.kind == "area":
+        return layout_area(
+            data,
+            state.grouping,
+            width,
+            height,
+            annotations,
+            percent=state.percent,
+            fmt=state.format,
+        )
     if state.kind == "bar":
         return layout_bar(
             data,
@@ -47,6 +61,8 @@ def layout_chart(state: ChartState, width: float, height: float) -> tuple[Primit
         annotations,
         percent=state.percent,
         fmt=state.format,
+        lines=state.lines,
+        secondary=state.secondary,
     )
 
 

@@ -26,11 +26,11 @@ from librecharts.core.layout.column import (
     BREAK_GAP,
     BREAK_OVERHANG,
     BREAK_SLANT,
-    MIN_ARROW_LABEL_WIDTH,
 )
 from librecharts.core.layout.common import (
     GAP_RATIO,
     LEGEND_HEIGHT,
+    MIN_ARROW_LABEL_WIDTH,
     TICK_GAP,
     TICK_HEIGHT,
     column_top,

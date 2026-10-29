@@ -128,6 +128,40 @@ def test_version_4_state_starts_unsorted() -> None:
     assert from_json(json.dumps(raw)).sort == "none"
 
 
+def test_round_trip_preserves_line_series_and_markers() -> None:
+    fmt = Format(markers=False)
+    state = make_state(kind="column", lines=(0, 2), secondary=(2,), format=fmt)
+    restored = from_json(to_json(state))
+    assert restored.lines == (0, 2)
+    assert restored.secondary == (2,)
+    assert restored.format == fmt
+
+
+@pytest.mark.parametrize("kind", ["line", "area"])
+def test_line_and_area_charts_round_trip(kind: str) -> None:
+    state = make_state(kind=kind)
+    assert from_json(to_json(state)).kind == kind
+
+
+@pytest.mark.parametrize("percent", [False, True])
+def test_an_area_chart_keeps_its_percent_variant(percent: bool) -> None:
+    state = make_state(kind="area", percent=percent)
+    assert from_json(to_json(state)).percent is percent
+
+
+def test_version_6_state_gets_no_line_series_and_shows_markers() -> None:
+    raw = valid_raw()
+    del raw["lines"]
+    del raw["secondary"]
+    raw["format"] = {k: v for k, v in raw["format"].items() if k != "markers"}
+    raw["v"] = 6
+    restored = from_json(json.dumps(raw))
+    assert restored.version == SCHEMA_VERSION
+    assert restored.lines == ()
+    assert restored.secondary == ()
+    assert restored.format.markers is True
+
+
 @pytest.mark.parametrize(("kind", "percent"), [("mekko", True), ("column", False), ("bar", False)])
 def test_version_3_state_is_migrated_with_a_percent_mekko(kind: str, percent: bool) -> None:
     raw = {**valid_raw(), "kind": kind, "v": 3}
@@ -199,6 +233,16 @@ def test_integers_in_values_become_floats() -> None:
         lambda r: r.update(format={**r["format"], "unit": 5}),
         lambda r: r.update(format={**r["format"], "separator": ";"}),
         lambda r: r.update(format={**r["format"], "language": "deu"}),
+        lambda r: r.update(format={**r["format"], "markers": "yes"}),
+        lambda r: r.pop("lines"),
+        lambda r: r.update(lines="0"),
+        lambda r: r.update(lines=[True]),
+        lambda r: r.update(lines=[-1]),
+        lambda r: r.update(lines=[0, 0]),
+        lambda r: r.update(secondary=[0]),
+        lambda r: r.update(lines=[0], percent=True),
+        lambda r: r.pop("secondary"),
+        lambda r: r.update(secondary="0"),
         lambda r: r.update(annotations=[{**ARROW, "value": "1"}]),
         lambda r: r.update(annotations=[{**BREAK, "value": 1.0}]),
         lambda r: r.update(annotations=[{**ARROW, "kind": "value_line", "value": True}]),

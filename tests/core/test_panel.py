@@ -1,6 +1,11 @@
 from dataclasses import replace
 
-from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
+from librecharts.core.datasheet import (
+    sample_mekko_state,
+    sample_state,
+    sample_waterfall_state,
+    state_from_table,
+)
 from librecharts.core.menu import PROTOCOL
 from librecharts.core.model import Annotation
 from librecharts.core.panel import content
@@ -10,7 +15,14 @@ def test_insert_buttons_are_always_enabled() -> None:
     panel = content(None, False, "en-US")
     assert [b.command for b in panel.insert] == [
         PROTOCOL + c
-        for c in ("InsertColumnChart", "InsertBarChart", "InsertWaterfallChart", "InsertMekkoChart")
+        for c in (
+            "InsertColumnChart",
+            "InsertBarChart",
+            "InsertLineChart",
+            "InsertAreaChart",
+            "InsertWaterfallChart",
+            "InsertMekkoChart",
+        )
     ]
     assert all(b.enabled for b in panel.insert)
 
@@ -18,7 +30,7 @@ def test_insert_buttons_are_always_enabled() -> None:
 def test_a_column_chart_offers_its_variants_and_the_sort_cycle() -> None:
     panel = content(sample_state(), True, "en-US")
     assert [b.command for b in panel.options] == [
-        PROTOCOL + "ChangeChart?grouping=stacked&percent=false",
+        PROTOCOL + "ChangeChart?grouping=stacked",
         PROTOCOL + "ChangeChart?grouping=clustered",
         PROTOCOL + "ChangeChart?percent=true",
         PROTOCOL + "ChangeChart?sort=descending",
@@ -103,3 +115,29 @@ def test_annotations_that_are_not_drawn_are_not_listed() -> None:
 
 def test_texts_follow_the_locale() -> None:
     assert content(None, False, "de-DE").status == "Kein Diagramm ausgewählt."
+
+
+def test_line_and_area_charts_report_their_kind() -> None:
+    line = state_from_table("line", "stacked", [[None, "2024", "2025"], ["Sales", 1, 2]])
+    area = state_from_table("area", "stacked", [[None, "2024", "2025"], ["Sales", 1, 2]])
+    assert content(line, True, "en-US").status == "Line chart, 2 categories"
+    assert content(area, True, "en-US").status == "Area chart, 2 categories"
+    assert content(replace(area, percent=True), True, "en-US").status == (
+        "Area chart (100 %), 2 categories"
+    )
+
+
+def test_a_combination_chart_reports_its_lines() -> None:
+    panel = content(replace(sample_state(), lines=(1,)), True, "en-US")
+    assert panel.status.startswith("Column chart with lines, ")
+
+
+def test_line_and_area_charts_offer_only_their_annotation_buttons() -> None:
+    area = state_from_table("area", "stacked", [[None, "2024"], ["Sales", 1]])
+    enabled = {b.title: b.enabled for b in content(area, True, "en-US").add}
+    assert "Add value line..." in enabled
+    assert enabled["Add value line..."]
+    assert not enabled["Add difference arrow"]
+    assert not enabled["Add axis break"]
+    line = state_from_table("line", "stacked", [[None, "2024"], ["Sales", 1]])
+    assert all(b.enabled for b in content(line, True, "en-US").add)

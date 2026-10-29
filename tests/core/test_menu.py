@@ -1,6 +1,11 @@
 from dataclasses import replace
 
-from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
+from librecharts.core.datasheet import (
+    sample_mekko_state,
+    sample_state,
+    sample_waterfall_state,
+    state_from_table,
+)
 from librecharts.core.menu import PROTOCOL, SEPARATOR, MenuItem, chart_menu
 from librecharts.core.model import Annotation, Format
 
@@ -10,6 +15,14 @@ EDIT = MenuItem("Edit chart data", PROTOCOL + "EditData")
 VARIANTS = (
     MenuItem("Show clustered", PROTOCOL + "ChangeChart?grouping=clustered"),
     MenuItem("Show as 100 %", PROTOCOL + "ChangeChart?percent=true"),
+)
+LINES = MenuItem(
+    "Series as lines",
+    children=(
+        MenuItem("Product A as line", PROTOCOL + "ChangeChart?line=0&on=true"),
+        MenuItem("Product B as line", PROTOCOL + "ChangeChart?line=1&on=true"),
+        MenuItem("Product C as line", PROTOCOL + "ChangeChart?line=2&on=true"),
+    ),
 )
 SORT = MenuItem(
     "Sort categories",
@@ -55,7 +68,7 @@ def commands(item: MenuItem) -> list[str]:
 
 def test_column_chart_without_annotations_offers_data_variants_sort_format_and_arrows() -> None:
     assert chart_menu(sample_state(), "en-US") == MenuItem(
-        "LibreCharts", children=(EDIT, *VARIANTS, SORT, FORMAT, *ADD)
+        "LibreCharts", children=(EDIT, *VARIANTS, LINES, SORT, FORMAT, *ADD)
     )
 
 
@@ -168,7 +181,9 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
     )
     items = chart_menu(state, "en-US").children
     annotation_items = [
-        item for item in items if item.children and item.title not in ("Sort categories", "Format")
+        item
+        for item in items
+        if item.children and item.title not in ("Series as lines", "Sort categories", "Format")
     ]
     assert [item.title for item in annotation_items] == [
         "Difference 2023 → 2025",
@@ -203,7 +218,7 @@ def test_hidden_annotations_are_not_listed_but_keep_their_index() -> None:
     listed = [
         item
         for item in chart_menu(state, "en-US").children
-        if item.children and item.title not in ("Sort categories", "Format")
+        if item.children and item.title not in ("Series as lines", "Sort categories", "Format")
     ]
     assert len(listed) == 1
     assert commands(listed[0])[-1] == PROTOCOL + "RemoveAnnotation?index=1"
@@ -216,3 +231,56 @@ def test_menu_is_translated() -> None:
     assert "Differenz 2023 → 2024" in titles
     assert "Kategorien sortieren" in titles
     assert "Format" in titles
+
+
+def test_the_line_submenu_toggles_each_series_and_its_axis() -> None:
+    state = replace(sample_state(), lines=(1,), secondary=(1,))
+    lines = next(
+        item for item in chart_menu(state, "en-US").children if item.title == "Series as lines"
+    )
+    assert [item.title for item in lines.children] == [
+        "Product A as line",
+        "Product B as column",
+        "Product B on primary axis",
+        "Product C as line",
+    ]
+    assert [item.command for item in lines.children] == [
+        PROTOCOL + "ChangeChart?line=0&on=true",
+        PROTOCOL + "ChangeChart?line=1&on=false",
+        PROTOCOL + "ChangeChart?secondary=1&on=false",
+        PROTOCOL + "ChangeChart?line=2&on=true",
+    ]
+
+
+def test_a_line_on_the_primary_axis_offers_the_secondary_one() -> None:
+    state = replace(sample_state(), lines=(0,))
+    lines = next(
+        item for item in chart_menu(state, "en-US").children if item.title == "Series as lines"
+    )
+    assert "Product A on secondary axis" in [item.title for item in lines.children]
+    assert [item.command for item in lines.children][1] == PROTOCOL + (
+        "ChangeChart?secondary=0&on=true"
+    )
+
+
+def test_bar_and_100_percent_charts_have_no_line_submenu() -> None:
+    for state in (
+        replace(sample_state(), kind="bar"),
+        replace(sample_state(), percent=True),
+    ):
+        titles = [item.title for item in chart_menu(state, "de-DE").children]
+        assert "Reihen als Linien" not in titles
+
+
+def test_line_and_area_charts_offer_their_own_annotations() -> None:
+    line = state_from_table("line", "stacked", [[None, "2024"], ["Sales", 10]])
+    area = state_from_table("area", "stacked", [[None, "2024"], ["Sales", 10]])
+    line_titles = [item.title for item in chart_menu(line, "en-US").children]
+    area_titles = [item.title for item in chart_menu(area, "en-US").children]
+    assert "Add difference arrow" in line_titles
+    assert "Add difference arrow" not in area_titles
+    assert "Add value line..." in area_titles
+    line_format = next(
+        item for item in chart_menu(line, "en-US").children if item.title == "Format"
+    )
+    assert "Hide point markers" in [item.title for item in line_format.children]

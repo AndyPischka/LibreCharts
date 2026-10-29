@@ -21,6 +21,8 @@ SUPPORTED: dict[ChartKind, frozenset[str]] = {
     "column": frozenset({"difference", "cagr", "axis_break", "value_line"}),
     "bar": frozenset({"difference", "cagr", "axis_break", "value_line"}),
     "waterfall": frozenset({"difference", "cagr", "axis_break", "value_line"}),
+    "line": frozenset({"difference", "cagr", "axis_break", "value_line"}),
+    "area": frozenset({"value_line"}),
 }
 
 

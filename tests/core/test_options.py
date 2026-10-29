@@ -1,9 +1,17 @@
 import pytest
 
-from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
+from librecharts.core.datasheet import (
+    sample_mekko_state,
+    sample_state,
+    sample_waterfall_state,
+    state_from_table,
+)
 from librecharts.core.options import (
     Switch,
+    can_draw_lines,
     changed,
+    line_query,
+    secondary_query,
     sort_options,
     sort_toggle,
     variants,
@@ -12,7 +20,7 @@ from librecharts.core.options import (
 
 def test_a_column_offers_all_three_variants_with_the_current_one_marked() -> None:
     assert variants(sample_state()) == (
-        Switch("menu_stacked", "ChangeChart?grouping=stacked&percent=false", True),
+        Switch("menu_stacked", "ChangeChart?grouping=stacked", True),
         Switch("menu_clustered", "ChangeChart?grouping=clustered", False),
         Switch("menu_percent", "ChangeChart?percent=true", False),
     )
@@ -115,3 +123,95 @@ def test_kinds_without_a_variant_or_sort_reject_it(kind: str) -> None:
 def test_a_waterfall_rejects_the_percent_option() -> None:
     with pytest.raises(ValueError, match="no percent option"):
         changed(sample_waterfall_state(), "percent=true")
+
+
+def test_an_area_chart_switches_between_stacked_and_100_percent() -> None:
+    area = state_from_table("area", "stacked", [[None, "2024"], ["Sales", 10]])
+    assert variants(area) == (
+        Switch("menu_stacked", "ChangeChart?grouping=stacked", True),
+        Switch("menu_percent", "ChangeChart?percent=true", False),
+    )
+    percent = changed(area, "percent=true")
+    assert percent.percent
+    assert variants(percent)[0].current is False
+    assert variants(percent)[1].current is True
+    assert not changed(percent, "percent=false").percent
+    with pytest.raises(ValueError, match="always stacked"):
+        changed(area, "grouping=clustered")
+
+
+def test_only_a_column_that_is_not_100_percent_can_draw_lines() -> None:
+    assert can_draw_lines(sample_state())
+    assert can_draw_lines(changed(sample_state(), "grouping=clustered"))
+    assert not can_draw_lines(changed(sample_state(), "percent=true"))
+    assert not can_draw_lines(sample_waterfall_state())
+
+
+def test_line_and_secondary_queries_carry_the_series_and_the_flag() -> None:
+    assert line_query(0, True) == "ChangeChart?line=0&on=true"
+    assert line_query(2, False) == "ChangeChart?line=2&on=false"
+    assert secondary_query(1, True) == "ChangeChart?secondary=1&on=true"
+    assert secondary_query(1, False) == "ChangeChart?secondary=1&on=false"
+
+
+def test_a_series_can_be_drawn_as_a_line_and_back() -> None:
+    state = changed(sample_state(), "line=1&on=true")
+    assert state.lines == (1,)
+    assert state.secondary == ()
+    assert changed(state, "line=1&on=false").lines == ()
+    assert changed(sample_state(), "line=0&on=true").lines == (0,)
+    assert changed(sample_state(), "line=2&on=true").lines == (2,)
+
+
+def test_the_secondary_axis_only_carries_lines() -> None:
+    state = changed(sample_state(), "secondary=1&on=true")
+    assert state.lines == (1,)
+    assert state.secondary == (1,)
+    assert changed(state, "secondary=1&on=false").secondary == ()
+    assert changed(state, "secondary=1&on=false").lines == (1,)
+
+
+def test_a_series_that_stops_being_a_line_also_leaves_the_secondary_axis() -> None:
+    state = changed(changed(sample_state(), "line=1&on=true"), "secondary=1&on=true")
+    back = changed(state, "line=1&on=false")
+    assert back.lines == ()
+    assert back.secondary == ()
+
+
+def test_line_series_survive_a_variant_switch_but_not_100_percent() -> None:
+    state = changed(sample_state(), "line=0&on=true")
+    assert changed(state, "grouping=clustered").lines == (0,)
+    percent = changed(state, "percent=true")
+    assert percent.lines == ()
+    assert percent.secondary == ()
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "line=0&on=maybe",
+        "line=x&on=true",
+        "line=-1&on=true",
+        "line=3&on=true",
+        "line=0&on=true&sort=none",
+    ],
+)
+def test_bad_line_queries_are_rejected(query: str) -> None:
+    with pytest.raises(ValueError, match=r"."):
+        changed(sample_state(), query)
+
+
+@pytest.mark.parametrize("kind", ["waterfall", "mekko", "area"])
+def test_other_kinds_reject_line_series(kind: str) -> None:
+    state = {
+        "waterfall": sample_waterfall_state,
+        "mekko": sample_mekko_state,
+        "area": lambda: state_from_table("area", "stacked", [[None, "2024"], ["Sales", 10]]),
+    }[kind]()
+    with pytest.raises(ValueError, match="cannot draw series as lines"):
+        changed(state, "line=0&on=true")
+
+
+def test_a_100_percent_chart_rejects_line_series() -> None:
+    with pytest.raises(ValueError, match="100 %"):
+        changed(changed(sample_state(), "percent=true"), "line=0&on=true")

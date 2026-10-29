@@ -232,6 +232,34 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Show legend",
         "de": "Legende anzeigen",
     },
+    "menu_markers_show": {
+        "en": "Show point markers",
+        "de": "Punktmarkierungen anzeigen",
+    },
+    "menu_markers_hide": {
+        "en": "Hide point markers",
+        "de": "Punktmarkierungen ausblenden",
+    },
+    "menu_line_series": {
+        "en": "Series as lines",
+        "de": "Reihen als Linien",
+    },
+    "menu_series_as_line": {
+        "en": "{name} as line",
+        "de": "{name} als Linie",
+    },
+    "menu_series_as_column": {
+        "en": "{name} as column",
+        "de": "{name} als S\u00e4ule",
+    },
+    "menu_secondary_axis": {
+        "en": "{name} on secondary axis",
+        "de": "{name} auf zweiter Achse",
+    },
+    "menu_primary_axis": {
+        "en": "{name} on primary axis",
+        "de": "{name} auf erster Achse",
+    },
     "menu_number_format": {
         "en": "Number format...",
         "de": "Zahlenformat...",
@@ -380,6 +408,14 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Marimekko chart",
         "de": "Marimekko-Diagramm",
     },
+    "insert_line": {
+        "en": "Line chart",
+        "de": "Liniendiagramm",
+    },
+    "insert_area": {
+        "en": "Area chart",
+        "de": "Fl\u00e4chendiagramm",
+    },
     "kind_column": {
         "en": "Column chart",
         "de": "Säulendiagramm",
@@ -407,6 +443,22 @@ MESSAGES: dict[str, dict[str, str]] = {
     "kind_mekko_units": {
         "en": "Marimekko chart (units)",
         "de": "Marimekko-Diagramm (Einheiten)",
+    },
+    "kind_line": {
+        "en": "Line chart",
+        "de": "Liniendiagramm",
+    },
+    "kind_area": {
+        "en": "Area chart",
+        "de": "Fl\u00e4chendiagramm",
+    },
+    "kind_area_percent": {
+        "en": "Area chart (100 %)",
+        "de": "Fl\u00e4chendiagramm (100 %)",
+    },
+    "kind_column_lines": {
+        "en": "Column chart with lines",
+        "de": "S\u00e4ulendiagramm mit Linien",
     },
     "status_none": {
         "en": "No chart selected.",

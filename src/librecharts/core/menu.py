@@ -35,12 +35,16 @@ SEPARATOR = MenuItem()
 
 def chart_menu(state: ChartState, locale: str) -> MenuItem:
     """The "LibreCharts" submenu for a chart with ``state``."""
+    data = notes.measured(state)
     items = [MenuItem(text("menu_edit_data", locale), PROTOCOL + "EditData")]
     items += [
         _command(switch.title, switch.command, locale)
         for switch in options.variants(state)
         if not switch.current
     ]
+    line_menu = _line_menu(state, data, locale)
+    if line_menu.children:
+        items.append(line_menu)
     sorts = tuple(
         _command(switch.title, switch.command, locale)
         for switch in options.sort_options(state)
@@ -57,10 +61,14 @@ def chart_menu(state: ChartState, locale: str) -> MenuItem:
             _command("menu_add_difference", "PickAnnotation?kind=difference", locale),
             _command("menu_add_level", "PickAnnotation?kind=difference&style=level", locale),
             _command("menu_add_cagr", "PickAnnotation?kind=cagr", locale),
-            _command("menu_add_break", "AxisBreak", locale),
-            _command("menu_add_value_line", "ValueLine", locale),
         ]
-    data = notes.measured(state)
+    if supports(state, "axis_break") or supports(state, "value_line"):
+        if not supports(state, "difference"):
+            items.append(SEPARATOR)
+        if supports(state, "axis_break"):
+            items.append(_command("menu_add_break", "AxisBreak", locale))
+        if supports(state, "value_line"):
+            items.append(_command("menu_add_value_line", "ValueLine", locale))
     shown = [
         (index, annotation)
         for index, annotation in enumerate(state.annotations)
@@ -81,6 +89,37 @@ def chart_menu(state: ChartState, locale: str) -> MenuItem:
 
 def _command(key: str, command: str, locale: str) -> MenuItem:
     return MenuItem(text(key, locale), PROTOCOL + command)
+
+
+def _line_menu(state: ChartState, data: ChartData, locale: str) -> MenuItem:
+    """The "Series as lines" submenu of a column chart: per series, line/column and axis."""
+    entries: list[MenuItem] = []
+    if options.can_draw_lines(state):
+        for index, series in enumerate(data.series):
+            is_line = index in state.lines
+            entries.append(
+                MenuItem(
+                    text(
+                        "menu_series_as_column" if is_line else "menu_series_as_line",
+                        locale,
+                        name=series.name,
+                    ),
+                    PROTOCOL + options.line_query(index, not is_line),
+                )
+            )
+            if is_line:
+                on_secondary = index in state.secondary
+                entries.append(
+                    MenuItem(
+                        text(
+                            "menu_primary_axis" if on_secondary else "menu_secondary_axis",
+                            locale,
+                            name=series.name,
+                        ),
+                        PROTOCOL + options.secondary_query(index, not on_secondary),
+                    )
+                )
+    return MenuItem(text("menu_line_series", locale), children=tuple(entries))
 
 
 def _format_menu(state: ChartState, locale: str) -> MenuItem:

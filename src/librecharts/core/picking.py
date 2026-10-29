@@ -16,6 +16,7 @@ from librecharts.core import sorting
 from librecharts.core.datasheet import parse
 from librecharts.core.layout.bar import bar_at
 from librecharts.core.layout.column import column_at
+from librecharts.core.layout.line import line_at
 from librecharts.core.layout.waterfall import step_at
 from librecharts.core.model import Annotation, AnnotationKind, ArrowStyle, ChartState
 from librecharts.core.waterfall import parse_waterfall
@@ -24,7 +25,7 @@ Target = tuple[int, int | None]  # category, series (None: the column as a whole
 
 
 def target_at(state: ChartState, width: float, height: float, x: float, y: float) -> Target | None:
-    """The column (or bar) at chart point (x, y), or ``None`` if there is none to annotate.
+    """The column (or bar, or line point) at chart point (x, y), or ``None`` if there is none.
 
     The returned category is the data sheet index, even when sorting drew the category elsewhere.
     """
@@ -33,7 +34,18 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
         order = sorting.order(data, state.grouping, state.sort)
         data = sorting.sorted_data(data, order)
         annotations = sorting.remap(state.annotations, order)
-        target = column_at(data, state.grouping, width, annotations, x, y, state.format)
+        target = column_at(
+            data,
+            state.grouping,
+            width,
+            annotations,
+            x,
+            y,
+            state.format,
+            height=height,
+            lines=state.lines,
+            secondary=state.secondary,
+        )
         return _to_data_index(target, order)
     if state.kind == "bar":
         data = parse(state)
@@ -42,6 +54,8 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
         annotations = sorting.remap(state.annotations, order)
         target = bar_at(data, state.grouping, width, height, annotations, x, y, state.format)
         return _to_data_index(target, order)
+    if state.kind == "line":
+        return line_at(parse(state), width, height, state.annotations, x, y, state.format)
     if state.kind == "waterfall":
         return step_at(parse_waterfall(state), width, state.annotations, x, y, state.format)
     return None

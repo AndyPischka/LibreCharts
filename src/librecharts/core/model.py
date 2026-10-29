@@ -6,9 +6,9 @@ import math
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
-ChartKind = Literal["column", "bar", "waterfall", "mekko"]
+ChartKind = Literal["column", "bar", "waterfall", "mekko", "line", "area"]
 Grouping = Literal["stacked", "clustered"]
 SortOrder = Literal["none", "descending", "ascending"]
 AnnotationKind = Literal["difference", "cagr", "axis_break", "value_line"]
@@ -40,10 +40,13 @@ class Format:
     unit: str = ""
     separator: Separator = "."
     language: str = "en"
+    markers: bool = True  # point markers on line series
 
     def __post_init__(self) -> None:
         if self.series_names not in get_args(SeriesNames):
             raise ValueError(f"unknown series name mode: {self.series_names!r}")
+        if not isinstance(self.markers, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
+            raise ValueError("markers must be true or false")
         if self.decimals is not None and not 0 <= self.decimals <= 4:
             raise ValueError("decimals must be None or between 0 and 4")
         if self.magnitude not in (0, 3, 6, 9):
@@ -121,11 +124,15 @@ class ChartState:
     such as ``=B2*2``). ``values`` holds the evaluated numbers the chart is drawn from, ``None``
     where a cell is empty or not numeric. Both grids are rectangular and have the same shape.
 
-    ``percent`` draws a 100 % chart: a Mekko with every column 100 % high, or a stacked column or
-    bar chart whose segments show shares of their column. ``sort`` reorders the categories of a
-    column or bar chart for display only, without touching the data sheet. Neither has a meaning
-    for the other chart kinds, where they keep their defaults. ``format`` holds axis, number and
-    series-name options.
+    ``percent`` draws a 100 % chart: a Mekko with every column 100 % high, or a stacked column,
+    bar or area chart whose segments show shares of their column. ``sort`` reorders the categories
+    of a column or bar chart for display only, without touching the data sheet. Neither has a
+    meaning for the other chart kinds, where they keep their defaults. ``format`` holds axis,
+    number and series-name options.
+
+    ``lines`` holds the series of a column chart that are drawn as lines instead of columns;
+    ``secondary`` is the subset of them on the right-hand axis. Series indices are data sheet rows,
+    like annotation indices: after a data edit a dangling index is ignored.
     """
 
     kind: ChartKind
@@ -136,6 +143,8 @@ class ChartState:
     percent: bool = False
     sort: SortOrder = "none"
     format: Format = Format()
+    lines: tuple[int, ...] = ()
+    secondary: tuple[int, ...] = ()
     version: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -146,13 +155,29 @@ class ChartState:
         if self.sort not in get_args(SortOrder):
             raise ValueError(f"unknown sort order: {self.sort!r}")
         if self.percent and not (
-            self.kind == "mekko" or (self.kind in ("column", "bar") and self.grouping == "stacked")
+            self.kind == "mekko"
+            or (self.kind in ("column", "bar", "area") and self.grouping == "stacked")
         ):
             raise ValueError(
-                "only a Marimekko chart or a stacked column or bar chart can be a percent chart"
+                "only a Marimekko chart or a stacked column, bar or area chart can be a "
+                "percent chart"
             )
+        if self.kind in ("line", "area") and self.grouping != "stacked":
+            raise ValueError(f"a {self.kind} chart is always stacked")
         if self.sort != "none" and self.kind not in ("column", "bar"):
             raise ValueError(f"a {self.kind} chart cannot be sorted")
+        if (self.lines or self.secondary) and self.kind != "column":
+            raise ValueError("only a column chart can draw series as lines")
+        if self.lines and self.percent:
+            raise ValueError("a 100 % chart cannot draw series as lines")
+        if len(set(self.lines)) != len(self.lines) or len(set(self.secondary)) != len(
+            self.secondary
+        ):
+            raise ValueError("series indices must be unique")
+        if any(index < 0 for index in (*self.lines, *self.secondary)):
+            raise ValueError("series indices must not be negative")
+        if not set(self.secondary) <= set(self.lines):
+            raise ValueError("the series on the secondary axis must be lines")
         if len(self.cells) != len(self.values):
             raise ValueError("cells and values must have the same number of rows")
         widths = {len(row) for row in (*self.cells, *self.values)}

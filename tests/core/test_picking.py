@@ -2,7 +2,12 @@ from dataclasses import replace
 
 import pytest
 
-from librecharts.core.datasheet import sample_mekko_state, sample_state, sample_waterfall_state
+from librecharts.core.datasheet import (
+    sample_mekko_state,
+    sample_state,
+    sample_waterfall_state,
+    state_from_table,
+)
 from librecharts.core.layout.column import LANE_HEIGHT
 from librecharts.core.messages import MESSAGES
 from librecharts.core.model import Annotation
@@ -126,3 +131,37 @@ def test_level_lanes_right_of_the_plot_hit_nothing() -> None:
     # the plot shrinks to 3000 - LEVEL_LANE_WIDTH = 1000: slots of 333
     assert target_at(level, WIDTH, HEIGHT, 500, 5000) == (1, None)
     assert target_at(level, WIDTH, HEIGHT, 1500, 5000) is None
+
+
+LINE = state_from_table("line", "stacked", [[None, "2020", "2021"], ["Sales", 10, 20]])
+AREA = state_from_table("area", "stacked", [[None, "2020", "2021"], ["Sales", 10, 20]])
+
+
+def test_line_points_are_targets() -> None:
+    # axis 0..20 over 8200 from y=800: 10 is at 4900, 20 at 800; slots of 1000
+    assert target_at(LINE, 2000, 10000, 500, 4900) == (0, 0)
+    assert target_at(LINE, 2000, 10000, 1500, 800) == (1, 0)
+    assert target_at(LINE, 2000, 10000, 500, 4000) == (0, 0)  # within the tolerance
+
+
+def test_a_click_far_from_every_line_point_hits_nothing() -> None:
+    assert target_at(LINE, 2000, 10000, 500, 9000) is None
+    assert target_at(LINE, 2000, 10000, 2500, 4900) is None
+    assert target_at(LINE, 2000, 10000, 500, 100) is None
+
+
+def test_area_charts_have_no_targets() -> None:
+    assert target_at(AREA, 2000, 10000, 500, 4900) is None
+
+
+def test_a_series_drawn_as_a_line_can_be_picked() -> None:
+    state = replace(STACKED, lines=(2,))
+    # line series C: 5, 8 and 9; the axis stays 0..40 (column totals), plot 6200 high from 800
+    assert target_at(state, WIDTH, HEIGHT, 500, 800 + (40 - 5) / 40 * 6200) == (0, 2)
+    assert target_at(state, WIDTH, HEIGHT, 1500, 800 + (40 - 8) / 40 * 6200) == (1, 2)
+
+
+def test_secondary_line_points_use_the_secondary_scale() -> None:
+    state = replace(STACKED, lines=(2,), secondary=(2,))
+    # the right axis covers the line values only (0..10) and takes one axis band of the plot
+    assert target_at(state, WIDTH, HEIGHT, 700, 800 + (10 - 8) / 10 * 6200) == (1, 2)

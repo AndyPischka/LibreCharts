@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING
 
 from librecharts.core.datasheet import ChartData
 from librecharts.core.format import magnitude_suffix
 from librecharts.core.model import Format, Grouping
-from librecharts.core.primitives import Primitive, Rect, Text
+from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
 from librecharts.core.scale import Axis, nice_axis
 
 if TYPE_CHECKING:
@@ -22,6 +22,14 @@ TICK_GAP = 100.0  # between the plot edge and the tick label
 LEGEND_HEIGHT = 800.0  # band above the plot for a legend
 SWATCH = 250.0  # legend colour swatch
 SWATCH_GAP = 120.0  # between a legend swatch and its text
+AXIS_BREAK_GAP = 300.0  # height of the white gap of a vertical axis break mark
+AXIS_BREAK_SLANT = 100.0  # how far the break lines fall from left to right
+
+LABEL_HEIGHT = 600.0  # height of a value, total or annotation label box
+MIN_ARROW_LABEL_WIDTH = 1800.0  # arrows between neighbouring narrow columns stay readable
+LEVEL_LANE_WIDTH = 2000.0  # room right of the plot for one level arrow or value line and its label
+LEVEL_ARROW_INSET = 300.0  # from a level lane's left edge to its arrow
+LEVEL_LABEL_GAP = 150.0  # between a level arrow or value line and its label
 
 
 def format_value(value: float, fmt: Format | None = None) -> str:
@@ -112,6 +120,134 @@ def legend(names: Sequence[str], width: float) -> list[Primitive]:
             )
         )
     return out
+
+
+def vertical_axis(
+    axis: Axis,
+    cut: Break | None,
+    y: Callable[[float], float],
+    plot_left: float,
+    fmt: Format,
+) -> list[Primitive]:
+    """The vertical axis line, its tick labels and a break mark (line and area charts)."""
+    out: list[Primitive] = [Line(plot_left, y(axis.maximum), plot_left, y(axis.minimum), "axis")]
+    for tick in visible_ticks(axis, cut):
+        top = y(cut.fold(tick) if cut else tick) - TICK_HEIGHT / 2
+        out.append(
+            Text(
+                0,
+                top,
+                plot_left - TICK_GAP,
+                TICK_HEIGHT,
+                format_value(tick, fmt),
+                "right",
+                "axis",
+            )
+        )
+    if cut:
+        out.extend(vertical_break_mark(plot_left, y(cut.lower)))
+    return out
+
+
+def vertical_grid(
+    axis: Axis,
+    cut: Break | None,
+    y: Callable[[float], float],
+    plot_left: float,
+    plot_width: float,
+) -> list[Primitive]:
+    """Light lines behind the plot, one per tick except zero (the baseline covers it)."""
+    return [
+        Line(
+            plot_left,
+            y(cut.fold(tick) if cut else tick),
+            plot_left + plot_width,
+            y(cut.fold(tick) if cut else tick),
+            "grid",
+        )
+        for tick in visible_ticks(axis, cut)
+        if tick != 0
+    ]
+
+
+def vertical_break_mark(x: float, y_break: float) -> list[Primitive]:
+    """A white gap and two slanted lines across a vertical axis line."""
+    top = y_break - AXIS_BREAK_GAP / 2
+    return [
+        Rect(x - AXIS_BREAK_GAP / 2, top, AXIS_BREAK_GAP, AXIS_BREAK_GAP, BACKGROUND),
+        Line(x - AXIS_BREAK_GAP / 2, top, x + AXIS_BREAK_GAP / 2, top + AXIS_BREAK_SLANT, "axis"),
+        Line(
+            x - AXIS_BREAK_GAP / 2,
+            top + AXIS_BREAK_GAP - AXIS_BREAK_SLANT,
+            x + AXIS_BREAK_GAP / 2,
+            top + AXIS_BREAK_GAP,
+            "axis",
+        ),
+    ]
+
+
+def bracket(
+    start: tuple[float, float], end: tuple[float, float], line_y: float, label: str
+) -> list[Primitive]:
+    """Up from ``start``, across at ``line_y``, down onto ``end`` with an arrowhead."""
+    (x1, y1), (x2, y2) = start, end
+    left, right = min(x1, x2), max(x1, x2)
+    label_width = max(right - left, MIN_ARROW_LABEL_WIDTH)
+    return [
+        Line(x1, line_y, x1, y1, "annotation"),
+        Line(left, line_y, right, line_y, "annotation"),
+        Line(x2, line_y, x2, y2, "annotation", arrow=True),
+        Text(
+            (left + right - label_width) / 2,
+            line_y - LABEL_HEIGHT,
+            label_width,
+            LABEL_HEIGHT,
+            label,
+            "center",
+            "annotation",
+        ),
+    ]
+
+
+def level_arrow(
+    start: tuple[float, float], end: tuple[float, float], arrow_x: float, label: str
+) -> list[Primitive]:
+    """Dashed lines from both levels to ``arrow_x``, an arrow from one level to the other."""
+    (x1, y1), (x2, y2) = start, end
+    return [
+        Line(x1, y1, arrow_x, y1, "helper"),
+        Line(x2, y2, arrow_x, y2, "helper"),
+        Line(arrow_x, y1, arrow_x, y2, "annotation", arrow=True),
+        Text(
+            arrow_x + LEVEL_LABEL_GAP,
+            (y1 + y2 - LABEL_HEIGHT) / 2,
+            LEVEL_LANE_WIDTH - LEVEL_ARROW_INSET - LEVEL_LABEL_GAP,
+            LABEL_HEIGHT,
+            label,
+            "left",
+            "annotation",
+        ),
+    ]
+
+
+def point_runs(
+    points: Sequence[tuple[float, float]], values: Sequence[float | None]
+) -> list[list[tuple[float, float]]]:
+    """Split ``points`` where ``values`` is empty, so a gap breaks a polyline."""
+    runs: list[list[tuple[float, float]]] = []
+    run: list[tuple[float, float]] = []
+    position = 0
+    for value in values:
+        if value is None:
+            if run:
+                runs.append(run)
+                run = []
+            continue
+        run.append(points[position])
+        position += 1
+    if run:
+        runs.append(run)
+    return runs
 
 
 def spread(tops: list[float], height: float) -> list[float]:

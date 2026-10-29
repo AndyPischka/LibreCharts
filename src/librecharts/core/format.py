@@ -75,10 +75,11 @@ def magnitude_suffix(magnitude: int, language: str) -> str:
 def default_format(kind: str, grouping: Grouping, locale: str) -> Format:
     """The format a newly inserted chart starts with.
 
-    A Mekko and a stacked column or bar chart name their series next to the last column (think-cell
-    style); a clustered one uses a legend. New charts have no axis, like before M6.
+    A Mekko, a line, an area and a stacked column or bar chart name their series next to the last
+    category (think-cell style); a clustered one uses a legend. New charts have no axis, like
+    before M6.
     """
-    if kind == "mekko":
+    if kind in ("mekko", "line", "area"):
         names: SeriesNames = "labels"
     elif kind in ("column", "bar"):
         names = "labels" if grouping == "stacked" else "legend"
@@ -96,7 +97,9 @@ def supports(state: ChartState, option: str) -> bool:
     if option in ("axis", "gridlines"):
         return state.kind != "mekko" or not state.percent
     if option == "series_names":
-        return state.kind in ("column", "bar", "mekko")
+        return state.kind in ("column", "bar", "mekko", "line", "area")
+    if option == "markers":
+        return state.kind == "line" or (state.kind == "column" and bool(state.lines))
     return False
 
 
@@ -109,7 +112,7 @@ def changed(current: Format, query: str) -> Format:
     if len(args) != 1:
         raise ValueError(f"expected exactly one format option, got {sorted(args)}")
     key, value = next(iter(args.items()))
-    if key in ("axis", "gridlines"):
+    if key in ("axis", "gridlines", "markers"):
         flag = {"true": True, "false": False}.get(value)
         if flag is None:
             raise ValueError(f"{key} must be true or false, not {value!r}")
@@ -154,6 +157,13 @@ def format_options(state: ChartState) -> tuple[Switch, ...]:
                 state.format.series_names == mode,
             )
             for mode in ("none", "labels", "legend")
+        )
+    if supports(state, "markers"):
+        switches.append(
+            Switch(
+                "menu_markers_hide" if state.format.markers else "menu_markers_show",
+                f"ChangeFormat?markers={'false' if state.format.markers else 'true'}",
+            )
         )
     return tuple(switches)
 

@@ -60,4 +60,35 @@ class Text:
     fill: int | None = None
 
 
-Primitive = Rect | Line | Text
+@dataclass(frozen=True, slots=True)
+class Polyline:
+    """A connected line through ``points`` (diagonal segments allowed).
+
+    One primitive per run of consecutive values, so a series stays one selectable shape. The
+    renderer draws it in the series colour.
+    """
+
+    points: tuple[tuple[float, float], ...]
+    series: int
+
+
+@dataclass(frozen=True, slots=True)
+class Polygon:
+    """A closed, filled area through ``points``, in the series colour (stacked area charts)."""
+
+    points: tuple[tuple[float, float], ...]
+    series: int
+
+
+@dataclass(frozen=True, slots=True)
+class Marker:
+    """A small filled circle at (``x``, ``y``) in the series colour (line points)."""
+
+    x: float
+    y: float
+    series: int
+
+
+MARKER_SIZE = 250.0  # diameter of a point marker, 1/100 mm; the renderer keeps it fixed on resize
+
+Primitive = Rect | Line | Text | Polyline | Polygon | Marker

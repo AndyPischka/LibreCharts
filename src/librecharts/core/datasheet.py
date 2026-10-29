@@ -153,6 +153,28 @@ def sample_state() -> ChartState:
     )
 
 
+def sample_line_state() -> ChartState:
+    """Revenue and costs over six years: what a new line chart shows."""
+    return _sample_years("line")
+
+
+def sample_area_state() -> ChartState:
+    """Revenue and costs over six years: what a new area chart shows."""
+    return _sample_years("area")
+
+
+def _sample_years(kind: ChartKind) -> ChartState:
+    return state_from_table(
+        kind,
+        "stacked",
+        [
+            [None, "2020", "2021", "2022", "2023", "2024", "2025"],
+            ["Revenue", 12, 15, 18, 22, 27, 33],
+            ["Costs", 9, 10, 12, 14, 16, 19],
+        ],
+    )
+
+
 def _raw(cell: Cell) -> str:
     if cell is None:
         return ""
