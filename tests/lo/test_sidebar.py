@@ -6,7 +6,7 @@ what it looks like and the clicks are checked by hand. Its contents are tested i
 tests/core/test_panel.py.
 """
 
-from helpers import dispatch, first_page, new_impress, prop
+from helpers import close_doc, dispatch, first_page, new_impress, prop
 
 from librecharts.core.messages import text
 from librecharts.lo import store, ui
@@ -80,4 +80,4 @@ def test_panel_follows_the_selected_chart(ctx):
         difference = text("menu_bracket", ui.ui_locale(ctx), start="", end="").split(" ")[0]
         assert any(label.startswith(difference) for label in labels)
     finally:
-        doc.close(True)
+        close_doc(doc)

@@ -5,6 +5,7 @@ import time
 
 from helpers import (
     close_datasheets,
+    close_doc,
     datasheets,
     dispatch,
     first_page,
@@ -78,7 +79,7 @@ def test_variants_are_one_undo_step_each(ctx):
         dispatch(ctx, doc, TO_STACKED)
         assert without_format(_state(doc, chart_id)) == sample_state()
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_sort_survives_reload_and_a_data_sheet_edit(ctx):
@@ -103,10 +104,10 @@ def test_sort_survives_reload_and_a_data_sheet_edit(ctx):
                 ((_, reloaded_id),) = store.find_charts(first_page(reloaded))
                 assert _state(reloaded, reloaded_id).sort == "descending", fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_an_arrow_stays_on_its_category_after_sorting(ctx):
@@ -122,4 +123,4 @@ def test_an_arrow_stays_on_its_category_after_sorting(ctx):
         # The stored annotation keeps the data sheet indices.
         assert [(a.start, a.end) for a in _state(doc, chart_id).annotations] == [(0, 2)]
     finally:
-        doc.close(True)
+        close_doc(doc)

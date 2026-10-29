@@ -10,7 +10,14 @@ import time
 from dataclasses import replace
 
 import uno
-from helpers import dispatch, first_page, new_impress, set_chart_state, skip_on_headless_linux
+from helpers import (
+    close_doc,
+    dispatch,
+    first_page,
+    new_impress,
+    set_chart_state,
+    skip_on_headless_linux,
+)
 
 from librecharts.core.datasheet import sample_state
 from librecharts.core.model import Annotation
@@ -71,7 +78,7 @@ def test_picking_two_columns_adds_a_difference_arrow(ctx):
         assert len(doc.getUndoManager().getAllUndoActionTitles()) == depth + 1
         assert "+28.6%" in [group.getByIndex(i).String for i in range(group.getCount())]
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_picking_the_start_column_again_keeps_waiting(ctx):
@@ -86,7 +93,7 @@ def test_picking_the_start_column_again_keeps_waiting(ctx):
         controller.select(_child_with_text(group, "2025"))
         _wait_for(lambda: _annotations(doc, chart_id) == (Annotation("cagr", 1, 2),))
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_picking_bars_of_a_clustered_chart_measures_that_series(ctx):
@@ -101,7 +108,7 @@ def test_picking_bars_of_a_clustered_chart_measures_that_series(ctx):
         _wait_for(lambda: len(_annotations(doc, chart_id)) == 1)
         assert _annotations(doc, chart_id) == (Annotation("difference", 0, 2, series=1),)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_selecting_something_outside_the_chart_cancels(ctx):
@@ -121,7 +128,7 @@ def test_selecting_something_outside_the_chart_cancels(ctx):
         assert _annotations(doc, chart_id) == ()
         assert _chart_selected(doc)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_escape_cancels(ctx):
@@ -142,7 +149,7 @@ def test_escape_cancels(ctx):
         _settle()
         assert _annotations(doc, chart_id) == ()
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_picking_two_bars_adds_a_difference_arrow_to_a_bar_chart(ctx):
@@ -160,7 +167,7 @@ def test_picking_two_bars_adds_a_difference_arrow_to_a_bar_chart(ctx):
         _wait_for(lambda: _chart_selected(doc))
         assert "+28.6%" in [group.getByIndex(i).String for i in range(group.getCount())]
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_picking_two_columns_adds_a_difference_arrow_to_a_waterfall_chart(ctx):
@@ -178,4 +185,4 @@ def test_picking_two_columns_adds_a_difference_arrow_to_a_waterfall_chart(ctx):
         _wait_for(lambda: _chart_selected(doc))
         assert "+10%" in [group.getByIndex(i).String for i in range(group.getCount())]
     finally:
-        doc.close(True)
+        close_doc(doc)

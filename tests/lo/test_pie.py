@@ -1,7 +1,7 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
 """Pie and doughnut charts in a real LibreOffice: segments, variant switch and persistence."""
 
-from helpers import dispatch, first_page, new_impress, save_and_reload, uno_command
+from helpers import close_doc, dispatch, first_page, new_impress, save_and_reload, uno_command
 
 from librecharts.lo import store
 
@@ -41,7 +41,7 @@ def test_a_pie_chart_draws_one_segment_per_series_and_category(ctx):
             assert expected in texts, (expected, texts)
         assert "Product A" in texts  # the legend column right of the pies
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_the_doughnut_switch_is_one_undo_step_and_shows_the_sum(ctx):
@@ -62,7 +62,7 @@ def test_the_doughnut_switch_is_one_undo_step_and_shows_the_sum(ctx):
         assert not _state(doc, chart_id).doughnut
         assert "100" not in [text for _, text in _children(group)]
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_resize_keeps_the_segments(ctx):
@@ -84,7 +84,7 @@ def test_a_resize_keeps_the_segments(ctx):
         assert len(_children(group)) == before
         assert len(_segments(_children(group))) == 6
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_pie_and_doughnut_charts_survive_reload(ctx):
@@ -103,6 +103,6 @@ def test_pie_and_doughnut_charts_survive_reload(ctx):
                 texts = [text for _, text in _children(reloaded_group) if text]
                 assert "100" in texts, (fmt, texts)
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)

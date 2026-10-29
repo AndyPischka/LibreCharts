@@ -5,7 +5,7 @@ import time
 from dataclasses import replace
 
 import uno
-from helpers import dispatch, first_page, new_impress, set_chart_state, uno_command
+from helpers import close_doc, dispatch, first_page, new_impress, set_chart_state, uno_command
 
 from librecharts.core import style
 from librecharts.lo import store
@@ -78,7 +78,7 @@ def test_two_charts_share_the_smallest_scale_and_undo_as_one_step(ctx):
         assert _state(doc, id_b).scale_group is None
         assert max(_bar_heights(group_a)) == before
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_removing_the_group_restores_the_own_scale(ctx):
@@ -102,7 +102,7 @@ def test_removing_the_group_restores_the_own_scale(ctx):
         assert max(_bar_heights(group_a)) == before
         assert scaled < before
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_the_shared_scale_survives_a_resize_of_one_chart(ctx):
@@ -131,4 +131,4 @@ def test_the_shared_scale_survives_a_resize_of_one_chart(ctx):
         # The smaller chart now limits the group, so the other one's columns shrink too.
         assert max(_bar_heights(group_a)) < scaled
     finally:
-        doc.close(True)
+        close_doc(doc)

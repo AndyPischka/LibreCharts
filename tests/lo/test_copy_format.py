@@ -1,7 +1,7 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
 """Copy chart format between charts in a real LibreOffice (ADR 0016)."""
 
-from helpers import dispatch, first_page, new_impress, uno_command
+from helpers import close_doc, dispatch, first_page, new_impress, uno_command
 
 from librecharts.lo import store
 
@@ -29,7 +29,7 @@ def test_applying_without_a_copied_format_changes_nothing(ctx):
         assert _state(doc, chart_id) == before
         assert len(manager.getAllUndoActionTitles()) == depth
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_copied_format_reaches_another_chart_in_one_undo_step(ctx):
@@ -66,4 +66,4 @@ def test_a_copied_format_reaches_another_chart_in_one_undo_step(ctx):
         assert not restored.format.axis
         assert restored.colors == ()
     finally:
-        doc.close(True)
+        close_doc(doc)

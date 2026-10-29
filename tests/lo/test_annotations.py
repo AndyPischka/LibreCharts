@@ -6,6 +6,7 @@ import time
 import uno
 from helpers import (
     close_datasheets,
+    close_doc,
     datasheets,
     dispatch,
     first_page,
@@ -77,7 +78,7 @@ def test_difference_arrow_is_stored_and_drawn(ctx):
         assert "+28.6%" in _labels(group)  # sample totals: 35 -> 45
         assert _arrowheads(group) == 1
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_adding_an_arrow_is_one_undo_step(ctx):
@@ -97,7 +98,7 @@ def test_adding_an_arrow_is_one_undo_step(ctx):
         assert len(_annotations(doc, chart_id)) == 1
         assert group.getCount() == children + ARROW_SHAPES
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_arrows_survive_odp_and_pptx(ctx):
@@ -112,9 +113,9 @@ def test_arrows_survive_odp_and_pptx(ctx):
                 assert "+28.6%" in _labels(group), fmt
                 assert _arrowheads(group) == 1, fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_editing_data_keeps_an_arrow_added_while_the_data_sheet_is_open(ctx):
@@ -128,7 +129,7 @@ def test_editing_data_keeps_an_arrow_added_while_the_data_sheet_is_open(ctx):
         assert _annotations(doc, chart_id) == (Annotation("difference", 0, 2),)
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_resized_chart_keeps_its_arrow_laid_out(ctx):
@@ -149,7 +150,7 @@ def test_resized_chart_keeps_its_arrow_laid_out(ctx):
         assert "+28.6%" in _labels(group)
         assert _arrowheads(group) == 1
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_level_arrow_points_up_with_dashed_helper_lines(ctx):
@@ -167,7 +168,7 @@ def test_level_arrow_points_up_with_dashed_helper_lines(ctx):
         assert (dashed, start_heads, end_heads) == (2, 1, 0)
         assert "+28.6%" in _labels(group)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_changing_and_removing_an_arrow_are_undo_steps(ctx):
@@ -192,7 +193,7 @@ def test_changing_and_removing_an_arrow_are_undo_steps(ctx):
         uno_command(ctx, doc, ".uno:Undo")
         assert len(_annotations(doc, chart_id)) == 1
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_remove_all_annotations(ctx):
@@ -205,7 +206,7 @@ def test_remove_all_annotations(ctx):
         assert _annotations(doc, chart_id) == ()
         assert group.getCount() == children
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_axis_break_cuts_a_tall_column_with_a_white_gap(ctx):
@@ -220,7 +221,7 @@ def test_axis_break_cuts_a_tall_column_with_a_white_gap(ctx):
         assert _white_gaps(group) == 1
         assert "100" in _labels(group)  # the label keeps the real value
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def _white_gaps(group):
@@ -248,7 +249,7 @@ def test_a_manual_axis_break_cuts_every_column_beyond_it_and_a_new_one_replaces_
         uno_command(ctx, doc, ".uno:Undo")
         assert _white_gaps(group) == 2
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_changing_the_range_of_an_axis_break(ctx):
@@ -262,7 +263,7 @@ def test_changing_the_range_of_an_axis_break(ctx):
         dispatch(ctx, doc, "org.librecharts:ChangeAnnotation?index=0&lower=&upper=")
         assert _annotations(doc, chart_id) == (Annotation("axis_break", 0, 0),)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_bar_chart_arrows_and_axis_break_are_stored_and_drawn(ctx):
@@ -281,7 +282,7 @@ def test_bar_chart_arrows_and_axis_break_are_stored_and_drawn(ctx):
         assert "+28.6%" in _labels(group)
         assert _arrowheads(group) == 2
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_waterfall_arrows_and_a_break_below_the_steps_are_drawn(ctx):
@@ -307,4 +308,4 @@ def test_waterfall_arrows_and_a_break_below_the_steps_are_drawn(ctx):
         assert "100" in labels
         assert "+30" in labels
     finally:
-        doc.close(True)
+        close_doc(doc)

@@ -5,6 +5,7 @@ import time
 
 from helpers import (
     close_datasheets,
+    close_doc,
     datasheets,
     dispatch,
     first_page,
@@ -75,7 +76,7 @@ def test_a_line_chart_draws_one_polyline_per_series_with_markers(ctx):
         assert "12" in texts
         assert "33" in texts
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_markers_can_be_hidden_in_one_undo_step(ctx):
@@ -102,7 +103,7 @@ def test_markers_can_be_hidden_in_one_undo_step(ctx):
         assert _state(doc, chart_id).format.markers is True
         assert len(_of_type(_children(group), "EllipseShape")) == 12
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_line_chart_survives_reload_and_a_data_sheet_edit(ctx):
@@ -133,10 +134,10 @@ def test_a_line_chart_survives_reload_and_a_data_sheet_edit(ctx):
                 assert "Revenue" in texts, (fmt, texts)
                 assert "20" in texts, (fmt, texts)
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_resize_keeps_the_markers_small(ctx):
@@ -148,7 +149,7 @@ def test_a_resize_keeps_the_markers_small(ctx):
         group.Size = _size(group.Size.Width, big)
         _wait_for(lambda: group.Size.Height == big and _markers_small(group))
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def _size(width, height):

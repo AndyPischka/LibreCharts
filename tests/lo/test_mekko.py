@@ -6,6 +6,7 @@ import time
 import uno
 from helpers import (
     close_datasheets,
+    close_doc,
     datasheets,
     dispatch,
     first_page,
@@ -67,9 +68,9 @@ def test_mekko_is_inserted_and_survives_odp_and_pptx(ctx):
                     without_format(store.read_state(reloaded, reloaded_id)) == sample_mekko_state()
                 ), fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_width_row_in_the_data_sheet_changes_the_column_widths(ctx):
@@ -93,7 +94,7 @@ def test_a_width_row_in_the_data_sheet_changes_the_column_widths(ctx):
         assert "10" in _texts(group)
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def _state(doc, chart_id):
@@ -132,7 +133,7 @@ def test_switching_to_units_is_one_undo_step(ctx):
         dispatch(ctx, doc, TO_PERCENT)
         assert _state(doc, chart_id).percent
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_the_units_variant_survives_odp_and_pptx(ctx):
@@ -144,9 +145,9 @@ def test_the_units_variant_survives_odp_and_pptx(ctx):
                 ((_, reloaded_id),) = store.find_charts(first_page(reloaded))
                 assert not _state(reloaded, reloaded_id).percent, fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_data_sheet_edit_keeps_the_units_variant(ctx):
@@ -159,4 +160,4 @@ def test_a_data_sheet_edit_keeps_the_units_variant(ctx):
         assert not _state(doc, chart_id).percent
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)

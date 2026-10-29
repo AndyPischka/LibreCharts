@@ -5,6 +5,7 @@ import time
 
 from helpers import (
     close_datasheets,
+    close_doc,
     datasheets,
     dispatch,
     first_page,
@@ -81,7 +82,7 @@ def test_axis_gridlines_and_a_value_line_are_one_undo_step_each(ctx):
         uno_command(ctx, doc, ".uno:Undo")
         assert _state(doc, chart_id).annotations == ()
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_format_and_value_line_survive_reload_and_a_data_sheet_edit(ctx):
@@ -115,10 +116,10 @@ def test_format_and_value_line_survive_reload_and_a_data_sheet_edit(ctx):
                 assert "Product A" in texts, (fmt, texts)
                 assert "40" in texts, (fmt, texts)
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_labels_on_a_dark_segment_are_white(ctx):
@@ -131,4 +132,4 @@ def test_labels_on_a_dark_segment_are_white(ctx):
         assert colors["20"] == style.WHITE, colors
         assert colors["5"] == style.BLACK, colors
     finally:
-        doc.close(True)
+        close_doc(doc)

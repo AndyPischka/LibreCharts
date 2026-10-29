@@ -10,6 +10,7 @@ import time
 import uno
 from helpers import (
     close_datasheets,
+    close_doc,
     datasheets,
     dispatch,
     first_page,
@@ -67,4 +68,4 @@ def test_context_menu_of_a_chart_opens_its_data_sheet(ctx):
         _wait_for(lambda: len(datasheets(ctx)) == 1)
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)

@@ -1,7 +1,7 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
 """Area charts in a real LibreOffice: filled areas, shares, value lines and persistence."""
 
-from helpers import dispatch, first_page, new_impress, save_and_reload, uno_command
+from helpers import close_doc, dispatch, first_page, new_impress, save_and_reload, uno_command
 
 from librecharts.core.layout.common import format_share
 from librecharts.lo import store
@@ -45,7 +45,7 @@ def test_an_area_chart_draws_one_filled_area_per_series(ctx):
         assert "12" in texts
         assert "33" in texts
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_the_100_percent_variant_shows_shares_and_can_be_undone(ctx):
@@ -71,7 +71,7 @@ def test_the_100_percent_variant_shows_shares_and_can_be_undone(ctx):
         dispatch(ctx, doc, TO_STACKED)
         assert not _state(doc, chart_id).percent
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_value_line_is_the_area_charts_only_annotation(ctx):
@@ -92,7 +92,7 @@ def test_a_value_line_is_the_area_charts_only_annotation(ctx):
         uno_command(ctx, doc, ".uno:Undo")
         assert _state(doc, chart_id).annotations == ()
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_an_area_chart_survives_reload_in_both_variants(ctx):
@@ -112,6 +112,6 @@ def test_an_area_chart_survives_reload_in_both_variants(ctx):
                     texts = [text for _, text in _children(reloaded_group) if text]
                     assert "Revenue" in texts, (fmt, texts)
                 finally:
-                    reloaded.close(True)
+                    close_doc(reloaded)
         finally:
-            doc.close(True)
+            close_doc(doc)

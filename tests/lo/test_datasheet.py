@@ -3,7 +3,7 @@
 
 import time
 
-from helpers import close_datasheets, datasheets, dispatch, first_page, new_impress
+from helpers import close_datasheets, close_doc, datasheets, dispatch, first_page, new_impress
 
 from librecharts.lo import store
 
@@ -47,7 +47,7 @@ def test_datasheet_shows_the_stored_cells(ctx):
         assert not calc.isModified()
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_editing_a_value_updates_state_and_chart(ctx):
@@ -61,7 +61,7 @@ def test_editing_a_value_updates_state_and_chart(ctx):
         assert not calc.isModified(), "closing the data sheet would ask to save"
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_formula_survives_closing_and_reopening(ctx):
@@ -70,7 +70,7 @@ def test_formula_survives_closing_and_reopening(ctx):
         _cell(calc, "B2").setFormula("=4*5")
         _wait_for(lambda: _state(doc, chart_id).cells[1][1] == "=4*5")
         assert _state(doc, chart_id).values[1][1] == 20
-        calc.close(True)
+        close_doc(calc)
         assert datasheets(ctx) == []
 
         doc.getCurrentController().select(group)
@@ -79,7 +79,7 @@ def test_formula_survives_closing_and_reopening(ctx):
         assert _cell(reopened, "B2").getFormula() == "=4*5"
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_editing_again_reuses_the_open_window(ctx):
@@ -89,7 +89,7 @@ def test_editing_again_reuses_the_open_window(ctx):
         assert len(datasheets(ctx)) == 1
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_datasheet_of_a_hidden_presentation_is_hidden(ctx):
@@ -98,10 +98,10 @@ def test_datasheet_of_a_hidden_presentation_is_hidden(ctx):
         assert not calc.getCurrentController().getFrame().getContainerWindow().isVisible()
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_closing_the_presentation_closes_its_datasheet(ctx):
     doc, _, _, _ = _chart_with_open_datasheet(ctx)
-    doc.close(True)
+    close_doc(doc)
     _wait_for(lambda: datasheets(ctx) == [])

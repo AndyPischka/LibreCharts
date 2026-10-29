@@ -1,14 +1,17 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
 """Shared helpers for UNO integration tests (run under LibreOffice's Python)."""
 
+import gc
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import uno
 from com.sun.star.beans import PropertyValue
 
 FILTERS = {"odp": "impress8", "pptx": "Impress MS PowerPoint 2007 XML"}
+RELEASE_SETTLE_S = 0.3  # see close_doc
 
 
 def prop(name, value):
@@ -34,6 +37,19 @@ def new_impress(ctx, hidden=True):
     while page.getCount():
         page.remove(page.getByIndex(0))
     return doc
+
+
+def close_doc(doc):
+    """Close ``doc`` once LibreOffice had time to process the releases of shapes read from it.
+
+    Use this instead of ``doc.close(True)``. The UNO bridge delivers the releases of proxies on a
+    thread of its own, unordered with the calls of this process: a shape proxy dropped just before
+    the close was released after LibreOffice had torn the document down, which destroyed its draw
+    object with the dead item pool and crashed LibreOffice 25.8.
+    """
+    gc.collect()  # proxies in reference cycles of this process
+    time.sleep(RELEASE_SETTLE_S)
+    doc.close(True)
 
 
 def dispatch(ctx, doc, command):
@@ -82,7 +98,7 @@ def datasheets(ctx):
 
 def close_datasheets(ctx):
     for calc in datasheets(ctx):
-        calc.close(True)
+        close_doc(calc)
 
 
 def uno_command(ctx, doc, command):

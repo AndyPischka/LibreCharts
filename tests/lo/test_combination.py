@@ -5,6 +5,7 @@ import time
 
 from helpers import (
     close_datasheets,
+    close_doc,
     datasheets,
     dispatch,
     first_page,
@@ -75,7 +76,7 @@ def test_a_column_can_become_a_combination_in_one_undo_step(ctx):
         assert _state(doc, chart_id).lines == ()
         assert _count(_children(group), "PolyLineShape") == 0
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_the_secondary_axis_is_drawn_even_without_the_value_axis(ctx):
@@ -95,7 +96,7 @@ def test_the_secondary_axis_is_drawn_even_without_the_value_axis(ctx):
         assert "0" in texts, texts  # the always-shown right axis
         assert _count(_children(group), "PolyLineShape") == 1
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_combination_and_secondary_axis_survive_reload(ctx):
@@ -113,9 +114,9 @@ def test_combination_and_secondary_axis_survive_reload(ctx):
                 texts = [text for _, text in _children(reloaded_group) if text]
                 assert "0" in texts, (fmt, texts)
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_a_data_sheet_edit_keeps_the_combination(ctx):
@@ -136,4 +137,4 @@ def test_a_data_sheet_edit_keeps_the_combination(ctx):
         assert _count(_children(group), "PolyLineShape") == 1
     finally:
         close_datasheets(ctx)
-        doc.close(True)
+        close_doc(doc)

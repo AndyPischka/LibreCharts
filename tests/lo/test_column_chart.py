@@ -3,7 +3,15 @@
 
 from dataclasses import replace
 
-from helpers import dispatch, first_page, new_impress, save_and_reload, uno_command, without_format
+from helpers import (
+    close_doc,
+    dispatch,
+    first_page,
+    new_impress,
+    save_and_reload,
+    uno_command,
+    without_format,
+)
 
 from librecharts.core.datasheet import sample_state
 from librecharts.lo import chart, store
@@ -24,7 +32,7 @@ def test_insert_adds_one_anchored_group_with_stored_state(ctx):
         assert group.getCount() > 10
         assert without_format(store.read_state(doc, chart_id)) == sample_state()
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_insert_is_one_undo_step_and_redoable(ctx):
@@ -43,7 +51,7 @@ def test_insert_is_one_undo_step_and_redoable(ctx):
         assert len(charts) == 1
         assert charts[0][0].getCount() > 10
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_state_survives_odp_and_pptx(ctx):
@@ -58,9 +66,9 @@ def test_state_survives_odp_and_pptx(ctx):
                 _, chart_id = charts[0]
                 assert without_format(store.read_state(reloaded, chart_id)) == sample_state(), fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_redraw_keeps_frame_and_replaces_children(ctx):
@@ -82,7 +90,7 @@ def test_redraw_keeps_frame_and_replaces_children(ctx):
         assert stacked_children - group.getCount() == 3
         assert store.read_state(doc, chart_id) == clustered
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_redraw_is_one_undo_step(ctx):
@@ -102,7 +110,7 @@ def test_redraw_is_one_undo_step(ctx):
         assert store.read_state(doc, chart_id) == inserted
         assert manager.getCurrentUndoActionTitle() == "Insert LibreCharts chart"
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_toolbar_is_registered_for_presentations(ctx):
@@ -114,7 +122,7 @@ def test_toolbar_is_registered_for_presentations(ctx):
         assert toolbar is not None, "LibreCharts toolbar not registered"
         assert toolbar.ResourceURL == "private:resource/toolbar/addon_org.librecharts.toolbar"
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 BAR_INSERT = "org.librecharts:InsertBarChart"
@@ -134,9 +142,9 @@ def test_bar_chart_is_inserted_and_survives_odp_and_pptx(ctx):
                 ((_, reloaded_id),) = store.find_charts(first_page(reloaded))
                 assert without_format(store.read_state(reloaded, reloaded_id)) == expected, fmt
             finally:
-                reloaded.close(True)
+                close_doc(reloaded)
     finally:
-        doc.close(True)
+        close_doc(doc)
 
 
 def test_bar_chart_is_redrawn_as_bars_after_a_data_change(ctx):
@@ -167,4 +175,4 @@ def test_bar_chart_is_redrawn_as_bars_after_a_data_change(ctx):
         assert len({y + h for _, y, _, h in first}) == 3
         assert store.read_state(doc, chart_id) == replace(state, grouping="clustered")
     finally:
-        doc.close(True)
+        close_doc(doc)
