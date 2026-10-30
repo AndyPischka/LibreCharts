@@ -158,13 +158,17 @@ def test_dividers_start_the_chapters_and_highlight_them(ctx):
         lines = _paragraphs(_list(doc, role))
         muted = style.mix(style.TEXT_COLOR, style.WHITE, core.MUTED_SHARE)
         assert lines == [
-            (f"1\t{first}", False, muted),
-            (f"2\t{second}", True, core.accent(style.DEFAULT)),
+            (f"1\t{first}\t3", False, muted),
+            (f"2\t{second}\t6", True, core.accent(style.DEFAULT)),
             (f"3\t{third}", False, muted),
         ]
         main, divider = _list(doc), _list(doc, role)
         assert (divider.Position.X, divider.Position.Y) == (main.Position.X, main.Position.Y)
         assert (divider.Size.Width, divider.Size.Height) == (main.Size.Width, main.Size.Height)
+        paragraph = divider.getText().createEnumeration().nextElement()
+        right = paragraph.ParaTabStops[-1]
+        width = divider.Size.Width - divider.TextLeftDistance - divider.TextRightDistance
+        assert (right.Alignment.value, right.Position) == ("RIGHT", width - agenda.INDENT)
         assert current.Layout == agenda.TITLE_ONLY
         assert text("agenda_title", ui.ui_locale(ctx)) in [
             current.getByIndex(i).String for i in range(current.getCount())
@@ -197,7 +201,7 @@ def test_update_follows_the_edited_main_list_in_one_undo_step(ctx):
             "Slide 4",
             "Slide 5",
         ]
-        assert [line for line, _, _ in _paragraphs(_list(doc))] == ["1\tIntro", f"2\t{third}"]
+        assert [line for line, _, _ in _paragraphs(_list(doc))] == ["1\tIntro\t3", f"2\t{third}"]
         assert _undo_depth(doc) == depth + 1
 
         uno_command(ctx, doc, ".uno:Undo")
@@ -232,6 +236,13 @@ def test_a_chapter_started_between_two_others_is_new(ctx):
             f"divider {titles[2]}",
             "Slide 4",
             "Slide 5",
+        ]
+        # the divider of the third chapter moved one slide down, its page number with it
+        assert [line for line, _, _ in _paragraphs(_list(doc))] == [
+            f"1\t{titles[0]}\t3",
+            f"2\t{titles[1]}\t5",
+            f"3\t{titles[2]}\t7",
+            f"4\t{titles[3]}",
         ]
     finally:
         doc.close(True)

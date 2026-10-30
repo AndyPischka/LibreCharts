@@ -15,6 +15,7 @@ from typing import Any
 
 import uno
 from com.sun.star.awt import Point, Size
+from com.sun.star.style import TabStop
 
 from librecharts.core import agenda as core
 from librecharts.core.agenda import MAIN, Agenda, AgendaError, Line, Slide
@@ -31,6 +32,8 @@ BOLD = 150.0  # com.sun.star.awt.FontWeight.BOLD
 NORMAL = 100.0  # com.sun.star.awt.FontWeight.NORMAL
 
 _TOP = uno.Enum("com.sun.star.drawing.TextVerticalAdjust", "TOP")
+_LEFT = uno.Enum("com.sun.star.style.TabAlign", "LEFT")
+_RIGHT = uno.Enum("com.sun.star.style.TabAlign", "RIGHT")
 
 
 class Refused(Exception):
@@ -185,16 +188,18 @@ def _new_list(doc: Any, page: Any, role: str) -> Any:
 
 
 def _draw(doc: Any, state: _State, new_roles: set[str]) -> None:
-    """Write the lists of the main slide and the dividers of ``state``; new dividers take the
-    master and layout of the main slide, every divider its title, list position and font."""
+    """Write the lists of the main slide and the dividers of ``state`` with the dividers' current
+    slide numbers; new dividers take the master and layout of the main slide, every divider its
+    title, list position and font."""
     found = _find(doc)
     if MAIN not in found or state.agenda is None:
         return
     _, main_page, main_list = found[MAIN]
     colours = scheme.load(doc)
     font = _font(main_list)
+    pages = core.page_numbers(_slides(found))
     if state.main_text is None:
-        main_lines = core.lines(state.agenda, colours)
+        main_lines = core.lines(state.agenda, colours, pages=pages)
     else:
         main_lines = tuple(Line(paragraph, colours.text) for paragraph in state.main_text)
     _write(main_list, main_lines, font)
@@ -211,13 +216,17 @@ def _draw(doc: Any, state: _State, new_roles: set[str]) -> None:
             divider_title.String = title.String
         shape.Position = main_list.Position
         shape.Size = main_list.Size
-        _write(shape, core.lines(state.agenda, colours, chapter_id), font)
+        _write(shape, core.lines(state.agenda, colours, chapter_id, pages), font)
 
 
 def _write(shape: Any, lines: tuple[Line, ...], font: tuple[str, float]) -> None:
     name, size = font
     shape.String = "\n".join(line.text for line in lines)
     body = shape.getText()
+    # Tab positions count from the paragraph's left margin: the title at the margin, the page
+    # number flush right. Without the first stop the title jumps to the next default tab.
+    width = shape.Size.Width - shape.TextLeftDistance - shape.TextRightDistance - INDENT
+    stops = (_tab_stop(0, _LEFT), _tab_stop(max(width, 0), _RIGHT))
     for paragraph, line in zip(_paragraphs(shape), lines, strict=False):
         # Character attributes through a cursor: set on the paragraph, they lose against the
         # attributes of its text, which the new text took over from a reloaded document.
@@ -229,6 +238,16 @@ def _write(shape: Any, lines: tuple[Line, ...], font: tuple[str, float]) -> None
         paragraph.ParaLeftMargin = INDENT
         paragraph.ParaFirstLineIndent = -INDENT
         paragraph.ParaBottomMargin = SPACING
+        paragraph.ParaTabStops = stops
+
+
+def _tab_stop(position: int, alignment: Any) -> Any:
+    stop = TabStop()
+    stop.Position = position
+    stop.Alignment = alignment
+    stop.DecimalChar = "."
+    stop.FillChar = " "
+    return stop
 
 
 def _font(shape: Any) -> tuple[str, float]:

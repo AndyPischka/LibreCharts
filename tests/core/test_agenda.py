@@ -52,6 +52,11 @@ def test_titles_are_the_non_empty_paragraphs_without_numbers() -> None:
     assert agenda.parse_titles(text) == ("Intro", "Market", "Plan", "Outlook", "2025 figures")
 
 
+def test_titles_are_without_their_page_numbers() -> None:
+    text = "1\tIntro\t3\n2\tMarket\t 12 \nPlan 2027\n4\tOutlook\t"
+    assert agenda.parse_titles(text) == ("Intro", "Market", "Plan 2027", "Outlook")
+
+
 def test_kept_titles_keep_their_chapter_also_when_moved() -> None:
     assert agenda.reconcile(ABC, ["Plan", "Intro", "Market"]) == Agenda(
         (ABC.chapters[2], ABC.chapters[0], ABC.chapters[1])
@@ -174,6 +179,24 @@ def test_a_divider_highlights_its_chapter() -> None:
     muted = style.mix(style.TEXT_COLOR, style.WHITE, agenda.MUTED_SHARE)
     assert lines[0] == Line("1\tIntro", muted)
     assert lines[2] == Line("3\tPlan", muted)
+
+
+def test_page_numbers_are_the_dividers_slide_numbers() -> None:
+    slides = (Slide(1, MAIN), Slide(2, A), Slide(6, C))
+    assert agenda.page_numbers(slides) == {A: 3, C: 7}
+
+
+def test_lists_end_with_the_page_numbers_of_placed_chapters() -> None:
+    pages = {A: 3, C: 7}
+    main = agenda.lines(ABC, style.DEFAULT, pages=pages)
+    assert [line.text for line in main] == ["1\tIntro\t3", "2\tMarket", "3\tPlan\t7"]
+    divider = agenda.lines(ABC, style.DEFAULT, C, pages)
+    assert divider[2] == Line("3\tPlan\t7", agenda.accent(style.DEFAULT), bold=True)
+    assert agenda.parse_titles("\n".join(line.text for line in divider)) == (
+        "Intro",
+        "Market",
+        "Plan",
+    )
 
 
 def test_the_accent_is_the_most_readable_palette_colour() -> None:

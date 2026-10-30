@@ -10,7 +10,9 @@ cannot move slides through the API, so:
 - a divider is where its chapter starts; LibreCharts never moves slides, the user moves a chapter
   with its divider in the slide sorter;
 - the titles are edited on the main slide, one paragraph per chapter, and stored with their
-  chapter ids as JSON in the document property ``librecharts:agenda``.
+  chapter ids as JSON in the document property ``librecharts:agenda``;
+- behind each title the lists show the slide number of its chapter's divider, written by every
+  command (``1<tab>Title<tab>5``).
 
 Pure Python, no UNO: ``lo/agenda.py`` finds the agenda slides, asks this module what to change
 and carries it out.
@@ -22,7 +24,7 @@ import json
 import re
 import uuid
 from bisect import bisect_left
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import cast
 
@@ -39,6 +41,8 @@ _ID = re.compile(r"[0-9a-f]{12}")
 _DIVIDER = re.compile(re.escape(MAIN_NAME) + r":(?P<id>[0-9a-f]{12})")
 # The number LibreCharts writes in front of a title ("1<tab>"), or one typed as "1." or "1)".
 _NUMBER = re.compile(r"\d+[.)]?\t\s*|\d+[.)]\s+")
+# The page number LibreCharts writes behind a title ("<tab>5").
+_PAGE = re.compile(r"\t\s*\d+$")
 
 
 class AgendaError(ValueError):
@@ -106,13 +110,14 @@ def role(name: str) -> str | None:
 
 def parse_titles(text: str) -> tuple[str, ...]:
     """The chapter titles in the text of the main slide's list: one per non-empty paragraph,
-    without the number in front."""
+    without the number in front and the page number behind."""
     titles: list[str] = []
     for paragraph in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
         title = paragraph.strip()
         number = _NUMBER.match(title)
         if number is not None:
             title = title[number.end() :].strip()
+        title = _PAGE.sub("", title).strip()
         if title:
             titles.append(title)
     return tuple(titles)
@@ -218,19 +223,36 @@ def changes(
     return tuple(remove), tuple(insert)
 
 
-def lines(agenda: Agenda, scheme: style.Scheme, current: str = MAIN) -> tuple[Line, ...]:
+def page_numbers(slides: Sequence[Slide]) -> dict[str, int]:
+    """The slide number (counted from 1) of every divider by its chapter id."""
+    return {slide.role: slide.index + 1 for slide in slides if slide.role != MAIN}
+
+
+def lines(
+    agenda: Agenda,
+    scheme: style.Scheme,
+    current: str = MAIN,
+    pages: Mapping[str, int] | None = None,
+) -> tuple[Line, ...]:
     """The numbered list of the main slide, or of the divider of chapter ``current``: its title
-    bold in the accent colour, the others muted."""
+    bold in the accent colour, the others muted. A chapter in ``pages`` ends with its page number
+    behind a tab."""
+    pages = pages or {}
+
+    def entry(number: int, chapter: Chapter) -> str:
+        page = pages.get(chapter.id)
+        return f"{number}\t{chapter.title}" + ("" if page is None else f"\t{page}")
+
     if current == MAIN:
         return tuple(
-            Line(f"{number}\t{chapter.title}", scheme.text)
+            Line(entry(number, chapter), scheme.text)
             for number, chapter in enumerate(agenda.chapters, 1)
         )
     highlight, muted = accent(scheme), style.mix(scheme.text, scheme.background, MUTED_SHARE)
     return tuple(
-        Line(f"{number}\t{chapter.title}", highlight, bold=True)
+        Line(entry(number, chapter), highlight, bold=True)
         if chapter.id == current
-        else Line(f"{number}\t{chapter.title}", muted)
+        else Line(entry(number, chapter), muted)
         for number, chapter in enumerate(agenda.chapters, 1)
     )
 

@@ -43,6 +43,11 @@ slides were moved. A spike against LibreOffice 26.8 showed that both fail:
   (`1<tab>Title`, hanging indent); on a divider its chapter is bold in the *accent* (the palette
   colour with the highest contrast to the background, the text colour if none reaches 3:1) and the
   others are muted halfway to the background. Other shapes of the main slide are not repeated.
+- **Page numbers** (added after M12): behind each title, after a second tab, the lists show the
+  slide number of the chapter's divider (`1<tab>Title<tab>5`), flush right by a right tab stop at
+  the end of the text area; a left stop at the indent keeps the title there. The numbers are plain
+  text written by every command, not fields: Impress has no field for another slide's number.
+  *Update agenda* refreshes them; parsing the main list drops them again.
 - **Undo**: a command is one explicit action (ARCHITECTURE.md, invariant 7) that re-applies the agenda as it was
   before or after it: the property, the agenda slides by role and page index
   (`core/agenda.changes`), and the main list's text as the user had typed it. Slides are matched
@@ -73,5 +78,8 @@ slides were moved. A spike against LibreOffice 26.8 showed that both fail:
   on a divider are overwritten by the next update; both are documented in the changelog.
 - A chapter cannot start on the first slide, and undoing the removal of a divider that the user
   had moved to the first slide puts it back as the second.
+- Page numbers go stale when slides are moved or added until the next agenda command. PPTX keeps
+  the tab stops for PowerPoint, but LibreOffice 26.8 does not read them back: after reloading a
+  PPTX the numbers sit at the next default tab until *Update agenda* runs.
 - If the property is lost (e.g. a tool that drops custom properties), the next update starts with
   new chapter ids; the old dividers are left untouched instead of being removed.

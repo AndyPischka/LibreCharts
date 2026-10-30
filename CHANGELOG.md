@@ -14,6 +14,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   of the redrawn chart.
 
 ### Added
+- **Page numbers in the agenda**: the agenda slide and every divider show, flush right behind each
+  chapter, the slide number of the chapter's divider. Every agenda command renumbers them; after
+  moving or adding slides, *Update agenda* brings them up to date. Chapters without a divider have
+  no number yet. Titles hang behind their numbers at the indent now instead of the next default tab.
 - **Moving labels** (*Move labels*, *Reset label positions* in the LibreCharts menu, the chart's
   right-click menu and the sidebar): enter a chart and drag value labels and totals to another place,
   for example out of a segment too flat to hold them. A moved label keeps its distance from its
