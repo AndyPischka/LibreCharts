@@ -42,7 +42,7 @@ that the later milestones use; M6 then gives every chart type the same axis and 
 | M11 | Data links | Link a chart to a range in an external Calc or Excel file (or CSV) and update it on demand; relative paths, read-only data sheet, info bar when sources changed (ADR 0020) | done |
 | M12 | Slide elements | Harvey balls, check marks, same size and arranging shapes into a grid (ADR 0021); an agenda with a divider slide before every chapter (ADR 0022) | done |
 | M13 | Label placement | Moving single labels by hand; the offsets survive data edits, sorting and resizing (deferred from M6, ADR 0023) | done |
-| 3.0 | First release | `SECURITY.md`, packaging for extensions.libreoffice.org, German/English UI review | open |
+| 3.0 | First release | `SECURITY.md`, packaging for extensions.libreoffice.org | open |
 
 M9 comes first: its sector geometry is reused by the Harvey balls in M12, and its scatter data
 sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 follows.

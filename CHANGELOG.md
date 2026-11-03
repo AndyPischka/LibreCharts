@@ -5,7 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Changed
+- German and English UI strings reviewed and aligned: the ambiguous *Open source* is now *Open
+  source file* / *Quelldatei öffnen*, *Show percentage* is *Show percentage difference* /
+  *Prozentuale Differenz zeigen*, and menu, toolbar and sidebar agree on *Same scale*, *Own scale*
+  and *Arrange in grid*. The built-in colour schemes are translated (*Standard*, *Grau*, *Hoher
+  Kontrast*). The extension description lists the chart types and features of 3.0.
+
 ### Fixed
+- The German prompt for selecting a Harvey ball used the wrong article (*eine* instead of *einen*),
+  and the status line of a butterfly chart with more than two series ran its two sentences together.
 - *Start chapter here* is pressable right after inserting an agenda: before, it stayed grey on a
   content slide until *Update agenda* was pressed. The sidebar cannot hear a plain slide change,
   so the button no longer depends on the current slide; on an agenda slide, the command says why

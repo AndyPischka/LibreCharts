@@ -1,1 +1,1 @@
-Charts im Stil von think-cell (Säulen, Wasserfall, Marimekko, Annotationen) für LibreOffice Impress.
+Diagramme im Stil von think-cell für LibreOffice Impress: Säulen-, Balken-, Wasserfall-, Marimekko-, Linien-, Flächen-, Kreis-, Streu-, Schmetterlings- und Gantt-Diagramme, Annotationen, Datenverknüpfungen, Folienelemente und eine Agenda.

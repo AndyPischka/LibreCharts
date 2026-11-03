@@ -189,8 +189,8 @@
           <node oor:name="m2b" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>
-              <value xml:lang="en-US">Use the same scale</value>
-              <value xml:lang="de">Gleichen Maßstab verwenden</value>
+              <value xml:lang="en-US">Same scale</value>
+              <value xml:lang="de">Gleicher Maßstab</value>
             </prop>
             <prop oor:name="URL" oor:type="xs:string">
               <value>org.librecharts:SameScale</value>
@@ -202,8 +202,8 @@
           <node oor:name="m2c" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>
-              <value xml:lang="en-US">Use own scale</value>
-              <value xml:lang="de">Eigenen Maßstab verwenden</value>
+              <value xml:lang="en-US">Own scale</value>
+              <value xml:lang="de">Eigener Maßstab</value>
             </prop>
             <prop oor:name="URL" oor:type="xs:string">
               <value>org.librecharts:RemoveSameScale</value>
@@ -736,8 +736,8 @@
         </prop>
         <prop oor:name="Title" oor:type="xs:string">
           <value/>
-          <value xml:lang="en-US">Use the same scale</value>
-          <value xml:lang="de">Gleichen Maßstab verwenden</value>
+          <value xml:lang="en-US">Same scale</value>
+          <value xml:lang="de">Gleicher Maßstab</value>
         </prop>
         <prop oor:name="Target" oor:type="xs:string">
           <value>_self</value>
@@ -752,8 +752,8 @@
         </prop>
         <prop oor:name="Title" oor:type="xs:string">
           <value/>
-          <value xml:lang="en-US">Use own scale</value>
-          <value xml:lang="de">Eigenen Maßstab verwenden</value>
+          <value xml:lang="en-US">Own scale</value>
+          <value xml:lang="de">Eigener Maßstab</value>
         </prop>
         <prop oor:name="Target" oor:type="xs:string">
           <value>_self</value>

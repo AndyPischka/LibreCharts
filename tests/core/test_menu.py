@@ -35,7 +35,7 @@ SORT = MenuItem(
     ),
 )
 SERIES = MenuItem(
-    "Series names",
+    "Series labels",
     children=(
         MenuItem("Show series labels", PROTOCOL + "ChangeFormat?series_names=labels"),
         MenuItem("Show legend", PROTOCOL + "ChangeFormat?series_names=legend"),
@@ -201,7 +201,7 @@ def test_the_format_menu_hides_what_the_chart_already_shows() -> None:
     assert [child.title for child in format_menu.children] == [
         "Hide value axis",
         "Hide gridlines",
-        "Series names",
+        "Series labels",
         "Number format...",
     ]
     assert commands(format_menu)[0] == PROTOCOL + "ChangeFormat?axis=false"
@@ -215,9 +215,9 @@ def test_series_labels_and_legend_are_mutually_exclusive() -> None:
         for item in chart_menu(state, "en-US").children
         if item.title == "Format"
         for child in item.children
-        if child.title == "Series names"
+        if child.title == "Series labels"
     )
-    assert [child.title for child in series.children] == ["Hide series names", "Show legend"]
+    assert [child.title for child in series.children] == ["Hide series labels", "Show legend"]
     assert all(
         child.command != PROTOCOL + "ChangeFormat?series_names=labels" for child in series.children
     )
@@ -352,7 +352,7 @@ def test_a_linked_chart_shows_its_data_and_offers_update_and_the_link_commands()
             "Data link",
             children=(
                 MenuItem("Change link...", PROTOCOL + "LinkData"),
-                MenuItem("Open source", PROTOCOL + "OpenSource"),
+                MenuItem("Open source file", PROTOCOL + "OpenSource"),
                 MenuItem("Remove link", PROTOCOL + "RemoveLink"),
             ),
         ),

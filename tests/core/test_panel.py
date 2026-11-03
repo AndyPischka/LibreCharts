@@ -122,6 +122,20 @@ def test_texts_follow_the_locale() -> None:
     assert content(None, False, "de-DE").status == "Kein Diagramm ausgewählt."
 
 
+def test_built_in_colour_schemes_are_translated() -> None:
+    panel = content(None, False, "de-DE")
+    assert panel.scheme == "Standard"
+    assert [b.title for b in panel.schemes] == ["Standard", "Grau", "Hoher Kontrast"]
+    # the commands keep the scheme's stored name, so the translation never reaches the document
+    assert [b.command for b in panel.schemes] == [
+        PROTOCOL + f"SetScheme?name={name}" for name in ("Default", "Grey", "High contrast")
+    ]
+
+
+def test_a_custom_colour_scheme_keeps_its_name() -> None:
+    assert content(None, False, "de-DE", scheme_name="Acme").scheme == "Acme"
+
+
 def test_line_and_area_charts_report_their_kind() -> None:
     line = state_from_table("line", "stacked", [[None, "2024", "2025"], ["Sales", 1, 2]])
     area = state_from_table("area", "stacked", [[None, "2024", "2025"], ["Sales", 1, 2]])
@@ -135,6 +149,13 @@ def test_line_and_area_charts_report_their_kind() -> None:
 def test_a_combination_chart_reports_its_lines() -> None:
     panel = content(replace(sample_state(), lines=(1,)), True, "en-US")
     assert panel.status.startswith("Column chart with lines, ")
+
+
+def test_a_butterfly_chart_with_extra_series_says_so_in_a_sentence() -> None:
+    state = state_from_table(
+        "butterfly", "stacked", [[None, "2024"], ["Men", 1], ["Women", 2], ["Other", 3]]
+    )
+    assert content(state, True, "en-US").status.endswith(". Only the first two series are drawn.")
 
 
 def test_line_and_area_charts_offer_only_their_annotation_buttons() -> None:

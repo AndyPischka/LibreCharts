@@ -86,7 +86,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "break_manual": {
         "en": "Remove the values between",
-        "de": "Werte entfernen zwischen",
+        "de": "Werte dazwischen entfernen",
     },
     "break_lower": {
         "en": "Lower value:",
@@ -133,16 +133,16 @@ MESSAGES: dict[str, dict[str, str]] = {
         "de": "Absolute Differenz zeigen",
     },
     "menu_show_percent": {
-        "en": "Show percentage",
-        "de": "Prozent zeigen",
+        "en": "Show percentage difference",
+        "de": "Prozentuale Differenz zeigen",
     },
     "menu_as_level": {
         "en": "Show as level difference",
         "de": "Als Niveaudifferenz zeigen",
     },
     "menu_as_bracket": {
-        "en": "Show as arrow above the columns",
-        "de": "Als Pfeil über den Säulen zeigen",
+        "en": "Show as difference arrow",
+        "de": "Als Differenzpfeil zeigen",
     },
     "menu_remove": {
         "en": "Remove",
@@ -178,7 +178,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "menu_sort_none": {
         "en": "Data sheet order",
-        "de": "Reihenfolge der Daten",
+        "de": "Reihenfolge im Datenblatt",
     },
     "menu_sort_descending": {
         "en": "Descending",
@@ -217,11 +217,11 @@ MESSAGES: dict[str, dict[str, str]] = {
         "de": "Gitternetzlinien ausblenden",
     },
     "menu_series_names": {
-        "en": "Series names",
+        "en": "Series labels",
         "de": "Reihennamen",
     },
     "menu_series_none": {
-        "en": "Hide series names",
+        "en": "Hide series labels",
         "de": "Reihennamen ausblenden",
     },
     "menu_series_labels": {
@@ -640,6 +640,18 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Colour scheme",
         "de": "Farbschema",
     },
+    "scheme_default": {
+        "en": "Default",
+        "de": "Standard",
+    },
+    "scheme_grey": {
+        "en": "Grey",
+        "de": "Grau",
+    },
+    "scheme_high_contrast": {
+        "en": "High contrast",
+        "de": "Hoher Kontrast",
+    },
     "panel_scheme_load": {
         "en": "Load scheme...",
         "de": "Schema laden...",
@@ -697,8 +709,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "de": "Verknüpfung ändern...",
     },
     "menu_open_source": {
-        "en": "Open source",
-        "de": "Quelle öffnen",
+        "en": "Open source file",
+        "de": "Quelldatei öffnen",
     },
     "menu_remove_link": {
         "en": "Remove link",
@@ -921,7 +933,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "select_element": {
         "en": "Please select a Harvey ball or check mark first.",
-        "de": "Bitte zuerst eine Harvey Ball oder ein Häkchen auswählen.",
+        "de": "Bitte zuerst einen Harvey Ball oder ein Häkchen auswählen.",
     },
     "element_unsupported": {
         "en": "This element state does not exist.",
@@ -972,8 +984,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "de": "Gleiche Größe",
     },
     "menu_arrange_grid": {
-        "en": "Grid, {columns} columns",
-        "de": "Raster, {columns} Spalten",
+        "en": "Arrange in grid, {columns} columns",
+        "de": "Im Raster anordnen, {columns} Spalten",
     },
     "menu_arrange_swap": {
         "en": "Swap positions",

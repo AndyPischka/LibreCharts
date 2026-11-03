@@ -26,6 +26,18 @@ _ARRANGE_ICONS = {  # by the ``op`` of the Arrange command
     **{f"grid&columns={columns}": f"arrange_grid_{columns}" for columns in GRID_COLUMNS},
 }
 
+_SCHEME_KEYS = {  # built-in schemes are shown under a translated name
+    style.DEFAULT.name: "scheme_default",
+    style.GREY.name: "scheme_grey",
+    style.HIGH_CONTRAST.name: "scheme_high_contrast",
+}
+
+
+def scheme_title(name: str, locale: str) -> str:
+    """A scheme's name for the UI: built-in schemes are translated, others keep their name."""
+    key = _SCHEME_KEYS.get(name)
+    return text(key, locale) if key else name
+
 
 @dataclass(frozen=True, slots=True)
 class Button:
@@ -113,7 +125,7 @@ def content(
             count=str(len(data.categories)),
         )
         if kind == "butterfly" and len(data.series) > 2:
-            status += " " + text("status_butterfly_extra", locale)
+            status += ". " + text("status_butterfly_extra", locale)
         rows = tuple(
             Row(
                 annotation_title(
@@ -199,7 +211,7 @@ def content(
                 "",
                 locale,
                 scheme.name != scheme_name,
-                title=scheme.name,
+                title=scheme_title(scheme.name, locale),
             )
             for scheme in style.BUILT_INS
         ),
@@ -207,7 +219,7 @@ def content(
             _button("panel_scheme_load", "LoadScheme", "", locale),
             _button("panel_scheme_save", "SaveScheme", "", locale),
         ),
-        scheme=scheme_name,
+        scheme=scheme_title(scheme_name, locale),
         elements=(
             _button("insert_harvey", "InsertElement?harvey=50", "insert_harvey", locale),
             _button("insert_check", "InsertElement?check=tick", "insert_check", locale),

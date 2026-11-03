@@ -1,1 +1,1 @@
-Think-cell-style charts (column, waterfall, Marimekko, annotations) for LibreOffice Impress.
+Think-cell-style charts for LibreOffice Impress: column, bar, waterfall, Marimekko, line, area, pie, scatter, butterfly and Gantt charts, annotations, data links, slide elements and an agenda.

@@ -1,12 +1,32 @@
+import re
+
 import pytest
 
 from librecharts.core.messages import MESSAGES, text
+
+PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 
 @pytest.mark.parametrize("key", sorted(MESSAGES))
 def test_every_message_exists_in_english_and_german(key: str) -> None:
     assert set(MESSAGES[key]) >= {"en", "de"}
     assert all(MESSAGES[key].values())
+
+
+@pytest.mark.parametrize("key", sorted(MESSAGES))
+def test_placeholders_match_between_languages(key: str) -> None:
+    assert set(PLACEHOLDER.findall(MESSAGES[key]["en"])) == set(
+        PLACEHOLDER.findall(MESSAGES[key]["de"])
+    )
+
+
+@pytest.mark.parametrize("key", sorted(MESSAGES))
+def test_punctuation_and_spacing_match_between_languages(key: str) -> None:
+    en, de = MESSAGES[key]["en"], MESSAGES[key]["de"]
+    for ending in (".", ":", "..."):
+        assert en.endswith(ending) == de.endswith(ending), (key, ending)
+    assert en.startswith(" ") == de.startswith(" "), key
+    assert en.endswith(" ") == de.endswith(" "), key
 
 
 @pytest.mark.parametrize(
