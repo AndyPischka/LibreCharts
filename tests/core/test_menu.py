@@ -18,6 +18,12 @@ LINK = MenuItem("Link data...", PROTOCOL + "LinkData")
 VARIANTS = (
     MenuItem("Show clustered", PROTOCOL + "ChangeChart?grouping=clustered"),
     MenuItem("Show as 100 %", PROTOCOL + "ChangeChart?percent=true"),
+    MenuItem("Floating bars", PROTOCOL + "ChangeChart?range=true"),
+    MenuItem("Error bars", PROTOCOL + "ChangeChart?errors=true"),
+)
+WATERFALL_VARIANTS = (
+    MenuItem("Horizontal", PROTOCOL + "ChangeChart?horizontal=true"),
+    MenuItem("Stacked", PROTOCOL + "ChangeChart?stacked=true"),
 )
 LINES = MenuItem(
     "Series as lines",
@@ -167,10 +173,11 @@ def test_the_current_sort_order_is_not_offered_again() -> None:
     ]
 
 
-def test_waterfall_charts_have_no_variants_or_sort() -> None:
+def test_waterfall_charts_offer_horizontal_and_stacked_but_no_sort() -> None:
     assert chart_menu(sample_waterfall_state(), "en-US").children == (
         EDIT,
         LINK,
+        *WATERFALL_VARIANTS,
         FORMAT_WATERFALL,
         *FORMAT_TOOLS,
         *ADD_WATERFALL,

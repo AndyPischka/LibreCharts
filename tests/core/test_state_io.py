@@ -234,6 +234,30 @@ def test_round_trip_preserves_the_doughnut_flag() -> None:
     assert from_json(to_json(state)) == state
 
 
+def test_round_trip_preserves_the_m15_flags() -> None:
+    state = make_state(kind="waterfall", horizontal=True, stacked=True)
+    restored = from_json(to_json(state))
+    assert restored.horizontal is True
+    assert restored.stacked is True
+    column = make_state(range=True)
+    assert from_json(to_json(column)).range is True
+    line = make_state(kind="line", errors=True)
+    assert from_json(to_json(line)).errors is True
+
+
+def test_version_13_state_gets_no_floating_bars_error_bars_or_waterfall_variants() -> None:
+    raw = valid_raw()
+    for key in ("range", "errors", "horizontal", "stacked"):
+        del raw[key]
+    raw["v"] = 13
+    restored = from_json(json.dumps(raw))
+    assert restored.version == SCHEMA_VERSION
+    assert restored.range is False
+    assert restored.errors is False
+    assert restored.horizontal is False
+    assert restored.stacked is False
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [

@@ -3,12 +3,15 @@ from dataclasses import replace
 import pytest
 
 from librecharts.core.datasheet import (
+    sample_line_state,
     sample_mekko_state,
+    sample_pie_state,
+    sample_scatter_state,
     sample_state,
     sample_waterfall_state,
     state_from_table,
 )
-from librecharts.core.model import LabelKey, LabelOffset
+from librecharts.core.model import ChartState, LabelKey, LabelOffset
 from librecharts.core.options import (
     Switch,
     can_draw_lines,
@@ -22,11 +25,15 @@ from librecharts.core.options import (
 )
 
 
-def test_a_column_offers_all_three_variants_with_the_current_one_marked() -> None:
+def test_a_column_offers_all_variants_with_the_current_ones_marked() -> None:
     assert variants(sample_state()) == (
         Switch("menu_stacked", "ChangeChart?grouping=stacked", True),
         Switch("menu_clustered", "ChangeChart?grouping=clustered", False),
         Switch("menu_percent", "ChangeChart?percent=true", False),
+        Switch("menu_floating", "ChangeChart?range=true", False),
+        Switch("menu_baseline", "ChangeChart?range=false", True),
+        Switch("menu_error_bars", "ChangeChart?errors=true", False),
+        Switch("menu_no_error_bars", "ChangeChart?errors=false", True),
     )
 
 
@@ -50,11 +57,85 @@ def test_a_percent_mekko_offers_both_variants() -> None:
     )
 
 
-@pytest.mark.parametrize("state", [sample_waterfall_state()])
+@pytest.mark.parametrize("state", [sample_scatter_state()])
 def test_charts_without_options_have_no_switch(state: object) -> None:
     assert variants(state) == ()  # pyright: ignore[reportArgumentType]
     assert sort_options(state) == ()  # pyright: ignore[reportArgumentType]
     assert sort_toggle(state) is None  # pyright: ignore[reportArgumentType]
+
+
+def test_a_waterfall_offers_horizontal_and_stacked() -> None:
+    assert variants(sample_waterfall_state()) == (
+        Switch("menu_waterfall_vertical", "ChangeChart?horizontal=false", True),
+        Switch("menu_waterfall_horizontal", "ChangeChart?horizontal=true", False),
+        Switch("menu_waterfall_single", "ChangeChart?stacked=false", True),
+        Switch("menu_waterfall_stacked", "ChangeChart?stacked=true", False),
+    )
+    horizontal = changed(sample_waterfall_state(), "horizontal=true")
+    assert variants(horizontal)[1].current
+    stacked = changed(sample_waterfall_state(), "stacked=true")
+    assert variants(stacked)[3].current
+
+
+def test_a_line_chart_offers_error_bars() -> None:
+    assert variants(sample_line_state()) == (
+        Switch("menu_error_bars", "ChangeChart?errors=true", False),
+        Switch("menu_no_error_bars", "ChangeChart?errors=false", True),
+    )
+    assert variants(changed(sample_line_state(), "errors=true"))[0].current
+
+
+def test_a_100_percent_chart_offers_no_floating_or_error_bars() -> None:
+    state = changed(sample_state(), "percent=true")
+    assert [s.command for s in variants(state)] == [
+        "ChangeChart?grouping=stacked",
+        "ChangeChart?grouping=clustered",
+        "ChangeChart?percent=true",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("state", "query"),
+    [
+        (sample_state(), "range=true"),
+        (sample_state(), "errors=true"),
+        (sample_waterfall_state(), "horizontal=true"),
+        (sample_waterfall_state(), "stacked=true"),
+    ],
+)
+def test_the_new_flags_apply(state: ChartState, query: str) -> None:
+    after = changed(state, query)
+    key, _, value = query.partition("=")
+    assert getattr(after, key) == (value == "true")
+
+
+@pytest.mark.parametrize(
+    ("state", "query", "match"),
+    [
+        (sample_state(), "range=maybe", "range must be true or false"),
+        (sample_line_state(), "range=true", "no range option"),
+        (sample_pie_state(), "errors=true", "no errors option"),
+        (sample_state(), "horizontal=true", "no horizontal option"),
+        (sample_state(), "stacked=true", "no stacked option"),
+        (sample_state(), "percent=true&range=true", "exactly one chart option"),
+    ],
+)
+def test_bad_flag_queries_are_rejected(state: ChartState, query: str, match: str) -> None:
+    with pytest.raises(ValueError, match=match):
+        changed(state, query)
+
+
+def test_invalid_flag_combinations_are_rejected() -> None:
+    with pytest.raises(ValueError, match="100 %"):
+        changed(changed(sample_state(), "percent=true"), "range=true")
+    with pytest.raises(ValueError, match="combined"):
+        changed(changed(sample_state(), "range=true"), "errors=true")
+
+
+def test_switching_to_floating_bars_clears_the_moved_labels() -> None:
+    moved = replace(sample_state(), labels=(LabelOffset(LabelKey("value", 0, 0), 100.0, 50.0),))
+    assert changed(moved, "range=true").labels == ()
+    assert changed(moved, "errors=true").labels == moved.labels
 
 
 def test_sort_options_and_the_cycle() -> None:

@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 
 ChartKind = Literal[
     "column", "bar", "waterfall", "mekko", "line", "area", "pie", "scatter", "butterfly", "gantt"
@@ -255,6 +255,13 @@ class ChartState:
     ``labels`` holds the offsets of value labels and totals the user moved by hand, at most one per
     label. Like annotation indices they refer to data sheet indices: sorting never touches them, and
     an offset whose label is gone stays stored and unused.
+
+    ``range`` draws floating (from/to) bars on a column or bar chart: the series rows come in pairs,
+    an even row is the from level and the odd row below it the to level of one bar. ``errors`` draws
+    error bars on a column, bar or line chart: the row below each series row holds its error
+    magnitude. Neither combines with a 100 % chart or with the other. ``horizontal`` turns a
+    waterfall chart on its side and ``stacked`` stacks the step rows of several series in one column
+    per category; both are waterfall only.
     """
 
     kind: ChartKind
@@ -272,6 +279,10 @@ class ChartState:
     doughnut: bool = False
     link: Link | None = None
     labels: tuple[LabelOffset, ...] = ()
+    range: bool = False
+    errors: bool = False
+    horizontal: bool = False
+    stacked: bool = False
     version: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -291,12 +302,28 @@ class ChartState:
             )
         if self.kind in ("line", "area") and self.grouping != "stacked":
             raise ValueError(f"a {self.kind} chart is always stacked")
-        if self.sort != "none" and self.kind not in ("column", "bar", "butterfly", "gantt"):
+        if self.sort != "none" and self.kind not in ("column", "bar", "butterfly", "gantt", "pie"):
             raise ValueError(f"a {self.kind} chart cannot be sorted")
         if self.kind == "gantt" and self.sort == "descending":
             raise ValueError("a Gantt chart sorts by ascending start date only")
         if self.doughnut and self.kind != "pie":
             raise ValueError("only a pie chart can be a doughnut chart")
+        if self.range and self.kind not in ("column", "bar"):
+            raise ValueError(f"a {self.kind} chart has no floating bars")
+        if self.range and self.percent:
+            raise ValueError("a 100 % chart cannot have floating bars")
+        if self.range and self.errors:
+            raise ValueError("floating bars and error bars cannot be combined")
+        if self.range and self.lines:
+            raise ValueError("a chart with floating bars cannot draw series as lines")
+        if self.errors and self.kind not in ("column", "bar", "line"):
+            raise ValueError(f"a {self.kind} chart has no error bars")
+        if self.errors and self.percent:
+            raise ValueError("a 100 % chart cannot have error bars")
+        if self.horizontal and self.kind != "waterfall":
+            raise ValueError("only a waterfall chart can be horizontal")
+        if self.stacked and self.kind != "waterfall":
+            raise ValueError("only a waterfall chart can be stacked")
         if (self.lines or self.secondary) and self.kind != "column":
             raise ValueError("only a column chart can draw series as lines")
         if self.lines and self.percent:

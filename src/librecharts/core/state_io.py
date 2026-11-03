@@ -120,6 +120,14 @@ def _v12_to_v13(raw: _Raw) -> _Raw:
     return {**raw, "annotations": annotations}
 
 
+def _v13_to_v14(raw: _Raw) -> _Raw:
+    """Version 14 added floating bars, error bars and the waterfall variants (M15).
+
+    No existing chart uses them, so every flag starts false.
+    """
+    return {**raw, "range": False, "errors": False, "horizontal": False, "stacked": False}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -134,6 +142,7 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     10: _v10_to_v11,
     11: _v11_to_v12,
     12: _v12_to_v13,
+    13: _v13_to_v14,
 }
 
 
@@ -160,6 +169,10 @@ def to_json(state: ChartState) -> str:
             "doughnut": state.doughnut,
             "link": None if state.link is None else _link_to_raw(state.link),
             "labels": [_label_to_raw(offset) for offset in state.labels],
+            "range": state.range,
+            "errors": state.errors,
+            "horizontal": state.horizontal,
+            "stacked": state.stacked,
         },
         separators=(",", ":"),
         ensure_ascii=False,
@@ -191,6 +204,10 @@ def from_json(text: str) -> ChartState:
             doughnut=_as_flag(_get(raw, "doughnut"), "doughnut"),
             link=_as_link(_get(raw, "link")),
             labels=tuple(_as_label(item) for item in _as_labels(_get(raw, "labels"))),
+            range=_as_flag(_get(raw, "range"), "range"),
+            errors=_as_flag(_get(raw, "errors"), "errors"),
+            horizontal=_as_flag(_get(raw, "horizontal"), "horizontal"),
+            stacked=_as_flag(_get(raw, "stacked"), "stacked"),
             version=raw["v"],
         )
     except ValueError as exc:

@@ -62,7 +62,8 @@ def chart_menu(
         if not switch.current
     )
     if sorts:
-        items.append(MenuItem(text("menu_sort", locale), children=sorts))
+        title = "menu_sort_segments" if state.kind == "pie" else "menu_sort"
+        items.append(MenuItem(text(title, locale), children=sorts))
     formats_menu = _format_menu(state, locale)
     if formats_menu.children:
         items.append(formats_menu)

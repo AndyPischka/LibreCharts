@@ -1,6 +1,6 @@
 from librecharts.core.datasheet import ChartData, Series
 from librecharts.core.model import Annotation
-from librecharts.core.sorting import display_index, order, remap, sorted_data
+from librecharts.core.sorting import display_index, order, pie_order, remap, sorted_data
 
 
 def data(*series: tuple[str, tuple[float | None, ...]]) -> ChartData:
@@ -89,3 +89,40 @@ def test_an_annotation_pointing_past_the_data_keeps_its_index() -> None:
     moved = remap((Annotation("difference", 0, 9),), (1, 3, 2, 0))
     assert moved[0].start == 3
     assert moved[0].end == 9
+
+
+PIE = ChartData(
+    ("2024", "2025"),
+    (
+        Series("A", (40.0, 20.0)),
+        Series("B", (35.0, 50.0)),
+        Series("C", (25.0, None)),
+    ),
+)
+
+
+def test_pie_segments_keep_the_data_sheet_order_without_a_sort() -> None:
+    assert pie_order(PIE, "none") == ((0, 1, 2), (0, 1, 2))
+
+
+def test_pie_segments_sort_by_size_per_pie() -> None:
+    assert pie_order(PIE, "descending") == ((0, 1, 2), (1, 0, 2))
+    assert pie_order(PIE, "ascending") == ((2, 1, 0), (0, 1, 2))
+
+
+def test_empty_pie_segments_go_last_and_ties_keep_the_data_sheet_order() -> None:
+    pie = ChartData(
+        ("A", "B"),
+        (
+            Series("X", (5.0, None)),
+            Series("Y", (5.0, 3.0)),
+            Series("Z", (None, 3.0)),
+        ),
+    )
+    assert pie_order(pie, "descending") == ((0, 1, 2), (1, 2, 0))
+    assert pie_order(pie, "ascending") == ((0, 1, 2), (1, 2, 0))
+
+
+def test_a_pie_with_one_segment_is_never_reordered() -> None:
+    pie = ChartData(("A", "B"), (Series("X", (1.0, 2.0)),))
+    assert pie_order(pie, "descending") == ((0,), (0,))

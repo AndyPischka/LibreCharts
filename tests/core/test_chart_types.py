@@ -8,14 +8,17 @@ from librecharts.core import annotations as notes
 from librecharts.core import samescale, value_line
 from librecharts.core.datasheet import (
     sample_butterfly_state,
+    sample_line_state,
     sample_pie_state,
     sample_scatter_state,
     sample_state,
+    sample_waterfall_state,
 )
 from librecharts.core.format import default_format, format_options, settled, supports
 from librecharts.core.menu import PROTOCOL, chart_menu
 from librecharts.core.model import Annotation, ChartState, Format
 from librecharts.core.options import (
+    Switch,
     changed,
     sort_options,
     sort_toggle,
@@ -37,11 +40,48 @@ def test_only_a_pie_chart_can_be_a_doughnut() -> None:
         replace(sample_butterfly_state(), doughnut=True)
 
 
-def test_a_butterfly_chart_can_be_sorted_but_a_pie_or_scatter_chart_cannot() -> None:
+def test_floating_bars_are_a_column_and_bar_option_only() -> None:
+    assert replace(sample_state(), range=True).range
+    assert replace(sample_state(), kind="bar", range=True).range
+    for state in (sample_line_state(), sample_pie_state(), sample_waterfall_state()):
+        with pytest.raises(ValueError, match="no floating bars"):
+            replace(state, range=True)
+
+
+def test_floating_bars_need_no_100_percent_no_error_bars_and_no_lines() -> None:
+    with pytest.raises(ValueError, match="100 %"):
+        replace(sample_state(), percent=True, range=True)
+    with pytest.raises(ValueError, match="cannot be combined"):
+        replace(sample_state(), range=True, errors=True)
+    with pytest.raises(ValueError, match="lines"):
+        replace(sample_state(), range=True, lines=(0,))
+
+
+def test_error_bars_are_a_column_bar_and_line_option_only() -> None:
+    assert replace(sample_state(), errors=True).errors
+    assert replace(sample_line_state(), errors=True).errors
+    for state in (sample_pie_state(), sample_waterfall_state()):
+        with pytest.raises(ValueError, match="no error bars"):
+            replace(state, errors=True)
+    with pytest.raises(ValueError, match="100 %"):
+        replace(sample_state(), percent=True, errors=True)
+
+
+def test_horizontal_and_stacked_are_waterfall_options_only() -> None:
+    assert replace(sample_waterfall_state(), horizontal=True).horizontal
+    assert replace(sample_waterfall_state(), stacked=True).stacked
+    for state in (sample_state(), sample_line_state()):
+        with pytest.raises(ValueError, match="only a waterfall"):
+            replace(state, horizontal=True)
+        with pytest.raises(ValueError, match="only a waterfall"):
+            replace(state, stacked=True)
+
+
+def test_butterfly_and_pie_charts_can_be_sorted_but_a_scatter_chart_cannot() -> None:
     assert replace(sample_butterfly_state(), sort="descending").sort == "descending"
-    for state in (sample_pie_state(), sample_scatter_state()):
-        with pytest.raises(ValueError, match="cannot be sorted"):
-            replace(state, sort="descending")
+    assert replace(sample_pie_state(), sort="descending").sort == "descending"
+    with pytest.raises(ValueError, match="cannot be sorted"):
+        replace(sample_scatter_state(), sort="descending")
 
 
 @pytest.mark.parametrize(
@@ -92,10 +132,22 @@ def test_a_butterfly_chart_sorts() -> None:
     assert changed(state, "sort=ascending").sort == "ascending"
 
 
-def test_pie_and_scatter_charts_offer_no_sort() -> None:
-    for state in (sample_pie_state(), sample_scatter_state()):
-        assert sort_options(state) == ()
-        assert sort_toggle(state) is None
+def test_a_scatter_chart_offers_no_sort() -> None:
+    state = sample_scatter_state()
+    assert sort_options(state) == ()
+    assert sort_toggle(state) is None
+
+
+def test_a_pie_chart_sorts_its_segments() -> None:
+    state = sample_pie_state()
+    assert [s.command for s in sort_options(state)] == [
+        "ChangeChart?sort=none",
+        "ChangeChart?sort=descending",
+        "ChangeChart?sort=ascending",
+    ]
+    assert sort_options(state)[0].current
+    assert sort_toggle(state) == Switch("menu_sort_descending", "ChangeChart?sort=descending")
+    assert changed(state, "sort=descending").sort == "descending"
 
 
 # --- format ------------------------------------------------------------------------------------

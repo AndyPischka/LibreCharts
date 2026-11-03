@@ -3,6 +3,7 @@ from pathlib import Path
 
 from librecharts.core.datasheet import (
     sample_mekko_state,
+    sample_scatter_state,
     sample_state,
     sample_waterfall_state,
     state_from_table,
@@ -38,10 +39,23 @@ def test_a_column_chart_offers_its_variants_and_the_sort_cycle() -> None:
         PROTOCOL + "ChangeChart?grouping=stacked",
         PROTOCOL + "ChangeChart?grouping=clustered",
         PROTOCOL + "ChangeChart?percent=true",
+        PROTOCOL + "ChangeChart?range=true",
+        PROTOCOL + "ChangeChart?range=false",
+        PROTOCOL + "ChangeChart?errors=true",
+        PROTOCOL + "ChangeChart?errors=false",
         PROTOCOL + "ChangeChart?sort=descending",
     ]
-    # the current variant is shown but disabled
-    assert [b.enabled for b in panel.options] == [False, True, True, True]
+    # the current variants are shown but disabled
+    assert [b.enabled for b in panel.options] == [
+        False,
+        True,
+        True,
+        True,
+        False,
+        True,
+        False,
+        True,
+    ]
 
 
 def test_a_100_percent_chart_says_so_and_disables_the_100_percent_button() -> None:
@@ -102,7 +116,7 @@ def test_a_units_mekko_says_so_and_offers_percent() -> None:
 
 
 def test_only_charts_with_options_get_an_options_button() -> None:
-    assert content(sample_waterfall_state(), True, "en-US").options == ()
+    assert content(sample_scatter_state(), True, "en-US").options == ()
     assert content(None, True, "en-US").options == ()
     assert content(None, False, "en-US").options == ()
 

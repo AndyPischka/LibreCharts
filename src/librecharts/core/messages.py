@@ -247,6 +247,42 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Ascending",
         "de": "Aufsteigend",
     },
+    "menu_sort_segments": {
+        "en": "Sort segments",
+        "de": "Segmente sortieren",
+    },
+    "menu_floating": {
+        "en": "Floating bars",
+        "de": "Schwebende Balken",
+    },
+    "menu_baseline": {
+        "en": "Bars from the baseline",
+        "de": "Balken von der Grundlinie",
+    },
+    "menu_error_bars": {
+        "en": "Error bars",
+        "de": "Fehlerbalken",
+    },
+    "menu_no_error_bars": {
+        "en": "No error bars",
+        "de": "Keine Fehlerbalken",
+    },
+    "menu_waterfall_vertical": {
+        "en": "Vertical",
+        "de": "Vertikal",
+    },
+    "menu_waterfall_horizontal": {
+        "en": "Horizontal",
+        "de": "Horizontal",
+    },
+    "menu_waterfall_single": {
+        "en": "Single running total",
+        "de": "Eine laufende Summe",
+    },
+    "menu_waterfall_stacked": {
+        "en": "Stacked",
+        "de": "Gestapelt",
+    },
     "menu_format": {
         "en": "Format",
         "de": "Format",

@@ -1,4 +1,5 @@
-"""Category order of a column or bar chart (M5, "sort by value").
+"""Category order of a column or bar chart (M5, "sort by value") and segment order of a pie chart
+(M15, "sort segments by size").
 
 Sorting is a display option: the data sheet and the stored annotations keep their indices. The
 layout applies the permutation returned here, and picking maps a clicked display position back.
@@ -42,6 +43,28 @@ def sorted_data(data: ChartData, order: tuple[int, ...]) -> ChartData:
         tuple(data.categories[i] for i in order),
         tuple(replace(s, values=tuple(s.values[i] for i in order)) for s in data.series),
     )
+
+
+def pie_order(data: ChartData, sort: SortOrder) -> tuple[tuple[int, ...], ...]:
+    """Per category, a permutation of the series indices: display position -> series index.
+
+    Each pie sorts its segments by their value in that category, descending or ascending. Empty
+    segments go last, independently of the direction; ties keep their data sheet order. With
+    ``sort == "none"`` every pie keeps the data sheet order of its segments.
+    """
+    count = len(data.series)
+    if sort == "none" or count < 2:
+        return tuple(tuple(range(count)) for _ in data.categories)
+    sign = -1 if sort == "descending" else 1
+    out: list[tuple[int, ...]] = []
+    for category in range(len(data.categories)):
+
+        def key(series: int, category: int = category) -> tuple[int, float]:
+            value = data.series[series].values[category]
+            return (1, 0.0) if value is None else (0, sign * value)
+
+        out.append(tuple(sorted(range(count), key=key)))
+    return tuple(out)
 
 
 def display_index(order: tuple[int, ...]) -> dict[int, int]:

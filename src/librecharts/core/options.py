@@ -1,10 +1,13 @@
 """Chart options: switches the user can change after inserting a chart (ADRs 0012, 0013).
 
-Column and bar charts switch between stacked, clustered and 100 %, and sort their categories by
-value (a butterfly chart sorts too, a Gantt chart by start date). A pie chart switches between
-pie and doughnut. Area charts switch between stacked and 100 %. A Marimekko chart switches between
-percent and units. On a column chart, single series can be drawn as lines, optionally on a
-secondary axis.
+Column and bar charts switch between stacked, clustered and 100 %, between floating (from/to)
+bars and bars from the baseline, and between error bars and none, and sort their categories by
+value (a butterfly chart sorts too, a Gantt chart by start date, a pie chart its segments). A pie
+chart switches between pie and doughnut. Area charts switch between stacked and 100 %. A
+Marimekko chart switches between percent and units. A waterfall chart switches between vertical
+and horizontal and between a single and a stacked running total. A line chart switches error bars
+on and off. On a column chart, single series can be drawn as lines, optionally on a secondary
+axis.
 
 Switching the layout variant clears the labels the user moved; sorting and colours keep them.
 
@@ -20,7 +23,7 @@ from urllib.parse import parse_qs
 
 from librecharts.core.model import ChartState, Grouping, SortOrder
 
-SORTABLE = frozenset({"column", "bar", "butterfly", "gantt"})  # chart kinds that sort
+SORTABLE = frozenset({"column", "bar", "butterfly", "gantt", "pie"})  # chart kinds that sort
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,18 +52,38 @@ def variants(state: ChartState) -> tuple[Switch, ...]:
             Switch("menu_stacked", "ChangeChart?grouping=stacked", not state.percent),
             Switch("menu_percent", "ChangeChart?percent=true", state.percent),
         )
+    if state.kind == "waterfall":
+        return (
+            Switch("menu_waterfall_vertical", "ChangeChart?horizontal=false", not state.horizontal),
+            Switch("menu_waterfall_horizontal", "ChangeChart?horizontal=true", state.horizontal),
+            Switch("menu_waterfall_single", "ChangeChart?stacked=false", not state.stacked),
+            Switch("menu_waterfall_stacked", "ChangeChart?stacked=true", state.stacked),
+        )
+    if state.kind == "line":
+        return (
+            Switch("menu_error_bars", "ChangeChart?errors=true", state.errors),
+            Switch("menu_no_error_bars", "ChangeChart?errors=false", not state.errors),
+        )
     if state.kind not in ("column", "bar"):
         return ()
     clustered = state.grouping == "clustered"
-    return (
+    switches = [
         Switch("menu_stacked", "ChangeChart?grouping=stacked", not clustered and not state.percent),
         Switch("menu_clustered", "ChangeChart?grouping=clustered", clustered),
         Switch("menu_percent", "ChangeChart?percent=true", state.percent),
-    )
+    ]
+    if not state.percent:
+        switches += [
+            Switch("menu_floating", "ChangeChart?range=true", state.range),
+            Switch("menu_baseline", "ChangeChart?range=false", not state.range),
+            Switch("menu_error_bars", "ChangeChart?errors=true", state.errors),
+            Switch("menu_no_error_bars", "ChangeChart?errors=false", not state.errors),
+        ]
+    return tuple(switches)
 
 
 def sort_options(state: ChartState) -> tuple[Switch, ...]:
-    """The sort orders of a column or bar chart, the current one included."""
+    """The sort orders of a sortable chart, the current one included."""
     if state.kind not in SORTABLE:
         return ()
     if state.kind == "gantt":
@@ -144,6 +167,8 @@ def changed(state: ChartState, query: str) -> ChartState:
         return _variant(state, _percent(state, value))
     if key == "doughnut":
         return _variant(state, _doughnut(state, value))
+    if key in ("range", "errors", "horizontal", "stacked"):
+        return _flag(state, key, value)
     if key == "sort":
         return _sort(state, value)
     if key in ("line", "secondary"):
@@ -200,6 +225,25 @@ def _doughnut(state: ChartState, value: str) -> ChartState:
     if state.kind != "pie":
         raise ValueError(f"a {state.kind} chart has no doughnut option")
     return replace(state, doughnut=enabled)
+
+
+def _flag(state: ChartState, key: str, value: str) -> ChartState:
+    """Switch a boolean variant on or off (``range=true``); invalid combinations raise."""
+    enabled = {"true": True, "false": False}.get(value)
+    if enabled is None:
+        raise ValueError(f"{key} must be true or false, not {value!r}")
+    allowed = {
+        "range": ("column", "bar"),
+        "errors": ("column", "bar", "line"),
+        "horizontal": ("waterfall",),
+        "stacked": ("waterfall",),
+    }
+    if state.kind not in allowed[key]:
+        raise ValueError(f"a {state.kind} chart has no {key} option")
+    after = replace(state, **{key: enabled})  # type: ignore[arg-type]
+    if key == "errors":
+        return after  # error bars do not move the labels
+    return _variant(state, after)
 
 
 def _sort(state: ChartState, value: str) -> ChartState:
