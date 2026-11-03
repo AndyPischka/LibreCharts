@@ -7,6 +7,7 @@ from librecharts.lo import store
 
 INSERT = "org.librecharts:InsertPieChart"
 TO_DOUGHNUT = "org.librecharts:ChangeChart?doughnut=true"
+ADD = "org.librecharts:AddAnnotation?"
 
 
 def _state(doc, chart_id):
@@ -104,5 +105,45 @@ def test_pie_and_doughnut_charts_survive_reload(ctx):
                 assert "100" in texts, (fmt, texts)
             finally:
                 reloaded.close(True)
+    finally:
+        doc.close(True)
+
+
+def test_difference_arrows_between_segments_are_stored_and_drawn(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, INSERT)
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        # Product A's 2024 share (40 %) vs. Product B's 2025 share (38 %)
+        dispatch(ctx, doc, ADD + "kind=difference&start=0&end=1&series=0&series_end=1")
+        annotations = _state(doc, chart_id).annotations
+        assert [(a.kind, a.start, a.end, a.series, a.series_end) for a in annotations] == [
+            ("difference", 0, 1, 0, 1)
+        ]
+        assert "-5%" in [text for _, text in _children(group) if text]
+
+        for fmt in ("odp", "pptx"):
+            reloaded = save_and_reload(ctx, doc, fmt)
+            try:
+                ((reloaded_group, reloaded_id),) = store.find_charts(first_page(reloaded))
+                restored = _state(reloaded, reloaded_id).annotations
+                assert [a.kind for a in restored] == ["difference"], fmt
+                assert "-5%" in [text for _, text in _children(reloaded_group) if text], fmt
+            finally:
+                reloaded.close(True)
+    finally:
+        doc.close(True)
+
+
+def test_a_difference_arrow_between_two_segments_of_one_pie_is_drawn(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, INSERT)
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        # between the segments of one pie: A's 40 % vs. B's 35 %
+        dispatch(ctx, doc, ADD + "kind=difference&start=0&end=0&series=0&series_end=1")
+        annotations = _state(doc, chart_id).annotations
+        assert [(a.kind, a.series, a.series_end) for a in annotations] == [("difference", 0, 1)]
+        assert "-12.5%" in [text for _, text in _children(group) if text]
     finally:
         doc.close(True)

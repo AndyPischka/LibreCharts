@@ -22,6 +22,7 @@ INSERT = "org.librecharts:InsertMekkoChart"
 EDIT = "org.librecharts:EditData"
 TO_UNITS = "org.librecharts:ChangeChart?percent=false"
 TO_PERCENT = "org.librecharts:ChangeChart?percent=true"
+ADD = "org.librecharts:AddAnnotation?"
 
 
 def _wait_for(condition, timeout_s=5.0):
@@ -159,4 +160,43 @@ def test_a_data_sheet_edit_keeps_the_units_variant(ctx):
         assert not _state(doc, chart_id).percent
     finally:
         close_datasheets(ctx)
+        doc.close(True)
+
+
+def test_difference_arrows_measure_segments_in_both_variants(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, INSERT)
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        # Product A's shares of Europe and Asia: 50 % -> 22.2 %
+        dispatch(ctx, doc, ADD + "kind=difference&start=0&end=2&series=0")
+        assert [a.kind for a in _state(doc, chart_id).annotations] == ["difference"]
+        assert "-55.6%" in _texts(group)
+        dispatch(ctx, doc, TO_UNITS)
+        texts = _texts(group)
+        # in units the same arrow measures the values: 40 -> 20
+        assert "-50%" in texts
+        uno_command(ctx, doc, ".uno:Undo")
+        assert "-55.6%" in _texts(group)
+    finally:
+        doc.close(True)
+
+
+def test_a_mekko_arrow_survives_odp_and_pptx(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, INSERT)
+        dispatch(ctx, doc, ADD + "kind=difference&start=0&end=2&series=0")
+        for fmt in ("odp", "pptx"):
+            reloaded = save_and_reload(ctx, doc, fmt)
+            try:
+                (group, chart_id), *_ = store.find_charts(first_page(reloaded))
+                annotations = _state(reloaded, chart_id).annotations
+                assert [a.kind for a in annotations] == ["difference"], fmt
+                # PPTX import turns text boxes into custom shapes: do not filter by shape type.
+                labels = [group.getByIndex(i).String for i in range(group.getCount())]
+                assert "-55.6%" in labels, fmt
+            finally:
+                reloaded.close(True)
+    finally:
         doc.close(True)

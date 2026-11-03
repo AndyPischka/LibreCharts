@@ -17,6 +17,7 @@ from librecharts.core.primitives import MARKER_SIZE
 from librecharts.lo import store
 
 INSERT = "org.librecharts:InsertScatterChart"
+ADD = "org.librecharts:AddAnnotation?"
 
 
 def _state(doc, chart_id):
@@ -149,6 +150,37 @@ def test_a_scatter_chart_survives_reload(ctx):
                 if fmt == "odp":  # PPTX import turns the ellipses into custom shapes
                     assert len(_ellipses(reloaded_group)) == 8, fmt
                 assert "Alpha" in _texts(reloaded_group), fmt
+            finally:
+                reloaded.close(True)
+    finally:
+        doc.close(True)
+
+
+def test_difference_and_cagr_arrows_connect_points(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, INSERT)
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        # the sample points: Alpha (12, 30) and Beta (18, 42)
+        dispatch(ctx, doc, ADD + "kind=difference&start=0&end=1")
+        dispatch(ctx, doc, ADD + "kind=cagr&start=0&end=1")
+        annotations = _state(doc, chart_id).annotations
+        assert [(a.kind, a.start, a.end) for a in annotations] == [
+            ("difference", 0, 1),
+            ("cagr", 0, 1),
+        ]
+        texts = _texts(group)
+        assert "+40%" in texts  # 30 -> 42
+        # (42 / 30) ** (1 / 6) - 1 over the x distance 6
+        assert "CAGR +5.8%" in texts
+
+        for fmt in ("odp", "pptx"):
+            reloaded = save_and_reload(ctx, doc, fmt)
+            try:
+                ((reloaded_group, reloaded_id),) = store.find_charts(first_page(reloaded))
+                restored = _state(reloaded, reloaded_id).annotations
+                assert [a.kind for a in restored] == ["difference", "cagr"], fmt
+                assert "+40%" in _texts(reloaded_group), fmt
             finally:
                 reloaded.close(True)
     finally:

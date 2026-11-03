@@ -10,7 +10,14 @@ import time
 from dataclasses import replace
 
 import uno
-from helpers import dispatch, first_page, new_impress, set_chart_state, skip_on_headless_linux
+from helpers import (
+    dispatch,
+    first_page,
+    new_impress,
+    set_chart_state,
+    skip_on_headless_linux,
+    without_format,
+)
 
 from librecharts.core.datasheet import sample_state
 from librecharts.core.model import Annotation
@@ -100,6 +107,102 @@ def test_picking_bars_of_a_clustered_chart_measures_that_series(ctx):
         controller.select(_child_with_text(group, "21"))
         _wait_for(lambda: len(_annotations(doc, chart_id)) == 1)
         assert _annotations(doc, chart_id) == (Annotation("difference", 0, 2, series=1),)
+    finally:
+        doc.close(True)
+
+
+def test_picking_two_bars_of_one_category_adds_a_between_series_arrow(ctx):
+    doc, group, chart_id = _chart(ctx)
+    try:
+        set_chart_state(ctx, doc, chart_id, replace(sample_state(), grouping="clustered"))
+        controller = doc.getCurrentController()
+        dispatch(ctx, doc, PICK + "difference")
+        controller.select(_child_with_text(group, "10"))  # Product A's 2023 bar
+        controller.select(_child_with_text(group, "20"))  # Product B's 2023 bar
+        _wait_for(
+            lambda: (
+                _annotations(doc, chart_id)
+                == (Annotation("difference", 0, 0, series=0, series_end=1),)
+            )
+        )
+        assert "+100%" in [group.getByIndex(i).String for i in range(group.getCount())]  # 10 -> 20
+    finally:
+        doc.close(True)
+
+
+def test_picking_two_categories_adds_a_category_gap(ctx):
+    doc, group, chart_id = _chart(ctx)
+    try:
+        controller = doc.getCurrentController()
+        dispatch(ctx, doc, PICK + "gap")
+        controller.select(_child_with_text(group, "2023"))
+        controller.select(_child_with_text(group, "2024"))
+        _wait_for(lambda: _annotations(doc, chart_id) == (Annotation("category_gap", 0, 1),))
+        _wait_for(lambda: _chart_selected(doc))
+    finally:
+        doc.close(True)
+
+
+def test_picking_two_segments_adds_a_difference_arrow_to_a_mekko_chart(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, "org.librecharts:InsertMekkoChart")
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        # make the share labels locale-independent (a new chart follows the UI locale)
+        set_chart_state(ctx, doc, chart_id, without_format(store.read_state(doc, chart_id)))
+        controller = doc.getCurrentController()
+        dispatch(ctx, doc, PICK + "difference")
+        # the sample Mekko's share labels: Product A in Europe (50 %) and in Asia (22.2 %)
+        controller.select(_child_with_text(group, "50%"))
+        controller.select(_child_with_text(group, "22.2%"))
+        _wait_for(
+            lambda: _annotations(doc, chart_id) == (Annotation("difference", 0, 2, series=0),)
+        )
+        _wait_for(lambda: _chart_selected(doc))
+        assert "-55.6%" in [group.getByIndex(i).String for i in range(group.getCount())]
+    finally:
+        doc.close(True)
+
+
+def test_picking_two_segments_of_one_column_adds_a_level_difference(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, "org.librecharts:InsertMekkoChart")
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        set_chart_state(ctx, doc, chart_id, without_format(store.read_state(doc, chart_id)))
+        controller = doc.getCurrentController()
+        dispatch(ctx, doc, PICK + "difference")
+        # Product A (50 %) and Product B (31.2 %) of Europe: no side-by-side bars -> level arrow
+        controller.select(_child_with_text(group, "50%"))
+        controller.select(_child_with_text(group, "31.2%"))
+        _wait_for(
+            lambda: (
+                _annotations(doc, chart_id)
+                == (Annotation("difference", 0, 0, series=0, style="level", series_end=1),)
+            )
+        )
+    finally:
+        doc.close(True)
+
+
+def test_picking_two_segments_adds_a_difference_arrow_to_a_pie_chart(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, "org.librecharts:InsertPieChart")
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        controller = doc.getCurrentController()
+        dispatch(ctx, doc, PICK + "difference")
+        # the sample pie's share labels: Product A of 2024 (40 %) and Product B of 2025 (38 %)
+        controller.select(_child_with_text(group, "40%"))
+        controller.select(_child_with_text(group, "38%"))
+        _wait_for(
+            lambda: (
+                _annotations(doc, chart_id)
+                == (Annotation("difference", 0, 1, series=0, series_end=1),)
+            )
+        )
+        _wait_for(lambda: _chart_selected(doc))
+        assert "-5%" in [group.getByIndex(i).String for i in range(group.getCount())]
     finally:
         doc.close(True)
 

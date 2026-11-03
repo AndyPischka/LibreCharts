@@ -34,6 +34,7 @@ from librecharts.lo import (
     samescale,
     scheme,
     store,
+    textdialog,
     ui,
 )
 from librecharts.lo import elements as lo_elements
@@ -470,6 +471,20 @@ def edit_value_line(ctx: Any, frame: Any, query: str) -> None:
     if state.annotations[index].kind != "value_line":
         return
     formatdialog.request_value_line(ctx, frame, group, state, index)
+
+
+def edit_bracket_text(ctx: Any, frame: Any, query: str) -> None:
+    """Change the text of the group bracket at ``index=...`` through a dialog; one undo step."""
+    found = _annotatable_chart(ctx, frame, "group_bracket")
+    if found is None:
+        return
+    group, state = found
+    index = _index(query)
+    if index is None or not 0 <= index < len(state.annotations):
+        return
+    if state.annotations[index].kind != "group_bracket":
+        return
+    textdialog.request_edit(ctx, frame, group, state, index)
 
 
 def _index(query: str) -> int | None:

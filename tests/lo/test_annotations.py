@@ -308,3 +308,87 @@ def test_waterfall_arrows_and_a_break_below_the_steps_are_drawn(ctx):
         assert "+30" in labels
     finally:
         doc.close(True)
+
+
+def test_a_group_bracket_and_a_category_gap_are_stored_and_drawn(ctx):
+    doc, group, chart_id = _chart(ctx)
+    try:
+        children = group.getCount()
+        dispatch(ctx, doc, ADD + "kind=group_bracket&start=0&end=2&text=Phase+1")
+        dispatch(ctx, doc, ADD + "kind=category_gap&start=1&end=2")
+        assert _annotations(doc, chart_id) == (
+            Annotation("group_bracket", 0, 2, text="Phase 1"),
+            Annotation("category_gap", 1, 2),
+        )
+        assert "Phase 1" in _labels(group)
+        # the bracket draws its two ticks, its line and its label; a gap draws nothing
+        assert group.getCount() == children + 4
+
+        uno_command(ctx, doc, ".uno:Undo")
+        uno_command(ctx, doc, ".uno:Undo")
+        assert _annotations(doc, chart_id) == ()
+        assert group.getCount() == children
+    finally:
+        doc.close(True)
+
+
+def test_between_series_level_arrow_is_stored_and_drawn(ctx):
+    doc, group, chart_id = _chart(ctx)
+    try:
+        dispatch(ctx, doc, ADD + "kind=difference&start=1&end=1&series=0&series_end=1&style=level")
+        assert _annotations(doc, chart_id) == (
+            Annotation("difference", 1, 1, series=0, style="level", series_end=1),
+        )
+        # Product A's 2024 value 12 vs. Product B's 22: +83.3 %
+        assert "+83.3%" in _labels(group)
+        assert _arrowheads(group) == 1
+    finally:
+        doc.close(True)
+
+
+def test_gaps_brackets_and_between_series_arrows_survive_odp_and_pptx(ctx):
+    doc, _, _ = _chart(ctx)
+    try:
+        dispatch(ctx, doc, ADD + "kind=group_bracket&start=0&end=2&text=Phase+1")
+        dispatch(ctx, doc, ADD + "kind=category_gap&start=1&end=2")
+        dispatch(ctx, doc, ADD + "kind=difference&start=1&end=1&series=0&series_end=1&style=level")
+        for fmt in ("odp", "pptx"):
+            reloaded = save_and_reload(ctx, doc, fmt)
+            try:
+                group, chart_id = store.find_charts(first_page(reloaded))[0]
+                assert _annotations(reloaded, chart_id) == (
+                    Annotation("group_bracket", 0, 2, text="Phase 1"),
+                    Annotation("category_gap", 1, 2),
+                    Annotation("difference", 1, 1, series=0, style="level", series_end=1),
+                ), fmt
+                assert "Phase 1" in _labels(group), fmt
+                assert "+83.3%" in _labels(group), fmt
+            finally:
+                reloaded.close(True)
+    finally:
+        doc.close(True)
+
+
+def test_a_resized_chart_keeps_its_gap_and_bracket_laid_out(ctx):
+    doc, group, chart_id = _chart(ctx)
+    try:
+        dispatch(ctx, doc, ADD + "kind=group_bracket&start=0&end=2&text=Phase+1")
+        dispatch(ctx, doc, ADD + "kind=category_gap&start=1&end=2")
+        size = group.Size
+        group.Size = uno.createUnoStruct("com.sun.star.awt.Size", size.Width * 2, size.Height)
+
+        def laid_out():
+            for i in range(group.getCount()):
+                child = group.getByIndex(i)
+                if child.ShapeType.endswith("TextShape") and child.String == "2023":
+                    return abs(child.Size.Height - CATEGORY_BAND) <= 1
+            return False
+
+        _wait_for(laid_out)
+        assert "Phase 1" in _labels(group)
+        assert _annotations(doc, chart_id) == (
+            Annotation("group_bracket", 0, 2, text="Phase 1"),
+            Annotation("category_gap", 1, 2),
+        )
+    finally:
+        doc.close(True)

@@ -26,7 +26,7 @@ from librecharts.core.messages import text
 from librecharts.core.model import Annotation, ChartState
 from librecharts.core.picking import PickSession, placed, target_at
 from librecharts.core.primitives import Text
-from librecharts.lo import chart, render, store, ui
+from librecharts.lo import chart, render, store, textdialog, ui
 
 INFOBAR = "org.librecharts.pick"
 _INFOBAR_INFO = 1  # com.sun.star.frame.InfobarType.INFO
@@ -139,9 +139,19 @@ class _Pick(unohelper.Base, XSelectionChangeListener, XKeyHandler, XCallback):
                     self.controller.removeInfobar(INFOBAR)
             ui.uno_command(self.ctx, self.frame, ".uno:LeaveGroup")
             if self._result is not None:
-                chart.add_annotation(
-                    self.controller.getModel(), self.group, placed(self.state, self._result)
-                )
+                annotation = placed(self.state, self._result)
+                if annotation.kind == "group_bracket" and not annotation.text:
+                    # A group bracket is labelled by the dialog that follows the picks; cancelling
+                    # it leaves the chart unchanged.
+                    label = textdialog.ask(self.ctx, self.frame, "")
+                    if label is not None:
+                        chart.add_annotation(
+                            self.controller.getModel(),
+                            self.group,
+                            replace(annotation, text=label),
+                        )
+                else:
+                    chart.add_annotation(self.controller.getModel(), self.group, annotation)
             self.controller.select(self.group)
         except Exception:
             traceback.print_exc()

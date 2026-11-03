@@ -136,6 +136,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.today_line(self.ctx, self.frame)
             elif url.Path.startswith("EditValueLine"):
                 commands.edit_value_line(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("EditBracketText"):
+                commands.edit_bracket_text(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ChangeAnnotation"):
                 commands.change_annotation(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("RemoveAnnotations"):
