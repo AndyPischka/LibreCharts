@@ -9,7 +9,12 @@ from __future__ import annotations
 from dataclasses import replace
 
 from librecharts.core.datasheet import ChartData
-from librecharts.core.model import Annotation, Grouping, SortOrder
+from librecharts.core.model import (
+    AXIS_ANNOTATIONS,
+    Annotation,
+    Grouping,
+    SortOrder,
+)
 
 
 def order(data: ChartData, grouping: Grouping, sort: SortOrder) -> tuple[int, ...]:
@@ -47,16 +52,34 @@ def display_index(order: tuple[int, ...]) -> dict[int, int]:
 def remap(annotations: tuple[Annotation, ...], order: tuple[int, ...]) -> tuple[Annotation, ...]:
     """``annotations`` with category indices moved to where sorting draws them.
 
-    Axis breaks belong to the whole axis. Annotations pointing past the data keep their index and
-    stay undrawn; undoing a data edit or the sort brings them back.
+    Axis annotations (axis breaks, value lines) belong to the whole axis. A category gap follows
+    its two categories and is not drawn when sorting separates them; a group bracket connects its
+    two end categories, so it spans whatever lies between them in display order. Annotations
+    pointing past the data keep their index and stay undrawn; undoing a data edit or the sort
+    brings them back.
     """
     if order == tuple(range(len(order))):
         return annotations
     positions = display_index(order)
     out: list[Annotation] = []
     for annotation in annotations:
-        if annotation.kind == "axis_break":
+        if annotation.kind in AXIS_ANNOTATIONS:
             out.append(annotation)
+            continue
+        if annotation.kind == "category_gap":
+            first = positions.get(annotation.start)
+            last = positions.get(annotation.end)
+            if first is not None and last == first + 1:
+                out.append(replace(annotation, start=first, end=last))
+            continue
+        if annotation.kind == "group_bracket":
+            first, last = sorted(
+                (
+                    positions.get(annotation.start, annotation.start),
+                    positions.get(annotation.end, annotation.end),
+                )
+            )
+            out.append(replace(annotation, start=first, end=last))
             continue
         out.append(
             replace(

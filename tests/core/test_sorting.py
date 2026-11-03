@@ -56,13 +56,33 @@ def test_annotations_follow_their_category() -> None:
         Annotation("difference", 0, 1),
         Annotation("axis_break", 0, 0),
         Annotation("difference", 3, 2, style="level"),
+        Annotation("value_line", 0, 0, value=3.0),
     )
     moved = remap(annotations, (1, 3, 2, 0))
     assert moved == (
         Annotation("difference", 3, 0),
         Annotation("axis_break", 0, 0),
         Annotation("difference", 1, 2, style="level"),
+        Annotation("value_line", 0, 0, value=3.0),
     )
+
+
+def test_axis_annotations_survive_a_sort_that_moves_category_zero() -> None:
+    # Regression: remap used to move a value line's (0, 0) to the display position of data
+    # category 0 and the revalidation then rejected the annotation.
+    line = Annotation("value_line", 0, 0, value=10.0)
+    assert remap((line,), (1, 2, 0)) == (line,)
+
+
+def test_a_category_gap_follows_its_categories_and_is_dropped_when_sorting_separates_them() -> None:
+    gap = Annotation("category_gap", 0, 1)
+    assert remap((gap,), (2, 3, 0, 1)) == (Annotation("category_gap", 2, 3),)
+    assert remap((Annotation("category_gap", 1, 2),), (2, 3, 0, 1)) == ()
+
+
+def test_a_group_bracket_connects_its_end_categories() -> None:
+    bracket = Annotation("group_bracket", 0, 2, text="Phase 1")
+    assert remap((bracket,), (1, 3, 2, 0)) == (Annotation("group_bracket", 2, 3, text="Phase 1"),)
 
 
 def test_an_annotation_pointing_past_the_data_keeps_its_index() -> None:

@@ -6,14 +6,16 @@ import math
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 13
 
 ChartKind = Literal[
     "column", "bar", "waterfall", "mekko", "line", "area", "pie", "scatter", "butterfly", "gantt"
 ]
 Grouping = Literal["stacked", "clustered"]
 SortOrder = Literal["none", "descending", "ascending"]
-AnnotationKind = Literal["difference", "cagr", "axis_break", "value_line"]
+AnnotationKind = Literal[
+    "difference", "cagr", "axis_break", "value_line", "category_gap", "group_bracket"
+]
 ArrowStyle = Literal["bracket", "level"]
 LabelMode = Literal["percent", "absolute"]
 SeriesNames = Literal["none", "labels", "legend"]
@@ -64,17 +66,24 @@ class Format:
 
 @dataclass(frozen=True, slots=True)
 class Annotation:
-    """An arrow, axis break or value line the user placed on a chart.
+    """An arrow, axis break, value line, category gap or group bracket on a chart.
 
     ``start`` and ``end`` are category indices. ``series`` is ``None`` for a column total and a
-    series index for one bar of a clustered chart. ``style`` and ``label`` only matter for
-    difference arrows. Indices are not checked against the data: after a data sheet edit an
-    annotation may point past the last category, it is then not drawn.
+    series index for one bar of a clustered chart; ``series_end`` is the series the *end* value
+    comes from: ``None`` means the same series as ``series`` (M14: a between-series arrow has a
+    different ``series_end``). ``style`` and ``label`` only matter for difference arrows.
+    Indices are not checked against the data: after a data sheet edit an annotation may point
+    past the last category, it is then not drawn.
 
     An axis break and a value line belong to the whole axis, not to a category (``start == end ==
     0`` by convention). ``lower`` and ``upper`` are the values an axis break removes from the
     scale; both ``None`` means automatic (see ``core/axis_break.py``). A value line's ``value`` is
     the horizontal/vertical level it marks; ``None`` means the average (see ``core/value_line.py``).
+
+    A ``category_gap`` opens between the adjacent categories ``start`` and ``end``
+    (``end == start + 1``); it is drawn only while they stay adjacent in display order. A
+    ``group_bracket`` spans the categories ``start..end`` and carries its label in ``text``
+    (empty: no label). Both belong to whole categories, not to one series.
     """
 
     kind: AnnotationKind
@@ -86,6 +95,8 @@ class Annotation:
     lower: float | None = None
     upper: float | None = None
     value: float | None = None
+    series_end: int | None = None
+    text: str = ""
 
     def __post_init__(self) -> None:
         if self.kind not in get_args(AnnotationKind):
@@ -94,15 +105,37 @@ class Annotation:
             raise ValueError(f"unknown arrow style: {self.style!r}")
         if self.label not in get_args(LabelMode):
             raise ValueError(f"unknown label mode: {self.label!r}")
-        if min(self.start, self.end, 0 if self.series is None else self.series) < 0:
+        if (
+            min(
+                self.start,
+                self.end,
+                0 if self.series is None else self.series,
+                0 if self.series_end is None else self.series_end,
+            )
+            < 0
+        ):
             raise ValueError("annotation indices must not be negative")
+        if self.series is None and self.series_end is not None:
+            raise ValueError("only an arrow with a start series can have an end series")
         if self.kind in AXIS_ANNOTATIONS:
             if self.start != 0 or self.end != 0:
                 raise ValueError("this annotation belongs to the axis, not to categories")
             if self.series is not None:
                 raise ValueError("this annotation belongs to the whole axis, not to one series")
-        elif self.end == self.start:
-            raise ValueError("an arrow needs two different categories")
+        elif self.kind == "category_gap":
+            if self.series is not None:
+                raise ValueError("a category gap belongs to the whole category, not to one series")
+            if self.end != self.start + 1:
+                raise ValueError("a category gap opens between two adjacent categories")
+        elif self.kind == "group_bracket":
+            if self.series is not None:
+                raise ValueError("a group bracket spans whole categories, not one series")
+            if self.end <= self.start:
+                raise ValueError("a group bracket spans at least two categories")
+        elif self.end == self.start and (
+            self.series is None or self.series_end in (None, self.series)
+        ):
+            raise ValueError("an arrow needs two different categories or two different series")
         if (self.lower is None) != (self.upper is None):
             raise ValueError("an axis break needs both values or neither")
         if self.lower is not None and self.upper is not None:
@@ -117,6 +150,10 @@ class Annotation:
                 raise ValueError("only a value line has a value")
             if not math.isfinite(self.value):
                 raise ValueError("the value of a value line must be finite")
+        if self.text and self.kind != "group_bracket":
+            raise ValueError("only a group bracket has a text")
+        if len(self.text) > 80:
+            raise ValueError("the bracket label must be at most 80 characters")
 
 
 @dataclass(frozen=True, slots=True)

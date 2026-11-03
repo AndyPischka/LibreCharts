@@ -36,6 +36,8 @@ ARROW = {
     "lower": None,
     "upper": None,
     "value": None,
+    "series_end": None,
+    "text": "",
 }
 
 
@@ -72,6 +74,26 @@ def test_round_trip_preserves_annotations() -> None:
     )
     state = make_state(annotations=annotations)
     assert from_json(to_json(state)).annotations == annotations
+
+
+def test_round_trip_preserves_the_m14_annotation_kinds() -> None:
+    annotations = (
+        Annotation("difference", 1, 1, series=0, series_end=1),  # between series
+        Annotation("difference", 0, 2, series=1, series_end=0),  # series and category differ
+        Annotation("category_gap", 1, 2),
+        Annotation("group_bracket", 0, 2, text="Phase 1"),
+    )
+    state = make_state(annotations=annotations)
+    assert from_json(to_json(state)).annotations == annotations
+
+
+def test_version_12_annotations_get_no_end_series_and_no_bracket_text() -> None:
+    raw = valid_raw()
+    raw["annotations"] = [{k: v for k, v in ARROW.items() if k not in ("series_end", "text")}]
+    raw["v"] = 12
+    restored = from_json(json.dumps(raw))
+    assert restored.version == SCHEMA_VERSION
+    assert restored.annotations == (Annotation("difference", 0, 1),)
 
 
 def test_version_2_annotations_are_migrated_to_automatic_global_axis_breaks() -> None:
@@ -377,6 +399,21 @@ def test_integers_in_values_become_floats() -> None:
         lambda r: r.update(annotations=[{k: v for k, v in BREAK.items() if k != "upper"}]),
         lambda r: r.update(annotations=[{**ARROW, "kind": "axis_break"}]),
         lambda r: r.update(annotations=[{k: v for k, v in ARROW.items() if k != "label"}]),
+        lambda r: r.update(annotations=[{k: v for k, v in ARROW.items() if k != "text"}]),
+        lambda r: r.update(annotations=[{k: v for k, v in ARROW.items() if k != "series_end"}]),
+        lambda r: r.update(annotations=[{**ARROW, "end": 0, "series": 0}]),
+        lambda r: r.update(annotations=[{**ARROW, "end": 0, "series": 0, "series_end": 0}]),
+        lambda r: r.update(annotations=[{**ARROW, "series_end": 1}]),
+        lambda r: r.update(annotations=[{**ARROW, "series_end": True}]),
+        lambda r: r.update(annotations=[{**ARROW, "series_end": -1}]),
+        lambda r: r.update(annotations=[{**ARROW, "series_end": 1.5}]),
+        lambda r: r.update(annotations=[{**ARROW, "text": "Phase"}]),
+        lambda r: r.update(annotations=[{**ARROW, "text": 5}]),
+        lambda r: r.update(annotations=[{**ARROW, "kind": "category_gap", "end": 2}]),
+        lambda r: r.update(annotations=[{**ARROW, "kind": "category_gap", "series": 0}]),
+        lambda r: r.update(annotations=[{**ARROW, "kind": "group_bracket", "end": 0}]),
+        lambda r: r.update(annotations=[{**ARROW, "kind": "group_bracket", "series": 0}]),
+        lambda r: r.update(annotations=[{**ARROW, "kind": "group_bracket", "text": "x" * 81}]),
     ],
 )
 def test_malformed_state_is_rejected(mutate: Any) -> None:

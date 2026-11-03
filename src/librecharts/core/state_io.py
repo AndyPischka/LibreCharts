@@ -108,6 +108,18 @@ def _v11_to_v12(raw: _Raw) -> _Raw:
     return {**raw, "labels": []}
 
 
+def _v12_to_v13(raw: _Raw) -> _Raw:
+    """Version 13 added the end series of an arrow and the text of a group bracket.
+
+    An existing arrow keeps measuring its start series at both ends (``series_end`` null), and
+    no existing chart has a group bracket to label.
+    """
+    annotations: list[Any] = []
+    for annotation in _as_list(raw.get("annotations", [])):
+        annotations.append({**_as_object(annotation), "series_end": None, "text": ""})
+    return {**raw, "annotations": annotations}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -121,6 +133,7 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     9: _v9_to_v10,
     10: _v10_to_v11,
     11: _v11_to_v12,
+    12: _v12_to_v13,
 }
 
 
@@ -195,6 +208,8 @@ def _annotation_to_raw(annotation: Annotation) -> _Raw:
         "lower": annotation.lower,
         "upper": annotation.upper,
         "value": annotation.value,
+        "series_end": annotation.series_end,
+        "text": annotation.text,
     }
 
 
@@ -302,7 +317,7 @@ def _as_list(value: object) -> list[object]:
 
 def _as_annotation(value: object) -> Annotation:
     raw = _as_object(value)
-    series = _get(raw, "series")
+    series, series_end = _get(raw, "series"), _get(raw, "series_end")
     return Annotation(
         kind=_get(raw, "kind"),
         start=_as_index(_get(raw, "start")),
@@ -313,6 +328,8 @@ def _as_annotation(value: object) -> Annotation:
         lower=_as_number(_get(raw, "lower")),
         upper=_as_number(_get(raw, "upper")),
         value=_as_number(_get(raw, "value")),
+        series_end=None if series_end is None else _as_index(series_end),
+        text=_as_text(_get(raw, "text"), "the bracket label"),
     )
 
 
