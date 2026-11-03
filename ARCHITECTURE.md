@@ -25,17 +25,17 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 
 | Module | Role |
 |---|---|
-| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations, Mekko/100 % option `percent`, category `sort`, `format`, line series `lines`/`secondary`, series palette overrides `colors`, same-scale group `scale_group`, data `link`, moved-label offsets `labels`, schema version) |
+| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations with their end series and bracket text, Mekko/100 % option `percent`, category `sort`, `format`, line series `lines`/`secondary`, series palette overrides `colors`, same-scale group `scale_group`, data `link`, moved-label offsets `labels`, schema version) |
 | `format.py` | Chart format options: defaults for a new chart, `ChangeFormat` arguments, which chart kind supports what, number-format parsing and validation, locale rules, `apply` for "copy chart format" (ADR 0014) |
 | `style.py` | Colour schemes (palette, text, line, background, font), the built-ins, scheme JSON and the black/white text colour for a fill by WCAG relative luminance (ADRs 0014, 0016) |
 | `samescale.py` | Same-scale groups: orientation, joinability, the natural length per value unit of every layout and the smallest common one (ADR 0017) |
 | `value_line.py` | Value lines: the average of a chart, the level a line marks, validation of the dialog's value or date (Gantt date lines) |
-| `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows, command arguments (ADR 0010) |
+| `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows (between series, in percentage points on share charts), the bracket label check, command arguments (ADRs 0010, 0024) |
 | `axis_break.py` | The axis break: automatic or manual value range to remove from the scale, `fold`, validation of the dialog's input |
 | `options.py` | Chart options the user can switch after inserting (variants, 100 %, sorting, Mekko percent/units, line series and their axis): the switches offered for a chart and the `ChangeChart` command's arguments (ADRs 0012, 0013, 0015) |
 | `percent.py` | Shares and the "negatives count as empty" rule for 100 % charts and the Mekko |
 | `sorting.py` | Display permutation of the categories, reordered data and annotation indices (ADR 0013) |
-| `picking.py` | Pick mode: chart point -> column or line point, `PickSession` collects the picks for one annotation |
+| `picking.py` | Pick mode: chart point -> column, bar, line point, Mekko or pie segment or scatter point, `PickSession` collects the picks for one annotation, `placed` fits a between-series arrow to the chart (ADR 0024) |
 | `links.py` | Data links: range addresses and names, relative and absolute source URLs, the fetched grid (names as shown, values as numbers), the read-only view, update reports (ADR 0020) |
 | `menu.py` | Contents of the chart's context menu as plain data |
 | `panel.py` | Contents of the sidebar panel (buttons, status, annotation list) as plain data |
@@ -51,17 +51,17 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `gantt.py` | Gantt data sheet rules (one row per activity; label, start, end, remark, phase by column position) -> rows of type bar, milestone, phase or heading; Calc serial numbers <-> dates; sort by start (ADR 0019) |
 | `timescale.py` | The Gantt date scale: unit pair from the date range, periods, header labels and date texts per language |
 | `scatter.py` | Scatter data sheet rules (one row per point; label, x, y, size, group by column position) -> points and groups (ADR 0018) |
-| `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked, clustered and 100 % columns / horizontal bars; columns also draw annotations and line series on a secondary axis |
+| `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked, clustered and 100 % columns / horizontal bars; columns also draw annotations (arrows with series ends, category gaps, group brackets) and line series on a secondary axis; `column_at`/`bar_at` hit-test, gap-aware |
 | `layout/line.py` | Points at the category centres, one `Polyline` per run of values, markers, a label at every point and the series names right of the last point |
 | `layout/area.py` | Stacked and 100 % areas: one `Polygon` per series between its cumulative edges, labels inside, series names right of the last category |
-| `layout/pie.py` | Pies and doughnuts: one pie per category, one `Polygon` per segment clockwise from 12 o'clock, shares inside or outside by angle, the sum in a doughnut's hole |
-| `layout/scatter.py` | Scatter and bubble charts: forced axes without zero, `Marker`s or `Bubble`s, group legend, value line |
+| `layout/pie.py` | Pies and doughnuts: one pie per category, one `Polygon` per segment clockwise from 12 o'clock, shares inside or outside by angle, the sum in a doughnut's hole; difference and CAGR arrows between segments; `pie_at` |
+| `layout/scatter.py` | Scatter and bubble charts: forced axes without zero, `Marker`s or `Bubble`s, group legend, value line, difference and CAGR arrows between points; `scatter_at` |
 | `layout/gantt.py` | Label column, two-level date header, a band per row with bars, milestone diamonds and phase brackets, remarks, shading, gridlines and date lines |
 | `layout/butterfly.py` | Two series as bars mirrored around a band of category names, one common scale, optional axis and gridlines |
 | `waterfall.py` | Waterfall data sheet rules (value row, "Total" marker row) -> steps with running totals |
 | `layout/waterfall.py` | Steps -> floating bars, totals, connectors and signed labels |
-| `mekko.py` | Mekko data sheet rules (optional "Width" row, negatives ignored) -> segments and column widths |
-| `layout/mekko.py` | Variable-width columns, 100 % high (percent) or scaled by their sums (units); value, total and width labels, series names |
+| `mekko.py` | Mekko data sheet rules (optional "Width" row, negatives ignored) -> segments, column widths and the segment values an annotation measures (ADR 0024) |
+| `layout/mekko.py` | Variable-width columns, 100 % high (percent) or scaled by their sums (units); value, total and width labels, series names, difference and CAGR arrows over segment levels; `mekko_at` |
 | `layout/common.py` | Number format, value axis and gridlines, series labels and legend, value-line lanes shared by the layouts |
 | `layout/chart.py` | `layout_chart(state, w, h, length_per_unit=None)`: applies sorting, picks the layout by chart kind, passes the shared scale of a same-scale group (ADR 0017) and applies the label offsets |
 | `labels.py` | Label placement: `place` applies the offsets of moved value labels and totals to laid-out primitives, `moved` finds them again from the shapes' boxes (ADR 0023) |
@@ -105,8 +105,9 @@ so every released schema version must stay readable (`state_io.py`).
 | `labels.py` | Moved labels: reads the shapes' boxes, stores the offsets `core/labels.moved` finds (no undo action) and puts other dragged shapes back; the *Move labels* session (ADR 0023) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
 | `axisdialog.py` | The axis break dialog (modal, built in code); asks, then adds or changes the break |
+| `textdialog.py` | The group bracket label dialog (modal, built in code); asks for the text after the picks and for *Change text...* |
 | `formatdialog.py` | The number-format and value-line dialogs (modal, built in code); validation lives in `core/format.py` and `core/value_line.py` |
-| `pick.py` | Pick mode: enters the chart group, turns selected shapes into an annotation (ADR 0010) |
+| `pick.py` | Pick mode: enters the chart group, turns selected shapes into an annotation; a group bracket asks for its label (ADRs 0010, 0024) |
 | `sidebar.py` | The LibreCharts sidebar panel: window with buttons, follows selection and document (ADR 0011) |
 | `contextmenu.py` | One interceptor per presentation: the LibreCharts submenu in a chart's context menu |
 | `ui.py` | UI locale and message boxes; texts come from `core/messages.py` |

@@ -69,13 +69,16 @@ Use these terms consistently in code, UI strings and docs.
 | **Width row** | Optional Mekko data sheet row named "Width"/"Breite" right below the category names; sets column widths. |
 | **Label key** | Names a movable label (a value label or a total) by its role and data sheet indices, independent of size and sort order (ADR 0023). |
 | **Label offset** | How far the user moved a label's centre from where the layout puts it, in 1/100 mm; stored in the chart state under its label key and applied after the layout (ADR 0023). |
-| **Annotation** | An arrow or axis break the user placed on a chart; stored in the chart state by category index (ADR 0010). |
-| **Difference arrow** | Annotation that shows the relative ("+25%") or absolute ("+5") difference between two columns, or two bars of one series. Drawn as a *bracket* (above columns, right of bars) or as a *level difference*. On a waterfall chart it measures the level a column ends at. |
+| **Annotation** | An arrow, axis break, value line, category gap or group bracket the user placed on a chart; stored in the chart state by indices (ADRs 0010, 0024). |
+| **Difference arrow** | Annotation that shows the relative ("+25%") or absolute ("+5") difference between two columns, two bars of one series, or two series (a *between-series arrow*). Drawn as a *bracket* (above columns, right of bars) or as a *level difference*. On a waterfall chart it measures the level a column ends at; on a Mekko a segment value (its share on a percent Mekko, so an absolute difference reads as percentage points); on a pie a segment's share; on a scatter chart the point's y value. |
+| **Between-series arrow** | Difference or CAGR arrow whose two ends measure two different series, usually of one category (ADR 0024). |
 | **Level difference** | Difference arrow drawn right of the plot (below it on bar charts): dashed lines at the values of both columns, an arrow between them. |
-| **CAGR arrow** | Annotation that shows the compound annual growth rate between two columns, over the years named by the categories (else the number of columns between them). |
+| **CAGR arrow** | Annotation that shows the compound annual growth rate between two columns, over the years named by the categories (else the number of columns between them); on a scatter chart over the x distance of the two points (ADR 0024). |
+| **Category gap** | The wider empty space between two adjacent categories of a column or bar chart; stored like an annotation and hidden while sorting separates its categories (ADR 0024). |
+| **Group bracket** | A bracket over a range of categories with a text label, in a lane above the plot (right of the outside labels on a bar chart); its text is asked for after the picks (ADR 0024). |
 | **Sidebar deck** | The LibreCharts tab of the Impress sidebar; its one panel mirrors the menu commands and lists the selected chart's annotations. |
 | **Axis break** | Removes a value range from the scale of the whole axis (automatic, or a lower and an upper value from a dialog): columns reaching beyond it get a white gap with slanted lines and continue above it; labels keep the real values. |
 | **Lane** | The strip one arrow occupies: above the plot for brackets, right of it for level differences. |
-| **Pick mode** | After choosing an annotation command, the user clicks the columns it connects; the chart group is entered meanwhile. |
+| **Pick mode** | After choosing an annotation command, the user clicks the columns, segments or points it connects; the chart group is entered meanwhile. |
 | **Core** | The pure-Python package `librecharts.core`; no UNO. |
 | **Adapter** | The package `librecharts.lo`; the only place that talks to LibreOffice. |

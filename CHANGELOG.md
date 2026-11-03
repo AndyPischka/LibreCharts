@@ -27,6 +27,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   of the redrawn chart.
 
 ### Added
+- **Annotations everywhere** (M14): difference and CAGR arrows now also connect **Mekko segments,
+  pie segments and scatter points**, placed by clicking them like on column charts. On a percent
+  Mekko and on pies the label shows the difference of the shares in percentage points; on a
+  scatter chart a CAGR counts the x distance of its two points.
+- **Difference arrows between series**: pick one bar of a series and one of another to compare
+  them, usually within one category. Where the series stack, the arrow is drawn as a level
+  difference automatically; on a pie, as a bracket between the segments.
+- **Category gaps** (*Add category gap* on column and bar charts): a wider empty space between two
+  adjacent categories. Sorting that separates them hides the gap until the sort order returns.
+- **Group brackets** (*Add group bracket* on column and bar charts): a bracket over a range of
+  categories with its own text ("Phase 1"), asked for after picking. *Change text...* edits it.
 - **Page numbers in the agenda**: the agenda slide and every divider show, flush right behind each
   chapter, the slide number of the chapter's divider. Every agenda command renumbers them; after
   moving or adding slides, *Update agenda* brings them up to date. Chapters without a divider have
