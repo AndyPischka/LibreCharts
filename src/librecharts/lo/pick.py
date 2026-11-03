@@ -24,7 +24,7 @@ from com.sun.star.view import XSelectionChangeListener
 from librecharts.core.layout.chart import layout_chart
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, ChartState
-from librecharts.core.picking import PickSession, target_at
+from librecharts.core.picking import PickSession, placed, target_at
 from librecharts.core.primitives import Text
 from librecharts.lo import chart, render, store, ui
 
@@ -139,7 +139,9 @@ class _Pick(unohelper.Base, XSelectionChangeListener, XKeyHandler, XCallback):
                     self.controller.removeInfobar(INFOBAR)
             ui.uno_command(self.ctx, self.frame, ".uno:LeaveGroup")
             if self._result is not None:
-                chart.add_annotation(self.controller.getModel(), self.group, self._result)
+                chart.add_annotation(
+                    self.controller.getModel(), self.group, placed(self.state, self._result)
+                )
             self.controller.select(self.group)
         except Exception:
             traceback.print_exc()

@@ -63,7 +63,7 @@ def natural_length_per_unit(state: ChartState, width: float, height: float) -> f
         )
     if state.kind == "mekko":
         return mekko.natural_length_per_unit(
-            parse_mekko(state), width, height, state.percent, state.format
+            parse_mekko(state), width, height, state.percent, state.format, state.annotations
         )
     data, annotations = display_data(state)
     if not data.categories or not data.series:

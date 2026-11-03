@@ -14,9 +14,11 @@ from librecharts.core.layout.column import (
     LEVEL_LANE_WIDTH,
     MIN_ARROW_LABEL_WIDTH,
     TOP_BAND,
+    column_at,
     format_value,
     layout_column,
 )
+from librecharts.core.layout.common import BRACKET_TICK
 from librecharts.core.model import Annotation, Grouping, LabelKey
 from librecharts.core.primitives import (
     BACKGROUND,
@@ -217,6 +219,83 @@ def test_arrows_pointing_past_the_data_are_not_drawn() -> None:
     assert layout_column(chart, "stacked", 2000, 10000, stale) == layout_column(
         chart, "stacked", 2000, 10000
     )
+
+
+def test_category_gap_widens_the_space_between_two_categories() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    gap = (Annotation("category_gap", 0, 1),)
+    rects = [p for p in layout_column(chart, "stacked", 2000, 10000, gap) if isinstance(p, Rect)]
+    # slot (2000 - 500) / 2 = 750, column 525: A stays, B shifts right by the gap
+    assert [r.x for r in rects] == [pytest.approx(112.5), pytest.approx(1362.5)]
+    assert rects[1].x - (rects[0].x + rects[0].width) == pytest.approx(725.0)  # 225 + 500
+
+
+def test_a_click_in_the_gap_hits_nothing_and_the_next_column_is_still_picked() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    gap = (Annotation("category_gap", 0, 1),)
+    assert column_at(chart, "stacked", 2000, gap, 900, 5000) is None  # in the gap
+    assert column_at(chart, "stacked", 2000, gap, 1600, 5000) == (1, None)
+    assert column_at(chart, "stacked", 2000, (), 900, 5000) == (0, None)  # without the gap
+
+
+def test_group_bracket_spans_its_categories_in_a_lane_above_the_plot() -> None:
+    chart = data(("S", (10.0, 20.0, 30.0)), categories=("A", "B", "C"))
+    bracket = Annotation("group_bracket", 0, 2, text="Phase 1")
+    primitives = layout_column(chart, "stacked", 3000, 10000, (bracket,))
+    line_y = LANE_HEIGHT - LANE_LINE_GAP
+    assert [p for p in primitives if isinstance(p, Line) and p.role == "annotation"] == [
+        Line(500, line_y, 500, line_y + BRACKET_TICK, "annotation"),
+        Line(500, line_y, 2500, line_y, "annotation"),
+        Line(2500, line_y, 2500, line_y + BRACKET_TICK, "annotation"),
+    ]
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert (label.text, label.y, label.height) == ("Phase 1", line_y - LABEL_HEIGHT, LABEL_HEIGHT)
+
+
+def test_an_empty_group_bracket_draws_no_label() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    primitives = layout_column(chart, "stacked", 2000, 10000, (Annotation("group_bracket", 0, 1),))
+    assert [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    assert not [p for p in primitives if isinstance(p, Text) and p.role == "annotation"]
+
+
+def test_between_series_arrow_meets_both_bars_of_one_category() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (5.0, 8.0)), categories=("X", "Y"))
+    arrow = Annotation("difference", 0, 0, series=0, series_end=1)
+    primitives = layout_column(chart, "clustered", 2000, 10000, (arrow,))
+    legs = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    # two bars of category X: A at 150..500, B at 500..850 -> centres 325 and 675
+    assert sorted({leg.x1 for leg in legs}) == [pytest.approx(325.0), pytest.approx(675.0)]
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.text == "-50%"  # 10 vs. 5
+
+
+def test_an_arrow_can_measure_two_series_in_two_categories() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (5.0, 8.0)), categories=("X", "Y"))
+    arrow = Annotation("difference", 0, 1, series=0, series_end=1, label="absolute")
+    primitives = layout_column(chart, "clustered", 2000, 10000, (arrow,))
+    legs = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    assert sorted({leg.x1 for leg in legs}) == [pytest.approx(325.0), pytest.approx(1675.0)]
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.text == "-2"  # A@X 10 vs. B@Y 8
+
+
+@pytest.mark.parametrize("grouping", ["stacked", "clustered"])
+def test_structure_with_gaps_and_brackets_does_not_depend_on_size(grouping: Grouping) -> None:
+    chart = data(("A", (1.0, -2.0, None)), ("B", (300.0, 5.0, 0.0)), categories=("X", "Y", "Z"))
+    annotations = (
+        Annotation("category_gap", 0, 1),
+        Annotation("group_bracket", 0, 2, text="Phase"),
+        Annotation("difference", 0, 0, series=0, series_end=1),
+    )
+
+    def shape(width: float, height: float) -> list[tuple[str, str]]:
+        return [
+            (type(p).__name__, getattr(p, "role", ""))
+            for p in layout_column(chart, grouping, width, height, annotations)
+        ]
+
+    assert shape(3000, 6000) == shape(30000, 20000) == shape(9000, 4500)
 
 
 @pytest.mark.parametrize("grouping", ["stacked", "clustered"])

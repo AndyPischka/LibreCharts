@@ -10,9 +10,10 @@ from librecharts.core.layout.pie import (
     DOUGHNUT_HOLE,
     OUTSIDE_RADIUS,
     layout_pie,
+    pie_at,
 )
-from librecharts.core.model import Format
-from librecharts.core.primitives import Polygon, Rect, Text
+from librecharts.core.model import Annotation, Format
+from librecharts.core.primitives import Line, Polygon, Rect, Text
 
 
 def data(*series: tuple[str, tuple[float | None, ...]], categories: tuple[str, ...]) -> ChartData:
@@ -21,6 +22,59 @@ def data(*series: tuple[str, tuple[float | None, ...]], categories: tuple[str, .
 
 def centre(text: Text) -> tuple[float, float]:
     return text.x + text.width / 2, text.y + text.height / 2
+
+
+def test_difference_arrows_connect_two_segments_of_one_pie() -> None:
+    chart = data(("A", (40.0,)), ("B", (35.0,)), ("C", (25.0,)), categories=("2024",))
+    arrow = Annotation("difference", 0, 0, series=1, series_end=0)
+    primitives = layout_pie(chart, False, 8000, 8000, annotations=(arrow,))
+    legs = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    # the legs stand on the arcs of the two segments, which are 45 degrees apart
+    assert len(legs) == 3
+    assert legs[0].x1 != legs[2].x2  # different segments of the pie
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.text == "+14.3%"  # B's 35% vs. A's 40% share
+
+
+def test_difference_arrows_connect_segments_of_two_pies() -> None:
+    chart = data(("A", (40.0, 35.0)), ("B", (60.0, 65.0)), categories=("2024", "2025"))
+    arrow = Annotation("difference", 0, 1, series=0)
+    primitives = layout_pie(chart, False, 16000, 8000, annotations=(arrow,))
+    legs = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    assert legs[1].x1 < legs[1].x2  # the horizontal line spans from pie 2024 to pie 2025
+    assert legs[0].x1 < legs[2].x1  # the legs stand on their own pie
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.text == "-12.5%"  # A's share: 40% -> 35%
+
+
+def test_pie_structure_with_arrows_does_not_depend_on_size() -> None:
+    chart = data(("A", (40.0, 35.0)), ("B", (35.0, 38.0)), categories=("2024", "2025"))
+    annotations = (
+        Annotation("difference", 0, 0, series=0, series_end=1),
+        Annotation("difference", 0, 1, style="level"),
+        Annotation("cagr", 0, 1, series=0),
+    )
+
+    def shape(width: float, height: float) -> list[tuple[str, str]]:
+        return [
+            (type(p).__name__, getattr(p, "role", ""))
+            for p in layout_pie(chart, False, width, height, annotations=annotations)
+        ]
+
+    assert shape(16000, 8000) == shape(30000, 20000) == shape(16000, 7000)
+
+
+def test_pie_at_finds_segments_and_misses_the_rest() -> None:
+    chart = data(("A", (40.0,)), ("B", (35.0,)), ("C", (25.0,)), categories=("2024",))
+    primitives = layout_pie(chart, False, 8000, 8000)
+    polygon = next(p for p in primitives if isinstance(p, Polygon))
+    cx, cy = polygon.points[0]
+    radius = math.hypot(polygon.points[1][0] - cx, polygon.points[1][1] - cy)
+    assert pie_at(chart, False, 8000, 8000, cx + 1, cy - radius + 1) == (0, 0)  # at 12 o'clock
+    assert pie_at(chart, False, 8000, 8000, cx - 1, cy - radius + 1) == (0, 2)  # west: C
+    assert pie_at(chart, False, 8000, 8000, cx, cy - radius * 2) is None  # above the pie
+    assert pie_at(chart, False, 8000, 8000, cx, cy) == (0, 0)  # the centre lies in A's segment
+    assert pie_at(chart, True, 8000, 8000, cx, cy) is None  # the hole of a doughnut hits nothing
 
 
 def test_segments_follow_series_order_and_fill_the_whole_pie() -> None:

@@ -4,7 +4,7 @@ import pytest
 
 from librecharts.core.datasheet import sample_scatter_state, state_from_table
 from librecharts.core.layout.chart import layout_chart
-from librecharts.core.layout.scatter import layout_scatter
+from librecharts.core.layout.scatter import layout_scatter, scatter_at
 from librecharts.core.model import Annotation, ChartState, Format
 from librecharts.core.primitives import (
     MARKER_SIZE,
@@ -143,3 +143,61 @@ def test_an_empty_chart_has_no_primitives() -> None:
 def test_too_small_a_box_is_rejected() -> None:
     with pytest.raises(ValueError, match="too small"):
         layout_scatter(chart(("A", 1, 1, None, None)), 2000, 2000)
+
+
+def test_difference_arrows_connect_two_points_in_a_lane_above_the_plot() -> None:
+    data = chart(("A", 1, 10, None, None), ("B", 2, 20, None, None))
+    arrow = Annotation("difference", 0, 1)
+    primitives = layout_scatter(data, 12000, 8000, (arrow,))
+    legs = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    assert len(legs) == 3
+    assert legs[0].x1 < legs[2].x1  # from point A to point B
+    assert [t.text for t in texts(primitives, "annotation")] == ["+100%"]
+
+
+def test_a_cagr_arrow_counts_the_x_distance_of_its_points() -> None:
+    data = chart(("A", 2, 10, None, None), ("B", 12, 20, None, None))
+    arrow = Annotation("cagr", 0, 1)
+    primitives = layout_scatter(data, 12000, 8000, (arrow,))
+    # 10 -> 20 over 10 x units: (20 / 10) ** (1 / 10) - 1 = 7.18 %
+    assert [t.text for t in texts(primitives, "annotation")] == ["CAGR +7.2%"]
+
+
+def test_level_arrows_run_right_of_the_rightmost_points_label() -> None:
+    data = chart(("A", 1, 10, None, None), ("B", 2, 20, None, None))
+    arrow = Annotation("difference", 0, 1, style="level")
+    primitives = layout_scatter(data, 12000, 8000, (arrow,))
+    helpers = [p for p in primitives if isinstance(p, Line) and p.role == "helper"]
+    arrows = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    assert len(helpers) == 2
+    assert arrows[0].x1 == arrows[0].x2  # the vertical arrow between the two levels
+    label = texts(primitives, "annotation")[0]
+    assert label.x > max(h.x2 for h in helpers)
+
+
+def test_scatter_structure_with_arrows_does_not_depend_on_size() -> None:
+    data = chart(("A", 1, 10, None, None), ("B", 2, 20, None, None), ("C", 3, 15, None, None))
+    annotations = (
+        Annotation("difference", 0, 2),
+        Annotation("difference", 1, 2, style="level"),
+        Annotation("cagr", 0, 1),
+    )
+
+    def shape(width: float, height: float) -> list[tuple[str, str]]:
+        return [
+            (type(p).__name__, getattr(p, "role", ""))
+            for p in layout_scatter(data, width, height, annotations)
+        ]
+
+    assert shape(12000, 8000) == shape(30000, 20000) == shape(12000, 6500)
+
+
+def test_scatter_at_finds_points_and_misses_the_lanes() -> None:
+    data = chart(("A", 1, 10, None, None), ("B", 2, 20, None, None))
+    arrow = (Annotation("difference", 0, 1),)
+    primitives = layout_scatter(data, 12000, 8000, arrow)
+    markers = [p for p in primitives if isinstance(p, Marker)]
+    assert scatter_at(data, 12000, 8000, markers[0].x, markers[0].y, arrow) == (0, None)
+    assert scatter_at(data, 12000, 8000, markers[1].x, markers[1].y, arrow) == (1, None)
+    # a click above the plot, in the bracket lane, hits nothing
+    assert scatter_at(data, 12000, 8000, markers[0].x, 100, arrow) is None

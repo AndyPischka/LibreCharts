@@ -5,6 +5,7 @@ import pytest
 
 from librecharts.core.datasheet import ChartData, Series, sample_mekko_state, state_from_table
 from librecharts.core.layout.chart import layout_chart
+from librecharts.core.layout.column import LANE_HEIGHT, LANE_LINE_GAP
 from librecharts.core.layout.mekko import (
     CATEGORY_BAND,
     LABEL_HEIGHT,
@@ -13,9 +14,10 @@ from librecharts.core.layout.mekko import (
     TOP_BAND,
     WIDTH_BAND,
     layout_mekko,
+    mekko_at,
 )
 from librecharts.core.mekko import MekkoData, has_width_row, parse_mekko
-from librecharts.core.model import ChartState, Format, LabelKey
+from librecharts.core.model import Annotation, ChartState, Format, LabelKey
 from librecharts.core.primitives import Line, Rect, Text
 
 
@@ -347,3 +349,74 @@ def test_a_stack_of_names_reaching_the_top_moves_down() -> None:
         p for p in layout_mekko(data, 10600, 4000) if isinstance(p, Text) and p.role == "series"
     ]
     assert min(n.y for n in names) == 0
+
+
+# --- annotations (M14) ------------------------------------------------------------------------
+
+
+def test_bracket_arrow_measures_segment_levels_in_a_lane_above_the_width_labels() -> None:
+    data = mekko(("A", (40.0, 10.0)), ("B", (60.0, 30.0)), categories=("E", "U"), widths=(80, 40))
+    arrow = Annotation("difference", 0, 1, series=0)
+    primitives = layout_mekko(data, 10600, 10000, percent=False, annotations=(arrow,))
+    lines = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    # the lane sits above the width labels; the legs stand on the two columns' segment levels
+    assert [line.y1 for line in lines] == [
+        LANE_HEIGHT - LANE_LINE_GAP,
+        LANE_HEIGHT - LANE_LINE_GAP,
+        LANE_HEIGHT - LANE_LINE_GAP,
+    ]
+    assert lines[0].x1 < lines[2].x2  # from Europe's column to the Americas'
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.text == "-75%"  # A: 40 -> 10
+
+
+def test_percent_mekko_arrows_read_as_percentage_points() -> None:
+    data = mekko(("A", (40.0, 10.0)), ("B", (60.0, 30.0)), categories=("E", "U"), widths=(80, 40))
+    arrow = Annotation("difference", 0, 0, series=0, series_end=1, label="absolute")
+    primitives = layout_mekko(data, 10600, 10000, percent=True, annotations=(arrow,))
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.text == "+20"  # 40 vs. 60 percentage points of the column
+
+
+def test_level_arrows_run_in_lanes_right_of_the_last_column() -> None:
+    data = mekko(("A", (40.0, 10.0)), ("B", (60.0, 30.0)), categories=("E", "U"), widths=(80, 40))
+    arrow = Annotation("difference", 0, 0, series=0, series_end=1, style="level")
+    primitives = layout_mekko(data, 10600, 10000, percent=False, annotations=(arrow,))
+    helpers = [p for p in primitives if isinstance(p, Line) and p.role == "helper"]
+    arrows = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    # the helpers start at the right edges of the measured segments' column, the arrow beyond it
+    assert all(h.x1 < h.x2 for h in helpers)
+    assert arrows
+    assert arrows[0].x1 == arrows[0].x2
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.x > max(h.x2 for h in helpers)
+
+
+def test_mekko_structure_with_arrows_does_not_depend_on_size() -> None:
+    data = mekko(("A", (40.0, 10.0)), ("B", (60.0, 30.0)), categories=("E", "U"), widths=(80, 40))
+    annotations = (
+        Annotation("difference", 0, 0, series=0, series_end=1),
+        Annotation("difference", 0, 1, style="level"),
+        Annotation("cagr", 0, 1),
+    )
+
+    def shape(width: float, height: float) -> list[tuple[str, str]]:
+        return [
+            (type(p).__name__, getattr(p, "role", ""))
+            for p in layout_mekko(data, width, height, False, annotations=annotations)
+        ]
+
+    assert shape(10600, 10000) == shape(30000, 20000) == shape(10600, 6000)
+
+
+def test_mekko_at_finds_columns_and_segments() -> None:
+    data = mekko(("A", (40.0, 10.0)), ("B", (60.0, 30.0)), categories=("E", "U"), widths=(80, 40))
+    percent = True
+    # widths 80 and 40 of 120: E takes 2/3 of the plot, its lower half is A's 40 of 100
+    target = mekko_at(data, 10600, 10000, percent, 500, 8000)
+    assert target is not None
+    assert target[0] == 0
+    target = mekko_at(data, 10600, 10000, percent, 500, 3000)
+    assert target == (0, 1)  # B's upper half
+    assert mekko_at(data, 10600, 10000, percent, 10000, 5000) is None  # between the columns
+    assert mekko_at(data, 10600, 10000, percent, 500, 500) is None  # above the plot

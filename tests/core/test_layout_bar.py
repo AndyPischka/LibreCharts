@@ -18,7 +18,7 @@ from librecharts.core.layout.bar import (
 )
 from librecharts.core.layout.chart import layout_chart
 from librecharts.core.layout.column import BREAK_GAP, MIN_ARROW_LABEL_WIDTH
-from librecharts.core.layout.common import format_value
+from librecharts.core.layout.common import BRACKET_TICK, format_value
 from librecharts.core.model import Annotation, Grouping, LabelKey
 from librecharts.core.primitives import BACKGROUND, Line, Rect, Text
 
@@ -413,3 +413,58 @@ def test_bar_at_nothing_to_hit_without_data_or_room() -> None:
     assert bar_at(empty, "stacked", 12000, 4000, (), 4000, 1000) is None
     chart = data(("S", (10.0,)), categories=("A",))
     assert bar_at(chart, "stacked", 3000, 4000, (), 100, 1000) is None
+
+
+def test_category_gap_widens_the_space_between_two_categories() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    gap = (Annotation("category_gap", 0, 1),)
+
+    def name_tops(annotations: tuple[Annotation, ...]) -> list[float]:
+        return [
+            p.y
+            for p in layout_bar(chart, "stacked", 8200, 4000, annotations)
+            if isinstance(p, Text) and p.role == "category"
+        ]
+
+    # slot (4000 - 500) / 2 = 1750: B moves down by the gap, A stays at the top
+    assert name_tops(gap) == [pytest.approx(0.0), pytest.approx(1750.0 + 500.0)]
+    assert name_tops(()) == [pytest.approx(0.0), pytest.approx(2000.0)]
+
+
+def test_a_click_in_the_gap_hits_nothing_and_the_next_bar_is_still_picked() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    gap = (Annotation("category_gap", 0, 1),)
+    assert bar_at(chart, "stacked", 8200, 4000, gap, 5000, 1900) is None  # in the gap
+    assert bar_at(chart, "stacked", 8200, 4000, gap, 5000, 3000) == (1, None)
+    assert bar_at(chart, "stacked", 8200, 4000, (), 5000, 1900) == (0, None)  # without the gap
+
+
+def test_group_bracket_spans_its_categories_in_a_lane_right_of_the_labels() -> None:
+    chart = data(("S", (10.0, 20.0, 30.0)), categories=("A", "B", "C"))
+    bracket = Annotation("group_bracket", 0, 2, text="Phase")
+    primitives = layout_bar(chart, "stacked", 8200, 4000, (bracket,))
+    # the bracket lane takes 2200 of the box, after the plot (3000..4800) and its label band
+    lane_x = 3000 + 1800 + 1200 + BRACKET_INSET
+    lines = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    assert [(line.x1, line.x2) for line in lines] == [
+        (lane_x, lane_x + BRACKET_TICK),
+        (lane_x, lane_x),
+        (lane_x, lane_x + BRACKET_TICK),
+    ]
+    top, bottom = lines[0].y1, lines[2].y1
+    assert top == pytest.approx(4000 / 3 / 2)  # the centre of category A's slot
+    assert bottom == pytest.approx(4000 - 4000 / 3 / 2)  # the centre of category C's slot
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.text == "Phase"
+    assert label.x == pytest.approx(lane_x + BRACKET_LABEL_GAP)
+
+
+def test_between_series_arrow_meets_both_bars_of_one_category() -> None:
+    chart = data(("A", (10.0, 20.0)), ("B", (5.0, 8.0)), categories=("X", "Y"))
+    arrow = Annotation("difference", 0, 0, series=0, series_end=1)
+    primitives = layout_bar(chart, "clustered", 8200, 4000, (arrow,))
+    legs = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    # two bars of category X: A's centre 650, B's centre 1350 (slots of 2000, bars à 700 from 300)
+    assert sorted({leg.y1 for leg in legs}) == [pytest.approx(650.0), pytest.approx(1350.0)]
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.text == "-50%"  # 10 vs. 5

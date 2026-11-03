@@ -8,7 +8,7 @@ here is plain data, so the flow is tested without LibreOffice.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Literal, cast, get_args
 from urllib.parse import parse_qs
 
@@ -18,15 +18,21 @@ from librecharts.core.datasheet import parse
 from librecharts.core.layout.bar import bar_at
 from librecharts.core.layout.column import column_at
 from librecharts.core.layout.line import line_at
+from librecharts.core.layout.mekko import mekko_at
+from librecharts.core.layout.pie import pie_at
+from librecharts.core.layout.scatter import scatter_at
 from librecharts.core.layout.waterfall import step_at
+from librecharts.core.mekko import parse_mekko
 from librecharts.core.model import Annotation, AnnotationKind, ArrowStyle, ChartState
+from librecharts.core.scatter import parse_scatter
 from librecharts.core.waterfall import parse_waterfall
 
 Target = tuple[int, int | None]  # category, series (None: the column as a whole)
 
 
 def target_at(state: ChartState, width: float, height: float, x: float, y: float) -> Target | None:
-    """The column (or bar, or line point) at chart point (x, y), or ``None`` if there is none.
+    """The column (or bar, line point, Mekko or pie segment, scatter point) at chart point (x, y),
+    or ``None`` if there is none.
 
     The returned category is the data sheet index, even when sorting drew the category elsewhere.
     """
@@ -59,6 +65,18 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
         return line_at(parse(state), width, height, state.annotations, x, y, state.format)
     if state.kind == "waterfall":
         return step_at(parse_waterfall(state), width, state.annotations, x, y, state.format)
+    if state.kind == "mekko":
+        return mekko_at(
+            parse_mekko(state), width, height, state.percent, x, y, state.annotations, state.format
+        )
+    if state.kind == "pie":
+        return pie_at(
+            parse(state), state.doughnut, width, height, x, y, state.annotations, state.format
+        )
+    if state.kind == "scatter":
+        return scatter_at(
+            parse_scatter(state), width, height, x, y, state.annotations, state.format
+        )
     return None
 
 
@@ -143,6 +161,29 @@ def annotation_kind(kind: Literal["difference", "cagr", "gap", "bracket"]) -> An
     if kind == "bracket":
         return "group_bracket"
     return kind  # pyright: ignore[reportReturnType]  # a session and annotation kind share the name
+
+
+def placed(state: ChartState, annotation: Annotation) -> Annotation:
+    """The drawable form of a between-series difference arrow on ``state``.
+
+    A bracket arrow connects two side-by-side bars, which only a clustered chart has: on a chart
+    that stacks its series (stacked columns and bars, lines, a Mekko) it becomes a level difference.
+    The other way round, a pie's segments meet at their arcs, so a level difference there becomes
+    a bracket arrow. Every other annotation is drawn the way it was picked.
+    """
+    if annotation.kind != "difference" or annotation.start != annotation.end:
+        return annotation
+    if annotation.series is None:
+        return annotation
+    if (
+        annotation.style == "bracket"
+        and state.kind in ("column", "bar", "line", "mekko")
+        and state.grouping == "stacked"
+    ):
+        return replace(annotation, style="level")
+    if annotation.style == "level" and state.kind == "pie":
+        return replace(annotation, style="bracket")
+    return annotation
 
 
 def supports(state: ChartState, kind: AnnotationKind) -> bool:

@@ -8,9 +8,11 @@ labels get extra room next to the names.
 
 Annotations are the column layout turned by 90 degrees: bracket arrows (difference, CAGR) run in
 lanes right of the outside labels, one lane per arrow, the first one closest to the plot; level
-arrows and value lines run in lanes below the plot. An axis break removes a value range from the
-scale (core/axis_break.py): bars reaching beyond it get a vertical break mark, ticks inside the
-range are left out and the axis line gets a break mark.
+arrows and value lines run in lanes below the plot. A category gap (M14) widens the empty space
+between two adjacent categories; a group bracket runs in a bracket lane right of the outside
+labels and spans the centres of its categories, with its label beside the line. An axis break
+removes a value range from the scale (core/axis_break.py): bars reaching beyond it get a vertical
+break mark, ticks inside the range are left out and the axis line gets a break mark.
 """
 
 from __future__ import annotations
@@ -28,7 +30,9 @@ from librecharts.core.layout.column import (
     BREAK_SLANT,
 )
 from librecharts.core.layout.common import (
+    BRACKET_TICK,
     GAP_RATIO,
+    GAP_WIDTH,
     LEGEND_HEIGHT,
     MIN_ARROW_LABEL_WIDTH,
     TICK_GAP,
@@ -36,6 +40,8 @@ from librecharts.core.layout.common import (
     column_top,
     format_value,
     legend,
+    slot_at,
+    slot_start,
     spread,
     value_axis,
     visible_ticks,
@@ -91,12 +97,15 @@ def layout_bar(
     """
     fmt = fmt or Format()
     if percent:
-        brackets, levels, lines = [], [], []
+        brackets, levels, lines, gaps, groups = [], [], [], [], []
     else:
         brackets, levels = notes.arrows(annotations, data, "bar")
         lines = notes.value_lines(annotations, data, "bar")
+        gaps = notes.category_gaps(annotations, data, "bar")
+        groups = notes.group_brackets(annotations, data, "bar")
+    gap_starts = tuple(sorted({gap.start for gap in gaps}))
     plot_left, plot_top, plot_width, plot_height = _plot(
-        data, width, height, len(brackets), len(levels) + len(lines), fmt, percent
+        data, width, height, len(brackets) + len(groups), len(levels) + len(lines), fmt, percent
     )
     if plot_height <= 0 or plot_width <= 0:
         raise ValueError("chart area too small")
@@ -117,8 +126,20 @@ def layout_bar(
             return plot_left + (value - axis.minimum) * length_per_unit
         return plot_left + (fold(value) - axis.minimum) / span * plot_width
 
-    slot = plot_height / len(data.categories)
+    count = len(data.categories)
+    slot = (plot_height - GAP_WIDTH * len(gap_starts)) / count
+    if slot <= 0:
+        raise ValueError("chart area too small")
     thickness = slot * (1 - GAP_RATIO)
+
+    def slot_y(category: int) -> float:
+        """The top edge of ``category``'s slot, shifted by the category gaps before it."""
+        return slot_start(plot_top, category, slot, gap_starts)
+
+    def centre(category: int) -> float:
+        """The centre of ``category``'s slot."""
+        return slot_y(category) + slot / 2
+
     plot_bottom = plot_top + plot_height
     out: list[Primitive] = []
     if fmt.series_names == "legend":
@@ -130,19 +151,19 @@ def layout_bar(
         out.extend(_axis(axis, cut, x, plot_bottom, fmt))
 
     for c, category in enumerate(data.categories):
-        slot_y = plot_top + c * slot
-        bar_y = slot_y + (slot - thickness) / 2
+        slot_top = slot_y(c)
+        bar_y = slot_top + (slot - thickness) / 2
         if grouping == "stacked":
             out.extend(_stacked_bar(data, c, bar_y, thickness, x, cut, percent=percent, fmt=fmt))
         else:
             out.extend(_clustered_bar(data, c, bar_y, thickness, x, cut, fmt))
         out.append(
-            Text(0, slot_y, LEFT_BAND - LABEL_GAP, slot, category, "right", "category"),
+            Text(0, slot_top, LEFT_BAND - LABEL_GAP, slot, category, "right", "category"),
         )
 
     def edges(category: int, series: int | None) -> tuple[float, float]:
         """Top and bottom edge of the measured bar, or of one bar of a clustered chart."""
-        bar_y = plot_top + category * slot + (slot - thickness) / 2
+        bar_y = slot_y(category) + (slot - thickness) / 2
         if series is not None and grouping == "clustered":
             bar_height = thickness / len(data.series)
             return bar_y + series * bar_height, bar_y + (series + 1) * bar_height
@@ -159,14 +180,27 @@ def layout_bar(
         value = notes.measured_value(data, category, series) or 0.0
         return x(value), edges(category, series)[1]
 
+    def end_series(arrow: Annotation) -> int | None:
+        """The series the arrow's end measures: its own, or the start's when it has none."""
+        return arrow.series_end if arrow.series_end is not None else arrow.series
+
     lane_start = plot_left + plot_width + RIGHT_BAND
     for lane, arrow in enumerate(brackets):
         out.extend(
             _bracket(
                 anchor(arrow.start, arrow.series),
-                anchor(arrow.end, arrow.series),
+                anchor(arrow.end, end_series(arrow)),
                 lane_start + lane * BRACKET_LANE_WIDTH + BRACKET_INSET,
                 notes.label(arrow, data),
+            )
+        )
+    for lane, group in enumerate(groups):
+        out.extend(
+            _group_bracket(
+                centre(group.start),
+                centre(group.end),
+                lane_start + (len(brackets) + lane) * BRACKET_LANE_WIDTH + BRACKET_INSET,
+                group.text,
             )
         )
     lane_top = plot_bottom + (AXIS_BAND_HEIGHT if fmt.axis else 0.0)
@@ -174,7 +208,7 @@ def layout_bar(
         out.extend(
             _level(
                 level(arrow.start, arrow.series),
-                level(arrow.end, arrow.series),
+                level(arrow.end, end_series(arrow)),
                 lane_top + lane * LEVEL_LANE_HEIGHT + LEVEL_ARROW_INSET,
                 notes.label(arrow, data),
             )
@@ -199,9 +233,9 @@ def layout_bar(
                 data,
                 grouping,
                 thickness,
-                plot_top,
+                slot_y,
                 slot,
-                lane_start + len(brackets) * BRACKET_LANE_WIDTH,
+                lane_start + (len(brackets) + len(groups)) * BRACKET_LANE_WIDTH,
             )
         )
     return tuple(out)
@@ -222,8 +256,9 @@ def natural_length_per_unit(
     fmt = fmt or Format()
     brackets, levels = notes.arrows(annotations, data, "bar")
     lines = notes.value_lines(annotations, data, "bar")
+    groups = notes.group_brackets(annotations, data, "bar")
     _, _, plot_width, plot_height = _plot(
-        data, width, height, len(brackets), len(levels) + len(lines), fmt, False
+        data, width, height, len(brackets) + len(groups), len(levels) + len(lines), fmt, False
     )
     if plot_width <= 0 or plot_height <= 0 or not data.categories or not data.series:
         return None
@@ -354,7 +389,7 @@ def _series_names(
     data: ChartData,
     grouping: Grouping,
     thickness: float,
-    plot_top: float,
+    slot_y: Callable[[int], float],
     slot: float,
     band_x: float,
 ) -> list[Primitive]:
@@ -362,13 +397,13 @@ def _series_names(
     last = len(data.categories) - 1
     labelled: list[tuple[float, str]] = []
     if grouping == "stacked":
-        bar_y = plot_top + last * slot + (slot - thickness) / 2
+        bar_y = slot_y(last) + (slot - thickness) / 2
         for series in data.series:
             labelled.append((bar_y + thickness / 2 - LABEL_HEIGHT / 2, series.name))
     else:
         bar_height = thickness / len(data.series)
         for i, series in enumerate(data.series):
-            centre = plot_top + last * slot + (slot - thickness) / 2 + (i + 0.5) * bar_height
+            centre = slot_y(last) + (slot - thickness) / 2 + (i + 0.5) * bar_height
             labelled.append((centre - LABEL_HEIGHT / 2, series.name))
     labelled.sort(key=lambda item: item[0], reverse=True)
     tops = spread([top for top, _ in labelled], LABEL_HEIGHT)
@@ -404,21 +439,31 @@ def bar_at(
     fmt = fmt or Format()
     brackets, levels = notes.arrows(annotations, data, "bar")
     lines = notes.value_lines(annotations, data, "bar")
+    gaps = notes.category_gaps(annotations, data, "bar")
+    groups = notes.group_brackets(annotations, data, "bar")
+    gap_starts = tuple(sorted({gap.start for gap in gaps}))
     plot_left, plot_top, plot_width, plot_height = _plot(
-        data, width, height, len(brackets), len(levels) + len(lines), fmt
+        data, width, height, len(brackets) + len(groups), len(levels) + len(lines), fmt
     )
-    if not data.categories or plot_width <= 0 or plot_height <= 0:
+    count = len(data.categories)
+    slot = (
+        (plot_height - GAP_WIDTH * len(gap_starts)) / count
+        if count and plot_height > GAP_WIDTH * len(gap_starts)
+        else 0.0
+    )
+    if not data.categories or plot_width <= 0 or plot_height <= 0 or slot <= 0:
         return None
     if not 0 <= x < plot_left + plot_width + RIGHT_BAND:
         return None
     if not plot_top <= y < plot_top + plot_height:
         return None
-    slot = plot_height / len(data.categories)
-    category = int((y - plot_top) // slot)
+    category = slot_at(plot_top, y, slot, count, gap_starts)
+    if category is None:
+        return None
     if grouping == "stacked" or not data.series:
         return category, None
     thickness = slot * (1 - GAP_RATIO)
-    offset = y - plot_top - category * slot - (slot - thickness) / 2
+    offset = y - slot_start(plot_top, category, slot, gap_starts) - (slot - thickness) / 2
     if not 0 <= offset < thickness:
         return category, None
     return category, int(offset // (thickness / len(data.series)))
@@ -443,6 +488,28 @@ def _bracket(
             "annotation",
         ),
     ]
+
+
+def _group_bracket(top: float, bottom: float, lane_x: float, label: str) -> list[Primitive]:
+    """A bracket over the categories from ``top`` to ``bottom``, its label beside the line."""
+    out: list[Primitive] = [
+        Line(lane_x, top, lane_x + BRACKET_TICK, top, "annotation"),
+        Line(lane_x, top, lane_x, bottom, "annotation"),
+        Line(lane_x, bottom, lane_x + BRACKET_TICK, bottom, "annotation"),
+    ]
+    if label:
+        out.append(
+            Text(
+                lane_x + BRACKET_LABEL_GAP,
+                (top + bottom - LABEL_HEIGHT) / 2,
+                BRACKET_LANE_WIDTH - BRACKET_INSET - BRACKET_LABEL_GAP,
+                LABEL_HEIGHT,
+                label,
+                "left",
+                "annotation",
+            )
+        )
+    return out
 
 
 def _level(

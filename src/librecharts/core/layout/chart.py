@@ -62,7 +62,13 @@ def _layout(
         )
     if state.kind == "mekko":
         return layout_mekko(
-            parse_mekko(state), width, height, state.percent, state.format, length_per_unit
+            parse_mekko(state),
+            width,
+            height,
+            state.percent,
+            state.format,
+            length_per_unit,
+            state.annotations,
         )
     if state.kind == "scatter":
         return layout_scatter(parse_scatter(state), width, height, state.annotations, state.format)
@@ -72,7 +78,14 @@ def _layout(
         )
     data, annotations = display_data(state)
     if state.kind == "pie":
-        return layout_pie(data, state.doughnut, width, height, state.format)
+        return layout_pie(
+            data,
+            state.doughnut,
+            width,
+            height,
+            state.format,
+            state.annotations,
+        )
     if state.kind == "butterfly":
         return layout_butterfly(data, width, height, state.format, length_per_unit)
     if state.kind == "line":

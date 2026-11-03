@@ -11,7 +11,7 @@ from librecharts.core.datasheet import (
 from librecharts.core.layout.column import LANE_HEIGHT
 from librecharts.core.messages import MESSAGES
 from librecharts.core.model import Annotation
-from librecharts.core.picking import PickSession, annotation_kind, supports, target_at
+from librecharts.core.picking import PickSession, annotation_kind, placed, supports, target_at
 
 STACKED = sample_state()  # three categories, three series
 CLUSTERED = replace(STACKED, grouping="clustered")
@@ -51,11 +51,15 @@ def test_waterfall_charts_have_targets_by_column() -> None:
     assert target_at(waterfall, 3000, 8000, 3000, 4000) is None
 
 
-def test_bar_charts_have_targets_and_other_charts_do_not() -> None:
+def test_bar_charts_have_targets_and_mekko_segments_are_targets() -> None:
     bar = replace(STACKED, kind="bar")
     assert target_at(bar, 12000, 3000, 4000, 100) == (0, None)
     assert target_at(bar, 12000, 3000, 4000, 2900) == (2, None)
-    assert target_at(sample_mekko_state(), WIDTH, HEIGHT, 500, 5000) is None
+    # the sample Mekko: Europe (80 wide of 185 total) starts with Product A's 40 of 80
+    assert target_at(sample_mekko_state(), WIDTH, HEIGHT, 500, 500) is None  # above the plot
+    assert target_at(sample_mekko_state(), WIDTH, HEIGHT, 500, 5000) == (0, 0)
+    assert target_at(sample_mekko_state(), WIDTH, HEIGHT, 500, 3000) == (0, 1)  # Product B
+    assert target_at(sample_mekko_state(), WIDTH, HEIGHT, 500, 1500) == (0, 2)  # Product C
 
 
 def test_empty_chart_has_no_targets() -> None:
@@ -131,6 +135,28 @@ def test_session_kinds_map_to_annotation_kinds() -> None:
     assert annotation_kind("cagr") == "cagr"
     assert annotation_kind("gap") == "category_gap"
     assert annotation_kind("bracket") == "group_bracket"
+
+
+def test_a_between_series_bradket_needs_side_by_side_bars() -> None:
+    between = Annotation("difference", 1, 1, series=0, series_end=1)
+    assert placed(replace(STACKED, grouping="clustered"), between) == between
+    assert placed(STACKED, between) == Annotation(
+        "difference", 1, 1, series=0, series_end=1, style="level"
+    )
+    # charts that stack their series measure levels instead
+    assert placed(replace(STACKED, kind="line"), between).style == "level"
+    assert placed(sample_mekko_state(), between).style == "level"
+    assert placed(replace(STACKED, kind="bar", grouping="clustered"), between).style == "bracket"
+
+
+def test_a_between_series_level_arrow_on_a_pie_becomes_a_bracket() -> None:
+    pie = replace(sample_state(), kind="pie")
+    between = Annotation("difference", 1, 1, series=0, series_end=1, style="level")
+    assert placed(pie, between) == Annotation("difference", 1, 1, series=0, series_end=1)
+    # an arrow over categories keeps the style it was picked with
+    across = Annotation("difference", 0, 2, style="level")
+    assert placed(pie, across) == across
+    assert placed(STACKED, across) == across
 
 
 def test_a_sorted_chart_reports_the_data_sheet_index() -> None:

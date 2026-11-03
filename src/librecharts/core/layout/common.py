@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from librecharts.core.axis_break import Break
 
 GAP_RATIO = 0.3  # share of a category slot left empty between columns or bars
+GAP_WIDTH = 500.0  # the wider empty space a category gap opens between two slots (M14)
+BRACKET_TICK = 200.0  # how far the end ticks of a group bracket drop below its line
 
 AXIS_BAND = 1600.0  # room left of (below, for bars) the plot for tick labels
 TICK_HEIGHT = 500.0  # height of one tick label box
@@ -228,6 +230,49 @@ def level_arrow(
             "annotation",
         ),
     ]
+
+
+def group_bracket(left: float, right: float, line_y: float, label: str) -> list[Primitive]:
+    """A bracket over the categories from ``left`` to ``right``, its label above the line."""
+    label_width = max(right - left, MIN_ARROW_LABEL_WIDTH)
+    out: list[Primitive] = [
+        Line(left, line_y, left, line_y + BRACKET_TICK, "annotation"),
+        Line(left, line_y, right, line_y, "annotation"),
+        Line(right, line_y, right, line_y + BRACKET_TICK, "annotation"),
+    ]
+    if label:
+        out.append(
+            Text(
+                (left + right - label_width) / 2,
+                line_y - LABEL_HEIGHT,
+                label_width,
+                LABEL_HEIGHT,
+                label,
+                "center",
+                "annotation",
+            )
+        )
+    return out
+
+
+def slot_start(origin: float, index: int, slot: float, gap_starts: Sequence[int]) -> float:
+    """The left (top, for bars) edge of category ``index``'s slot.
+
+    ``gap_starts`` are the categories a category gap opens after (M14): every gap before
+    ``index`` shifts the slot by :data:`GAP_WIDTH`.
+    """
+    return origin + index * slot + GAP_WIDTH * sum(1 for g in gap_starts if g < index)
+
+
+def slot_at(
+    origin: float, position: float, slot: float, count: int, gap_starts: Sequence[int]
+) -> int | None:
+    """The category whose slot contains ``position``, or ``None`` between or outside them."""
+    for c in range(count):
+        start = slot_start(origin, c, slot, gap_starts)
+        if start <= position < start + slot:
+            return c
+    return None
 
 
 def point_runs(

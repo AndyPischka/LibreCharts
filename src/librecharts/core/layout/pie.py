@@ -6,26 +6,39 @@ empty, like in 100 % charts. A share goes inside its segment when the segment sp
 ``MIN_INSIDE_ANGLE``, else just outside it. Which side a label is on follows from the data, never
 from the size, so the primitive structure stays the same on resize (ADR 0007). A doughnut shows
 the sum of its category in the hole.
+
+Annotations (M14): difference and CAGR arrows between two segments (of one pie or of two), labelled
+with the segments' shares, so an absolute difference reads as percentage points. Bracket arrows run
+in lanes above the pies and meet the arcs of the segments they measure at their mid-angle; level
+arrows run in lanes right of the pies.
 """
 
 from __future__ import annotations
 
+import math
+
+from librecharts.core import annotations as notes
 from librecharts.core.datasheet import ChartData
 from librecharts.core.geometry import polar, sector
+from librecharts.core.layout.column import LANE_HEIGHT, LANE_LINE_GAP
 from librecharts.core.layout.common import (
+    LABEL_HEIGHT,
     LEGEND_HEIGHT,
+    LEVEL_ARROW_INSET,
+    LEVEL_LANE_WIDTH,
     SWATCH,
     SWATCH_GAP,
+    bracket,
     format_value,
     legend,
+    level_arrow,
 )
-from librecharts.core.model import Format, LabelKey
-from librecharts.core.percent import column_total, share, share_label
+from librecharts.core.model import Annotation, Format, LabelKey
+from librecharts.core.percent import column_total, share, share_label, shares
 from librecharts.core.primitives import Polygon, Primitive, Rect, Text
 
 CATEGORY_BAND = 1000.0  # room below the pies for category names
 LABEL_WIDTH = 1300.0  # width of a share or total label box
-LABEL_HEIGHT = 600.0
 MIN_INSIDE_ANGLE = 20.0  # degrees; narrower segments get their label outside
 OUTSIDE_RADIUS = 1.15  # outside labels are centred at this multiple of the radius
 INSIDE_RADIUS_PIE = 0.65  # inside labels of a pie, as a share of the radius
@@ -34,16 +47,25 @@ SERIES_BAND = 2600.0  # room right of the last pie for the series names ("labels
 
 
 def layout_pie(
-    data: ChartData, doughnut: bool, width: float, height: float, fmt: Format | None = None
+    data: ChartData,
+    doughnut: bool,
+    width: float,
+    height: float,
+    fmt: Format | None = None,
+    annotations: tuple[Annotation, ...] = (),
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
     Raises ``ValueError`` if the box leaves no room for the pies.
     """
     fmt = fmt or Format()
-    top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    arrow_data = shares(data)
+    brackets, levels = notes.arrows(annotations, arrow_data, "pie")
+    legend_band = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    top = legend_band + len(brackets) * LANE_HEIGHT
+    right_lanes = len(levels) * LEVEL_LANE_WIDTH
     band = SERIES_BAND if fmt.series_names == "labels" else 0.0
-    plot_width = width - band
+    plot_width = width - band - right_lanes
     plot_height = height - top - CATEGORY_BAND
     slot = plot_width / max(len(data.categories), 1)
     # The outside labels must fit into the slot: they reach 1.15 r plus half a label box.
@@ -59,6 +81,7 @@ def layout_pie(
     inner = radius * DOUGHNUT_HOLE if doughnut else 0.0
     inside = radius * ((1 + DOUGHNUT_HOLE) / 2 if doughnut else INSIDE_RADIUS_PIE)
     cy = top + plot_height / 2
+    arcs: dict[tuple[int, int], tuple[float, float]] = {}  # (category, series) -> arc midpoint
     for c, category in enumerate(data.categories):
         cx = (c + 0.5) * slot
         total = column_total(data, c)
@@ -85,6 +108,7 @@ def layout_pie(
                     key=LabelKey("value", c, index),
                 )
             )
+            arcs[(c, index)] = polar(cx, cy, radius, angle + sweep / 2)
             angle += sweep
         if doughnut and total > 0:
             out.append(
@@ -102,8 +126,39 @@ def layout_pie(
         out.append(
             Text(c * slot, top + plot_height, slot, CATEGORY_BAND, category, "center", "category")
         )
+
+    def end_series(arrow: Annotation) -> int | None:
+        """The series the arrow's end measures: its own, or the start's when it has none."""
+        return arrow.series_end if arrow.series_end is not None else arrow.series
+
+    def anchor(category: int, series: int | None) -> tuple[float, float]:
+        """Where an arrow meets what it measures: a segment's arc, or the top of the pie."""
+        if series is None:
+            return (category + 0.5) * slot, cy - radius
+        return arcs.get((category, series), ((category + 0.5) * slot, cy))
+
+    for lane, arrow in enumerate(brackets):
+        line_y = legend_band + len(brackets) * LANE_HEIGHT - lane * LANE_HEIGHT - LANE_LINE_GAP
+        out.extend(
+            bracket(
+                anchor(arrow.start, arrow.series),
+                anchor(arrow.end, end_series(arrow)),
+                line_y,
+                notes.label(arrow, arrow_data),
+            )
+        )
+    for lane, arrow in enumerate(levels):
+        arrow_x = plot_width + lane * LEVEL_LANE_WIDTH + LEVEL_ARROW_INSET
+        out.extend(
+            level_arrow(
+                anchor(arrow.start, arrow.series),
+                anchor(arrow.end, end_series(arrow)),
+                arrow_x,
+                notes.label(arrow, arrow_data),
+            )
+        )
     if fmt.series_names == "labels":
-        out.extend(_series_names(data, plot_width, top, plot_height))
+        out.extend(_series_names(data, plot_width + right_lanes, top, plot_height))
     return tuple(out)
 
 
@@ -126,3 +181,56 @@ def _series_names(data: ChartData, left: float, top: float, plot_height: float) 
             )
         )
     return out
+
+
+def pie_at(
+    data: ChartData,
+    doughnut: bool,
+    width: float,
+    height: float,
+    x: float,
+    y: float,
+    annotations: tuple[Annotation, ...] = (),
+    fmt: Format | None = None,
+) -> tuple[int, int | None] | None:
+    """The segment at chart point (x, y): (category, series), or ``None``.
+
+    Uses the geometry of :func:`layout_pie`; a click between the pies, outside them, in the hole
+    of a doughnut or in the annotation lanes hits nothing.
+    """
+    fmt = fmt or Format()
+    arrow_data = shares(data)
+    brackets, levels = notes.arrows(annotations, arrow_data, "pie")
+    legend_band = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    top = legend_band + len(brackets) * LANE_HEIGHT
+    right_lanes = len(levels) * LEVEL_LANE_WIDTH
+    band = SERIES_BAND if fmt.series_names == "labels" else 0.0
+    plot_width = width - band - right_lanes
+    plot_height = height - top - CATEGORY_BAND
+    slot = plot_width / max(len(data.categories), 1)
+    radius = (min(slot, plot_height) / 2 - LABEL_WIDTH / 2) / OUTSIDE_RADIUS
+    if radius <= 0 or not data.categories or not data.series or not 0 <= x < plot_width:
+        return None
+    category = int(x // slot)
+    if category >= len(data.categories):
+        return None
+    cx, cy = (category + 0.5) * slot, top + plot_height / 2
+    dx, dy = x - cx, y - cy
+    distance = math.hypot(dx, dy)
+    inner = radius * (DOUGHNUT_HOLE if doughnut else 0.0)
+    if not inner <= distance <= radius:
+        return None
+    # clockwise from 12 o'clock; ``-dy if dy else 0.0`` keeps the centre out of -0.0, where
+    # atan2 would put it at 180 degrees
+    angle = math.degrees(math.atan2(dx, -dy if dy else 0.0)) % 360
+    total = column_total(data, category)
+    walked = 0.0
+    for index, series in enumerate(data.series):
+        value = series.values[category]
+        if value is None or share(value, total) is None:
+            continue
+        sweep = value / total * 360.0
+        if walked <= angle < walked + sweep:
+            return category, index
+        walked += sweep
+    return None

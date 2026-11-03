@@ -3,8 +3,9 @@
 Both axes are always drawn: a scatter chart is unreadable without them. They do not have to
 include zero. Points are markers, or bubbles when they have a size (the areas are proportional to
 the sizes, the largest bubble is ``MAX_BUBBLE`` of the shorter plot side, but never reaches out of
-the box). Points of one group share
-a colour; a legend names the groups. The only annotation is a horizontal value line.
+the box). Points of one group share a colour; a legend names the groups. Value lines run in lanes
+right of the plot; difference and CAGR arrows (M14) measure the points' y values, in bracket lanes
+above the plot or level lanes right of it. A CAGR counts the x distance of its two points.
 
 The kinds and order of the primitives depend on the data only, never on the size (ADR 0007).
 """
@@ -16,6 +17,7 @@ from collections.abc import Callable
 
 from librecharts.core import annotations as notes
 from librecharts.core import value_line
+from librecharts.core.layout.column import LANE_HEIGHT, LANE_LINE_GAP
 from librecharts.core.layout.common import (
     AXIS_BAND,
     LABEL_HEIGHT,
@@ -25,8 +27,10 @@ from librecharts.core.layout.common import (
     LEVEL_LANE_WIDTH,
     TICK_GAP,
     TICK_HEIGHT,
+    bracket,
     format_value,
     legend,
+    level_arrow,
 )
 from librecharts.core.model import Annotation, Format, LabelKey
 from librecharts.core.primitives import MARKER_SIZE, Bubble, Line, Marker, Primitive, Text
@@ -40,6 +44,7 @@ LABEL_WIDTH = 2400.0  # width of a point label box
 LABEL_GAP = 100.0  # between a marker and its label
 TICK_WIDTH = 1600.0  # width of an x tick label box
 MAX_BUBBLE = 0.12  # diameter of the largest bubble, as a share of the shorter plot side
+PICK_TOLERANCE = 900.0  # how far a click may miss a point and still pick it, 1/100 mm
 
 _Scale = Callable[[float], float]
 
@@ -58,9 +63,12 @@ def layout_scatter(
     fmt = fmt or Format()
     measured = levels(data)
     lines = notes.value_lines(annotations, measured, "scatter")
-    top = TOP_BAND + (LEGEND_HEIGHT if any(data.groups) else 0.0)
+    brackets, level_arrows = notes.arrows(annotations, measured, "scatter")
+    top = TOP_BAND + (LEGEND_HEIGHT if any(data.groups) else 0.0) + len(brackets) * LANE_HEIGHT
     plot_left = AXIS_BAND
-    plot_width = width - plot_left - RIGHT_BAND - len(lines) * LEVEL_LANE_WIDTH
+    plot_width = (
+        width - plot_left - RIGHT_BAND - (len(lines) + len(level_arrows)) * LEVEL_LANE_WIDTH
+    )
     plot_height = height - top - X_AXIS_BAND
     if plot_width <= 0 or plot_height <= 0:
         raise ValueError("chart area too small")
@@ -88,23 +96,22 @@ def layout_scatter(
         out.extend(_grid(x_axis, y_axis, x, y, plot_left, plot_width, top, plot_bottom))
     out.extend(_axes(x_axis, y_axis, x, y, plot_left, plot_bottom, fmt))
 
-    biggest = max((p.size for p in data.points if p.size is not None), default=0.0)
-    # A bubble on the edge of the plot must not reach out of the box: the group shape would grow,
-    # and every redraw at the group's size would widen the chart further.
-    edge = min(top, AXIS_BAND, X_AXIS_BAND, RIGHT_BAND)
-    largest = min(MAX_BUBBLE * min(plot_width, plot_height), 2 * edge)
-
-    def diameter(size: float) -> float:
-        return largest * math.sqrt(size / biggest)  # area proportional to the size
-
+    diameters = _bubble_diameters(data, top, plot_width, plot_height)
     # Big bubbles first, so that small ones stay visible on top of them.
-    sized = sorted((p for p in data.points if p.size is not None), key=lambda p: -(p.size or 0.0))
-    out.extend(Bubble(x(p.x), y(p.y), diameter(p.size or 0.0), p.group) for p in sized)
-    out.extend(Marker(x(p.x), y(p.y), p.group) for p in data.points if p.size is None)
+    sized = sorted(
+        ((p, d) for p, d in zip(data.points, diameters, strict=True) if d > 0.0),
+        key=lambda item: -(item[0].size or 0.0),
+    )
+    out.extend(Bubble(x(p.x), y(p.y), d, p.group) for p, d in sized)
+    out.extend(
+        Marker(x(p.x), y(p.y), p.group)
+        for p, d in zip(data.points, diameters, strict=True)
+        if d == 0.0
+    )
     for number, point in enumerate(data.points):
         if not point.label:
             continue
-        reach = (MARKER_SIZE if point.size is None else diameter(point.size)) / 2
+        reach = (MARKER_SIZE if diameters[number] == 0.0 else diameters[number]) / 2
         left = x(point.x) + reach + LABEL_GAP
         out.append(
             Text(
@@ -136,7 +143,108 @@ def layout_scatter(
                 ),
             )
         )
+
+    def anchor(index: int) -> tuple[float, float]:
+        """Where an arrow meets the point: above the marker or the top of the bubble."""
+        point = data.points[index]
+        reach = (MARKER_SIZE if diameters[index] == 0.0 else diameters[index]) / 2
+        return x(point.x), y(point.y) - reach
+
+    for lane, arrow in enumerate(brackets):
+        line_y = top - lane * LANE_HEIGHT - LANE_LINE_GAP
+        out.extend(
+            bracket(
+                anchor(arrow.start),
+                anchor(arrow.end),
+                line_y,
+                notes.label(arrow, measured, tuple(point.x for point in data.points)),
+            )
+        )
+    for lane, arrow in enumerate(level_arrows):
+        arrow_x = (
+            plot_left
+            + plot_width
+            + RIGHT_BAND
+            + (len(shown) + lane) * LEVEL_LANE_WIDTH
+            + LEVEL_ARROW_INSET
+        )
+        out.extend(
+            level_arrow(
+                anchor(arrow.start),
+                anchor(arrow.end),
+                arrow_x,
+                notes.label(arrow, measured, tuple(point.x for point in data.points)),
+            )
+        )
     return tuple(out)
+
+
+def _bubble_diameters(
+    data: ScatterData, top: float, plot_width: float, plot_height: float
+) -> list[float]:
+    """The diameter of every point's bubble, 0 for a plain marker (shared with the hit test)."""
+    biggest = max((p.size for p in data.points if p.size is not None), default=0.0)
+    if biggest <= 0:
+        return [0.0] * len(data.points)
+    # A bubble on the edge of the plot must not reach out of the box: the group shape would grow,
+    # and every redraw at the group's size would widen the chart further.
+    edge = min(top, AXIS_BAND, X_AXIS_BAND, RIGHT_BAND)
+    largest = min(MAX_BUBBLE * min(plot_width, plot_height), 2 * edge)
+    return [largest * math.sqrt((p.size or 0.0) / biggest) for p in data.points]
+
+
+def scatter_at(
+    data: ScatterData,
+    width: float,
+    height: float,
+    x: float,
+    y: float,
+    annotations: tuple[Annotation, ...] = (),
+    fmt: Format | None = None,
+) -> tuple[int, None] | None:
+    """The point at chart point (x, y), or ``None``.
+
+    Uses the geometry of :func:`layout_scatter`; a click near a point picks it, inside a bubble
+    everywhere, but points in the annotation lanes or outside the plot hit nothing.
+    """
+    fmt = fmt or Format()
+    measured = levels(data)
+    lines = notes.value_lines(annotations, measured, "scatter")
+    brackets, level_arrows = notes.arrows(annotations, measured, "scatter")
+    top = TOP_BAND + (LEGEND_HEIGHT if any(data.groups) else 0.0) + len(brackets) * LANE_HEIGHT
+    plot_left = AXIS_BAND
+    plot_width = (
+        width - plot_left - RIGHT_BAND - (len(lines) + len(level_arrows)) * LEVEL_LANE_WIDTH
+    )
+    plot_height = height - top - X_AXIS_BAND
+    if not data.points or plot_width <= 0 or plot_height <= 0:
+        return None
+    if not plot_left <= x <= plot_left + plot_width or not top <= y <= top + plot_height:
+        return None
+    shown = [level for level in (value_line.resolved(a, measured) for a in lines) if level]
+    xs = [point.x for point in data.points]
+    ys = [point.y for point in data.points] + shown
+    x_axis = nice_axis(min(xs), max(xs), include_zero=False)
+    y_axis = nice_axis(min(ys), max(ys), include_zero=False)
+
+    def px(value: float) -> float:
+        return plot_left + (value - x_axis.minimum) / (x_axis.maximum - x_axis.minimum) * plot_width
+
+    def py(value: float) -> float:
+        return top + (y_axis.maximum - value) / (y_axis.maximum - y_axis.minimum) * plot_height
+
+    diameters = _bubble_diameters(data, top, plot_width, plot_height)
+    best: tuple[float, int] | None = None
+    for index, point in enumerate(data.points):
+        distance = math.hypot(x - px(point.x), y - py(point.y))
+        reach = (diameters[index] if diameters[index] > 0.0 else MARKER_SIZE) / 2
+        if distance - reach > PICK_TOLERANCE:
+            continue
+        if best is None or distance - reach < best[0]:
+            best = (distance - reach, index)
+    if best is None:
+        return None
+    return best[1], None
 
 
 def _grid(

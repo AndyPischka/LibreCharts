@@ -10,6 +10,11 @@ below it a band for category labels. Bracket arrows (difference, CAGR) run in la
 band, one lane per arrow, the first one closest to the plot. Level arrows and value lines run in
 lanes right of the plot, the first one closest to it.
 
+A category gap (M14) widens the empty space between two adjacent categories; a group bracket runs
+in a bracket lane above the plot and spans the centres of its categories, with its label above the
+line. An arrow measures a (category, series?) pair at each end: a between-series arrow meets the
+bars it measures, which stand side by side in a clustered chart.
+
 An axis break removes a value range from the scale of the whole axis (core/axis_break.py): columns
 reaching beyond it get a break mark and continue above it; labels keep the real values, ticks inside
 the removed range are left out and the axis line gets a break mark.
@@ -32,6 +37,7 @@ from librecharts.core.datasheet import ChartData
 from librecharts.core.layout.common import (
     AXIS_BAND,
     GAP_RATIO,
+    GAP_WIDTH,
     LABEL_HEIGHT,
     LEGEND_HEIGHT,
     LEVEL_ARROW_INSET,
@@ -42,9 +48,12 @@ from librecharts.core.layout.common import (
     bracket,
     column_top,
     format_value,
+    group_bracket,
     legend,
     level_arrow,
     point_runs,
+    slot_at,
+    slot_start,
     spread,
     value_axis,
     visible_ticks,
@@ -105,6 +114,9 @@ class _Geometry:
     brackets: list[Annotation]
     levels: list[Annotation]
     value_lines: list[Annotation]
+    gaps: list[Annotation]  # category gaps, in the order they were added
+    groups: list[Annotation]  # group brackets, in the order they were added
+    gap_starts: tuple[int, ...]  # the categories a gap opens after, sorted and unique
     line_series: tuple[int, ...]
     secondary_series: tuple[int, ...]
     columns: int
@@ -171,6 +183,15 @@ def layout_column(
     slot, column_width = geo.slot, geo.column_width
     columns_data = geo.columns_data
     column_indices = tuple(i for i in range(len(data.series)) if i not in geo.line_series)
+
+    def slot_x(category: int) -> float:
+        """The left edge of ``category``'s slot, shifted by the category gaps before it."""
+        return slot_start(geo.plot_left, category, slot, geo.gap_starts)
+
+    def centre(category: int) -> float:
+        """The centre of ``category``'s slot."""
+        return slot_x(category) + slot / 2
+
     out: list[Primitive] = []
     if fmt.series_names == "legend":
         out.extend(legend([s.name for s in data.series], width))
@@ -184,8 +205,8 @@ def layout_column(
         )
 
     for c, category in enumerate(data.categories):
-        slot_x = geo.plot_left + c * slot
-        column_x = slot_x + (slot - column_width) / 2
+        left = slot_x(c)
+        column_x = left + (slot - column_width) / 2
         if grouping == "stacked":
             out.extend(
                 _stacked_column(
@@ -198,7 +219,7 @@ def layout_column(
             )
         out.append(
             Text(
-                slot_x,
+                left,
                 geo.top_band + geo.plot_height,
                 slot,
                 CATEGORY_BAND,
@@ -210,11 +231,11 @@ def layout_column(
 
     for index in geo.line_series:
         scale = y_secondary if index in secondary else y_data
-        out.extend(_line_series(data, index, geo.plot_left, slot, scale, fmt))
+        out.extend(_line_series(data, index, centre, slot, scale, fmt))
 
     def edges(category: int, series: int | None) -> tuple[float, float]:
         """Left and right edge of the measured column, or of one bar of a clustered column."""
-        column_x = geo.plot_left + category * slot + (slot - column_width) / 2
+        column_x = slot_x(category) + (slot - column_width) / 2
         if series is not None and grouping == "clustered" and geo.columns:
             bar_width = column_width / geo.columns
             position = column_indices.index(series) if series in column_indices else 0
@@ -226,8 +247,7 @@ def layout_column(
         if series is not None and series in geo.line_series:
             value = notes.measured_value(data, category, series) or 0.0
             scale = y_secondary if series in secondary else y_data
-            x = geo.plot_left + (category + 0.5) * slot
-            return x, scale(value) - LABEL_HEIGHT - LANE_LINE_GAP
+            return centre(category), scale(value) - LABEL_HEIGHT - LANE_LINE_GAP
         left, right = edges(category, series)
         return (left + right) / 2, y_data(
             column_top(columns_data, grouping, category, series)
@@ -238,24 +258,32 @@ def layout_column(
         if series is not None and series in geo.line_series:
             value = notes.measured_value(data, category, series) or 0.0
             scale = y_secondary if series in secondary else y_data
-            return geo.plot_left + (category + 0.5) * slot, scale(value)
+            return centre(category), scale(value)
         value = notes.measured_value(columns_data, category, series) or 0.0
         return edges(category, series)[1], y_data(value)
 
-    def measured_by(series: int | None) -> ChartData:
-        """The data an arrow with this series index measures: columns, or the line series."""
-        return data if series is not None and series in geo.line_series else columns_data
+    def measured_by(series: int | None, series_end: int | None = None) -> ChartData:
+        """The data an arrow with these series indices measures: columns, or the line series."""
+        end = series_end if series_end is not None else series
+        for s in (series, end):
+            if s is None or s not in geo.line_series:
+                return columns_data
+        return data
+
+    def end_series(arrow: Annotation) -> int | None:
+        """The series the arrow's end measures: its own, or the start's when it has none."""
+        return arrow.series_end if arrow.series_end is not None else arrow.series
 
     lanes_top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
-    lanes = len(geo.brackets) * LANE_HEIGHT
+    lanes = (len(geo.brackets) + len(geo.groups)) * LANE_HEIGHT
     for lane, arrow in enumerate(geo.brackets):
         line_y = lanes_top + lanes - lane * LANE_HEIGHT - LANE_LINE_GAP
         out.extend(
             bracket(
                 anchor(arrow.start, arrow.series),
-                anchor(arrow.end, arrow.series),
+                anchor(arrow.end, end_series(arrow)),
                 line_y,
-                notes.label(arrow, measured_by(arrow.series)),
+                notes.label(arrow, measured_by(arrow.series, arrow.series_end)),
             )
         )
     for lane, arrow in enumerate(geo.levels):
@@ -263,11 +291,14 @@ def layout_column(
         out.extend(
             level_arrow(
                 level(arrow.start, arrow.series),
-                level(arrow.end, arrow.series),
+                level(arrow.end, end_series(arrow)),
                 arrow_x,
-                notes.label(arrow, measured_by(arrow.series)),
+                notes.label(arrow, measured_by(arrow.series, arrow.series_end)),
             )
         )
+    for lane, group in enumerate(geo.groups):
+        line_y = lanes_top + lanes - (len(geo.brackets) + lane) * LANE_HEIGHT - LANE_LINE_GAP
+        out.extend(group_bracket(centre(group.start), centre(group.end), line_y, group.text))
     for lane, annotation in enumerate(geo.value_lines):
         out.extend(
             _value_line(
@@ -345,12 +376,14 @@ def _geometry(
     secondary_set: frozenset[int] = frozenset(i for i in secondary if i in line_set)
     columns_data = _column_data(data, line_set)
     if percent:
-        brackets, levels, value_lines = [], [], []
+        brackets, levels, value_lines, gaps, groups = [], [], [], [], []
     else:
         brackets, levels = notes.arrows(annotations, columns_data, "column")
         value_lines = notes.value_lines(annotations, columns_data, "column")
+        gaps = notes.category_gaps(annotations, columns_data, "column")
+        groups = notes.group_brackets(annotations, columns_data, "column")
     lanes_top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
-    top_band = lanes_top + len(brackets) * LANE_HEIGHT + TOP_BAND
+    top_band = lanes_top + (len(brackets) + len(groups)) * LANE_HEIGHT + TOP_BAND
     plot_left = AXIS_BAND if fmt.axis else 0.0
     right_lanes = len(levels) + len(value_lines)
     series_band = SERIES_BAND if fmt.series_names == "labels" else 0.0
@@ -390,7 +423,10 @@ def _geometry(
     primary_lines = tuple(i for i in sorted(line_set) if i not in secondary_set)
     axis = _with_line_values(axis, data, primary_lines, fold)
     count = len(data.categories)
-    slot = plot_width / count if count else 0.0
+    gap_starts = tuple(sorted({gap.start for gap in gaps}))
+    slot = (plot_width - GAP_WIDTH * len(gap_starts)) / count if count else 0.0
+    if count and slot <= 0:
+        raise ValueError("chart area too small")
     return _Geometry(
         columns_data=columns_data,
         plot_left=plot_left,
@@ -406,6 +442,9 @@ def _geometry(
         brackets=brackets,
         levels=levels,
         value_lines=value_lines,
+        gaps=gaps,
+        groups=groups,
+        gap_starts=gap_starts,
         line_series=tuple(sorted(line_set)),
         secondary_series=tuple(sorted(secondary_set)),
         columns=len(data.series) - len(line_set),
@@ -562,18 +601,14 @@ def _value_line(
 def _line_series(
     data: ChartData,
     index: int,
-    plot_left: float,
+    centre: Callable[[int], float],
     slot: float,
     y: _YScale,
     fmt: Format,
 ) -> list[Primitive]:
     """One series drawn as a line: polyline runs, markers and a value label at every point."""
     series = data.series[index]
-    points = [
-        (plot_left + (c + 0.5) * slot, y(value))
-        for c, value in enumerate(series.values)
-        if value is not None
-    ]
+    points = [(centre(c), y(value)) for c, value in enumerate(series.values) if value is not None]
     out: list[Primitive] = [
         Polyline(tuple(run), index) for run in point_runs(points, series.values)
     ]
@@ -586,7 +621,7 @@ def _line_series(
         top = point_y - LABEL_HEIGHT - LINE_LABEL_GAP if value >= 0 else point_y + LINE_LABEL_GAP
         out.append(
             Text(
-                plot_left + c * slot,
+                centre(c) - slot / 2,
                 top,
                 slot,
                 LABEL_HEIGHT,
@@ -713,6 +748,9 @@ def column_at(
     columns_data = _column_data(data, line_set)
     brackets, levels = notes.arrows(annotations, columns_data, "column")
     value_lines = notes.value_lines(annotations, columns_data, "column")
+    gaps = notes.category_gaps(annotations, columns_data, "column")
+    groups = notes.group_brackets(annotations, columns_data, "column")
+    gap_starts = tuple(sorted({gap.start for gap in gaps}))
     lanes_top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
     plot_left = AXIS_BAND if fmt.axis else 0.0
     series_band = SERIES_BAND if fmt.series_names == "labels" else 0.0
@@ -725,18 +763,27 @@ def column_at(
         - series_band
         - secondary_band
     )
+    count = len(data.categories)
+    slot = (
+        (plot_width - GAP_WIDTH * len(gap_starts)) / count
+        if count and plot_width > GAP_WIDTH * len(gap_starts)
+        else 0.0
+    )
     if (
         not data.categories
+        or plot_width <= 0
+        or slot <= 0
         or not plot_left <= x < plot_left + plot_width
-        or y < lanes_top + len(brackets) * LANE_HEIGHT
+        or y < lanes_top + (len(brackets) + len(groups)) * LANE_HEIGHT
     ):
         return None
-    slot = plot_width / len(data.categories)
-    category = min(int((x - plot_left) // slot), len(data.categories) - 1)
+    category = slot_at(plot_left, x, slot, count, gap_starts)
+    if category is None:
+        return None
     if grouping == "stacked" or not data.series:
         return category, None
     column_width = slot * (1 - GAP_RATIO)
-    offset = x - plot_left - category * slot - (slot - column_width) / 2
+    offset = x - slot_start(plot_left, category, slot, gap_starts) - (slot - column_width) / 2
     if not 0 <= offset < column_width:
         return category, None
     column_indices = [i for i in range(len(data.series)) if i not in line_set]
@@ -770,7 +817,9 @@ def _line_point_at(
         or not geo.top_band <= y < geo.top_band + geo.plot_height
     ):
         return None
-    category = min(int((x - geo.plot_left) // geo.slot), len(data.categories) - 1)
+    category = slot_at(geo.plot_left, x, geo.slot, len(data.categories), geo.gap_starts)
+    if category is None:
+        return None
     best: tuple[float, int] | None = None
     for index in geo.line_series:
         value = data.series[index].values[category]
