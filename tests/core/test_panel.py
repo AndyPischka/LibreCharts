@@ -202,7 +202,7 @@ def test_element_and_arrange_buttons_have_icons() -> None:
             assert (images / f"{icon}_{size}.png").is_file(), icon
 
 
-def test_agenda_buttons_follow_the_agenda_and_the_current_slide() -> None:
+def test_agenda_buttons_follow_the_agenda() -> None:
     commands = [PROTOCOL + c for c in ("InsertAgenda", "StartChapter", "UpdateAgenda")]
     none = content(None, False, "en-US")
     assert [b.command for b in none.agenda] == commands
@@ -214,7 +214,6 @@ def test_agenda_buttons_follow_the_agenda_and_the_current_slide() -> None:
         "Kapitel hier beginnen",
         "Agenda aktualisieren",
     ]
+    # Start chapter is enabled on the agenda slide too: the panel does not learn of a slide
+    # change (no selection or modify event), so the current slide is stale; the command refuses.
     assert [b.enabled for b in content_slide.agenda] == [True, True, True]
-
-    agenda_slide = content(None, False, "en-US", has_agenda=True, agenda_slide=True)
-    assert [b.enabled for b in agenda_slide.agenda] == [True, False, True]

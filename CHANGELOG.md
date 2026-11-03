@@ -6,6 +6,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Fixed
+- *Start chapter here* is pressable right after inserting an agenda: before, it stayed grey on a
+  content slide until *Update agenda* was pressed. The sidebar cannot hear a plain slide change,
+  so the button no longer depends on the current slide; on an agenda slide, the command says why
+  it cannot run there.
 - Undoing a resize after editing chart data brings the chart back to its old size; before, the undo
   did nothing visible. Charts are now redrawn in place where their shapes allow it.
 - Dragging a shape out of a chart no longer counts as resizing the chart.

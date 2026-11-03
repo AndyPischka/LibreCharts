@@ -135,7 +135,6 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
             bool(lo_elements.selected_elements(controller)),
             len(arrange.selected_shapes(controller)),
             agenda.stored(doc),
-            agenda.role_of_page(controller.getCurrentPage()) is not None,
         )
 
     def draw(self) -> None:

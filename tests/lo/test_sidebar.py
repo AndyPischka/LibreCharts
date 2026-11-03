@@ -121,3 +121,24 @@ def test_a_redraw_refreshes_the_panel_once_not_per_shape(ctx):
     finally:
         close_datasheets(ctx)
         doc.close(True)
+
+
+def test_start_chapter_is_pressable_without_updating_the_agenda_first(ctx):
+    # Switching slides fires neither a selection nor a modify event, so the panel cannot know the
+    # current slide: after inserting an agenda, *Start chapter here* stayed grey on a content
+    # slide until *Update agenda* changed the document and refreshed the panel.
+    doc = new_impress(ctx)
+    try:
+        say = lambda key: text(key, ui.ui_locale(ctx))  # noqa: E731 - the profile's language varies
+        dispatch(ctx, doc, "org.librecharts:InsertAgenda")  # shows the main agenda slide
+        element = _panel(ctx, doc)
+        labels = dict(_controls(element))
+        assert labels[say("menu_start_chapter")] is True
+        assert labels[say("menu_update_agenda")] is True
+
+        # like a user switching to a content slide, which the panel does not hear
+        doc.getCurrentController().setCurrentPage(doc.getDrawPages().getByIndex(0))
+        labels = dict(_controls(element))
+        assert labels[say("menu_start_chapter")] is True
+    finally:
+        doc.close(True)
