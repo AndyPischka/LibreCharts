@@ -1,8 +1,9 @@
-"""Pick mode: the user clicks the columns an annotation connects (M4 plan, "Interaction").
+"""Pick mode: the user clicks the chart points an annotation connects (M4 plan, "Interaction").
 
 The adapter feeds :class:`PickSession` with the chart-relative centre of every shape the user
-selects inside the chart; the session turns them into columns and, after the last one, into an
-annotation. Everything here is plain data, so the flow is tested without LibreOffice.
+selects inside the chart; the session turns them into targets (a column, bar, line point, Mekko
+segment, pie segment or scatter point) and, after the last one, into an annotation. Everything
+here is plain data, so the flow is tested without LibreOffice.
 """
 
 from __future__ import annotations
@@ -70,9 +71,16 @@ def _to_data_index(target: Target | None, order: tuple[int, ...]) -> Target | No
 
 @dataclass
 class PickSession:
-    """Collects the picks for one annotation of ``kind``."""
+    """Collects the picks for one annotation of ``kind``.
 
-    kind: Literal["difference", "cagr"]
+    A category gap needs two adjacent categories, a group bracket a range of categories; neither
+    looks at the series of a pick. An arrow measures a (category, series?) pair at each end: the
+    same series twice (``series_end is None``) or, on a chart with several series side by side, two
+    different series (of one category or of two). A CAGR always connects two different
+    categories, so it never measures between series.
+    """
+
+    kind: Literal["difference", "cagr", "gap", "bracket"]
     style: ArrowStyle = "bracket"
     picks: list[Target] = field(default_factory=list[Target])
 
@@ -84,7 +92,7 @@ class PickSession:
         """
         args = {key: values[-1] for key, values in parse_qs(query).items()}
         kind, style = args.get("kind"), args.get("style", "bracket")
-        if kind not in ("difference", "cagr"):  # an axis break needs no picks
+        if kind not in ("difference", "cagr", "gap", "bracket"):  # axis breaks need no picks
             raise ValueError(f"unknown annotation kind: {kind!r}")
         if style not in get_args(ArrowStyle):
             raise ValueError(f"unknown arrow style: {style!r}")
@@ -93,25 +101,51 @@ class PickSession:
     @property
     def prompt(self) -> str:
         """Message key telling the user what to click next."""
+        if self.kind in ("gap", "bracket"):
+            return f"pick_{self.kind}_{'end' if self.picks else 'start'}"
         return "pick_end" if self.picks else "pick_start"
 
     def add(self, target: Target) -> Annotation | None:
         """Record a pick; the finished annotation once enough columns are picked.
 
-        Picking the start column again is ignored, so a second click on it changes nothing.
+        Picking the first target again is ignored, so a second click on it changes nothing; a CAGR
+        needs two different categories (it measures growth over time, not between series). The
+        second category of a gap must be adjacent to the first, a bracket's end may be any
+        category; both ends keep their order.
         """
-        if self.picks and target[0] == self.picks[0][0]:
+        if self.picks and (
+            target == self.picks[0] or (self.kind == "cagr" and target[0] == self.picks[0][0])
+        ):
             return None
+        if self.kind == "gap" and self.picks and abs(target[0] - self.picks[0][0]) != 1:
+            return None  # a gap opens between two adjacent categories
         self.picks.append(target)
         if len(self.picks) < 2:
             return None
         (start, start_series), (end, end_series) = self.picks
-        # Both ends must measure the same thing: one series' bars, or else the column totals.
+        if self.kind in ("gap", "bracket"):
+            first, last = sorted((start, end))
+            kind = "category_gap" if self.kind == "gap" else "group_bracket"
+            return Annotation(kind, first, last)
+        # Both ends must measure comparable things: two single series, or else the column totals.
+        if start_series is not None and end_series is not None and start_series != end_series:
+            return Annotation(
+                self.kind, start, end, start_series, self.style, series_end=end_series
+            )
         series = start_series if start_series == end_series else None
         return Annotation(self.kind, start, end, series, self.style)
 
 
+def annotation_kind(kind: Literal["difference", "cagr", "gap", "bracket"]) -> AnnotationKind:
+    """The annotation kind a pick session of ``kind`` creates."""
+    if kind == "gap":
+        return "category_gap"
+    if kind == "bracket":
+        return "group_bracket"
+    return kind  # pyright: ignore[reportReturnType]  # a session and annotation kind share the name
+
+
 def supports(state: ChartState, kind: AnnotationKind) -> bool:
-    if state.percent:  # a 100 % chart has no annotations: they stay stored but are not offered
+    if state.percent and not (state.kind == "mekko" and kind == "difference"):
         return False
     return kind in notes.SUPPORTED.get(state.kind, frozenset())

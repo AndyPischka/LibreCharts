@@ -17,7 +17,7 @@ from librecharts.core import links as core_links
 from librecharts.core import samescale as core_samescale
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, AnnotationKind, ChartState
-from librecharts.core.picking import PickSession, supports
+from librecharts.core.picking import PickSession, annotation_kind, supports
 from librecharts.core.state_io import StateError
 from librecharts.lo import agenda as lo_agenda
 from librecharts.lo import arrange as lo_arrange
@@ -357,7 +357,7 @@ def add_annotation(ctx: Any, frame: Any, query: str) -> None:
 def pick_annotation(ctx: Any, frame: Any, query: str) -> None:
     """Start pick mode for the annotation kind (and style) in ``query`` on the selected chart."""
     session = PickSession.from_query(query)
-    found = _annotatable_chart(ctx, frame, session.kind)
+    found = _annotatable_chart(ctx, frame, annotation_kind(session.kind))
     if found is not None:
         group, state = found
         pick.start(ctx, frame, group, state, session)

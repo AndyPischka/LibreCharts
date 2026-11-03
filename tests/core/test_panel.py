@@ -73,18 +73,26 @@ def test_column_chart_enables_edit_and_annotations() -> None:
 
 
 def test_bar_and_waterfall_charts_can_be_annotated() -> None:
-    for state in (replace(sample_state(), kind="bar"), sample_waterfall_state()):
-        panel = content(state, True, "en-US")
-        assert all(b.enabled for b in (*panel.edit, *panel.add))
+    bar = content(replace(sample_state(), kind="bar"), True, "en-US")
+    assert all(b.enabled for b in bar.add)
+    waterfall = {b.title: b.enabled for b in content(sample_waterfall_state(), True, "en-US").add}
+    assert waterfall["Add difference arrow"]
+    assert not waterfall["Add category gap"]
+    assert not waterfall["Add group bracket"]
 
 
-def test_a_mekko_can_only_be_edited_and_switched() -> None:
+def test_a_percent_mekko_offers_the_difference_arrows_and_the_switch_to_units() -> None:
     panel = content(sample_mekko_state(), True, "en-US")
     assert panel.edit[0].enabled
     assert [b.title for b in panel.options] == ["Show with units"]
     assert panel.options[0].command == PROTOCOL + "ChangeChart?percent=false"
     assert all(b.enabled for b in panel.options)
-    assert not any(b.enabled for b in panel.add)
+    add = {b.title: b.enabled for b in panel.add}
+    assert add["Add difference arrow"]  # percentage points between segment levels
+    assert add["Add level difference"]
+    assert not add["Add CAGR arrow"]
+    assert not add["Add axis break"]
+    assert not add["Add category gap"]
 
 
 def test_a_units_mekko_says_so_and_offers_percent() -> None:
@@ -161,12 +169,16 @@ def test_a_butterfly_chart_with_extra_series_says_so_in_a_sentence() -> None:
 def test_line_and_area_charts_offer_only_their_annotation_buttons() -> None:
     area = state_from_table("area", "stacked", [[None, "2024"], ["Sales", 1]])
     enabled = {b.title: b.enabled for b in content(area, True, "en-US").add}
-    assert "Add value line..." in enabled
     assert enabled["Add value line..."]
     assert not enabled["Add difference arrow"]
     assert not enabled["Add axis break"]
+    assert not enabled["Add category gap"]
+    assert not enabled["Add group bracket"]
     line = state_from_table("line", "stacked", [[None, "2024"], ["Sales", 1]])
-    assert all(b.enabled for b in content(line, True, "en-US").add)
+    line_enabled = {b.title: b.enabled for b in content(line, True, "en-US").add}
+    assert line_enabled["Add difference arrow"]
+    assert not line_enabled["Add category gap"]
+    assert not line_enabled["Add group bracket"]
 
 
 def test_a_chart_with_its_own_data_offers_a_link() -> None:

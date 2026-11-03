@@ -11,7 +11,7 @@ from librecharts.core.datasheet import (
 from librecharts.core.layout.column import LANE_HEIGHT
 from librecharts.core.messages import MESSAGES
 from librecharts.core.model import Annotation
-from librecharts.core.picking import PickSession, supports, target_at
+from librecharts.core.picking import PickSession, annotation_kind, supports, target_at
 
 STACKED = sample_state()  # three categories, three series
 CLUSTERED = replace(STACKED, grouping="clustered")
@@ -74,26 +74,63 @@ def test_session_asks_for_start_then_end_and_returns_the_arrow() -> None:
 def test_picking_the_start_column_again_is_ignored() -> None:
     session = PickSession("cagr")
     session.add((1, 0))
-    assert session.add((1, 2)) is None
+    assert session.add((1, 2)) is None  # a CAGR needs two different categories
     assert session.add((0, 0)) == Annotation("cagr", 1, 0, series=0)
 
 
-def test_bars_of_different_series_measure_column_totals() -> None:
+def test_two_series_of_one_category_make_a_between_series_arrow() -> None:
+    session = PickSession("difference")
+    session.add((1, 0))
+    assert session.add((1, 2)) == Annotation("difference", 1, 1, series=0, series_end=2)
+
+
+def test_bars_of_different_series_measure_those_series() -> None:
     session = PickSession("difference", style="level")
     session.add((0, 0))
-    assert session.add((1, 2)) == Annotation("difference", 0, 1, style="level")
+    assert session.add((1, 2)) == Annotation(
+        "difference", 0, 1, series=0, style="level", series_end=2
+    )
+
+
+def test_a_gap_session_needs_adjacent_categories() -> None:
+    session = PickSession("gap")
+    assert session.prompt == "pick_gap_start"
+    assert session.add((0, None)) is None
+    assert session.prompt == "pick_gap_end"
+    assert session.add((2, None)) is None  # not adjacent: ignored
+    assert session.add((1, None)) == Annotation("category_gap", 0, 1)
+    assert PickSession.from_query("kind=gap").prompt == "pick_gap_start"
+
+
+def test_a_bracket_session_spans_two_categories_in_any_order() -> None:
+    session = PickSession("bracket")
+    assert session.prompt == "pick_bracket_start"
+    assert session.add((2, 1)) is None  # the series of a pick is ignored
+    assert session.prompt == "pick_bracket_end"
+    assert session.add((0, None)) == Annotation("group_bracket", 0, 2)
 
 
 def test_supports_follows_the_chart_kind() -> None:
     assert supports(STACKED, "difference")
     assert supports(STACKED, "axis_break")
-    assert not supports(sample_mekko_state(), "difference")
+    assert supports(sample_mekko_state(), "difference")  # percent Mekko: percentage points
+    assert supports(replace(sample_mekko_state(), percent=False), "cagr")
 
 
 def test_a_100_percent_chart_offers_no_annotations() -> None:
     percent = replace(STACKED, percent=True)
     assert not supports(percent, "difference")
     assert not supports(percent, "axis_break")
+    percent_mekko = replace(sample_mekko_state(), percent=True)
+    assert supports(percent_mekko, "difference")  # its segment levels are percentage points
+    assert not supports(percent_mekko, "cagr")
+
+
+def test_session_kinds_map_to_annotation_kinds() -> None:
+    assert annotation_kind("difference") == "difference"
+    assert annotation_kind("cagr") == "cagr"
+    assert annotation_kind("gap") == "category_gap"
+    assert annotation_kind("bracket") == "group_bracket"
 
 
 def test_a_sorted_chart_reports_the_data_sheet_index() -> None:
@@ -109,6 +146,8 @@ def test_session_from_query() -> None:
     assert PickSession.from_query("kind=difference&style=level") == PickSession(
         "difference", "level"
     )
+    assert PickSession.from_query("kind=gap") == PickSession("gap")
+    assert PickSession.from_query("kind=bracket") == PickSession("bracket")
 
 
 @pytest.mark.parametrize(
@@ -120,7 +159,12 @@ def test_session_from_bad_query_is_rejected(query: str) -> None:
 
 
 def test_every_prompt_has_a_message() -> None:
-    for session in (PickSession("difference"), PickSession("cagr")):
+    for session in (
+        PickSession("difference"),
+        PickSession("cagr"),
+        PickSession("gap"),
+        PickSession("bracket"),
+    ):
         assert session.prompt in MESSAGES
         session.add((0, None))
         assert session.prompt in MESSAGES

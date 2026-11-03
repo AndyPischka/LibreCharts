@@ -77,23 +77,30 @@ def chart_menu(
             items.append(_command("menu_reset_labels", "ResetLabels", locale))
     if state.scale_group is not None:
         items.append(_command("menu_remove_same_scale", "RemoveSameScale", locale))
+    add_items: list[MenuItem] = []
     if supports(state, "difference"):
-        items += [
-            SEPARATOR,
+        add_items += [
             _command("menu_add_difference", "PickAnnotation?kind=difference", locale),
             _command("menu_add_level", "PickAnnotation?kind=difference&style=level", locale),
-            _command("menu_add_cagr", "PickAnnotation?kind=cagr", locale),
         ]
-    if supports(state, "axis_break") or supports(state, "value_line"):
-        if not supports(state, "difference"):
-            items.append(SEPARATOR)
-        if supports(state, "axis_break"):
-            items.append(_command("menu_add_break", "AxisBreak", locale))
-        if supports(state, "value_line") and state.kind == "gantt":
-            items.append(_command("menu_add_date_line", "ValueLine", locale))
-            items.append(_command("menu_add_today_line", "TodayLine", locale))
-        elif supports(state, "value_line"):
-            items.append(_command("menu_add_value_line", "ValueLine", locale))
+        if supports(state, "cagr"):
+            add_items.append(_command("menu_add_cagr", "PickAnnotation?kind=cagr", locale))
+    if supports(state, "category_gap"):
+        add_items += [
+            _command("menu_add_gap", "PickAnnotation?kind=gap", locale),
+            _command("menu_add_group_bracket", "PickAnnotation?kind=bracket", locale),
+        ]
+    if supports(state, "axis_break"):
+        add_items.append(_command("menu_add_break", "AxisBreak", locale))
+    if supports(state, "value_line"):
+        if state.kind == "gantt":
+            add_items.append(_command("menu_add_date_line", "ValueLine", locale))
+            add_items.append(_command("menu_add_today_line", "TodayLine", locale))
+        else:
+            add_items.append(_command("menu_add_value_line", "ValueLine", locale))
+    if add_items:
+        items.append(SEPARATOR)
+        items += add_items
     shown = [
         (index, annotation)
         for index, annotation in enumerate(state.annotations)
@@ -300,6 +307,27 @@ def annotation_title(
             else format_value(annotation.value, fmt)
         )
         return text("menu_value_line", locale, value=value)
+    if annotation.kind == "category_gap":
+        return text(
+            "menu_gap",
+            locale,
+            start=data.categories[annotation.start],
+            end=data.categories[annotation.end],
+        )
+    if annotation.kind == "group_bracket":
+        return annotation.text or text(
+            "menu_group_bracket",
+            locale,
+            start=data.categories[annotation.start],
+            end=data.categories[annotation.end],
+        )
+    if annotation.series is not None and annotation.series_end not in (None, annotation.series):
+        return text(
+            "menu_between",
+            locale,
+            start=data.series[annotation.series].name,
+            end=data.series[annotation.series_end].name,
+        )
     key = (
         f"menu_{annotation.style}" if annotation.kind == "difference" else f"menu_{annotation.kind}"
     )
@@ -324,6 +352,8 @@ def _actions(
     if annotation.kind == "value_line":
         key = "menu_change_date_line" if dates else "menu_change_value_line"
         actions.append(_command(key, f"EditValueLine?index={index}", locale))
+    if annotation.kind == "group_bracket":
+        actions.append(_command("menu_change_text", f"EditBracketText?index={index}", locale))
     if annotation.kind == "difference":
         if annotation.label == "percent":
             actions.append(_command("menu_show_absolute", change + "label=absolute", locale))

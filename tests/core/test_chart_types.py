@@ -142,9 +142,10 @@ def test_new_charts_start_with_their_series_names() -> None:
 # --- annotations -------------------------------------------------------------------------------
 
 
-def test_a_scatter_chart_takes_value_lines_only() -> None:
-    assert notes.SUPPORTED["scatter"] == {"value_line"}
-    assert "pie" not in notes.SUPPORTED
+def test_a_scatter_chart_takes_arrows_and_value_lines() -> None:
+    assert notes.SUPPORTED["scatter"] == {"difference", "cagr", "value_line"}
+    assert notes.SUPPORTED["pie"] == {"difference", "cagr"}
+    assert notes.SUPPORTED["mekko"] == {"difference", "cagr"}
     assert "butterfly" not in notes.SUPPORTED
 
 
@@ -180,10 +181,12 @@ def test_the_scatter_colour_menu_lists_the_groups() -> None:
     assert [item.title for item in colours.children] == ["Group 1", "Group 2"]
 
 
-def test_a_scatter_menu_offers_the_value_line_but_no_arrows() -> None:
+def test_a_scatter_menu_offers_arrows_and_the_value_line() -> None:
     all_titles = titles(sample_scatter_state())
-    assert "Add value line..." in all_titles or any("value line" in t.lower() for t in all_titles)
-    assert not any("ifference" in t for t in all_titles)
+    assert "Add difference arrow" in all_titles
+    assert "Add CAGR arrow" in all_titles
+    assert any("value line" in t.lower() for t in all_titles)
+    assert "Add axis break" not in all_titles
 
 
 def test_the_panel_names_the_kind_and_its_variant() -> None:

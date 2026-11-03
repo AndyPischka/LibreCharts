@@ -182,6 +182,20 @@ def content(
                 _can_annotate(state, usable, "cagr"),
             ),
             _button(
+                "menu_add_gap",
+                "PickAnnotation?kind=gap",
+                "gap",
+                locale,
+                _can_annotate(state, usable, "category_gap"),
+            ),
+            _button(
+                "menu_add_group_bracket",
+                "PickAnnotation?kind=bracket",
+                "bracket",
+                locale,
+                _can_annotate(state, usable, "group_bracket"),
+            ),
+            _button(
                 "menu_add_break",
                 "AxisBreak",
                 "axis_break",

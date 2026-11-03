@@ -36,6 +36,25 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Now click the column the arrow points to. Esc cancels.",
         "de": "Jetzt die Säule anklicken, auf die der Pfeil zeigt. Esc bricht ab.",
     },
+    "pick_gap_start": {
+        "en": "Click one of the two categories the gap opens between. Esc cancels.",
+        "de": (
+            "Eine der beiden Kategorien anklicken, zwischen denen die Lücke entstehen soll. "
+            "Esc bricht ab."
+        ),
+    },
+    "pick_gap_end": {
+        "en": "Now click the second category, next to the first. Esc cancels.",
+        "de": "Jetzt die zweite Kategorie anklicken, direkt neben der ersten. Esc bricht ab.",
+    },
+    "pick_bracket_start": {
+        "en": "Click the first category of the group bracket. Esc cancels.",
+        "de": "Die erste Kategorie der Gruppenklammer anklicken. Esc bricht ab.",
+    },
+    "pick_bracket_end": {
+        "en": "Now click the last category of the group bracket. Esc cancels.",
+        "de": "Jetzt die letzte Kategorie der Gruppenklammer anklicken. Esc bricht ab.",
+    },
     "menu_edit_data": {
         "en": "Edit chart data",
         "de": "Diagrammdaten bearbeiten",
@@ -52,6 +71,14 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Add CAGR arrow",
         "de": "CAGR-Pfeil hinzufügen",
     },
+    "menu_add_gap": {
+        "en": "Add category gap",
+        "de": "Kategorielücke hinzufügen",
+    },
+    "menu_add_group_bracket": {
+        "en": "Add group bracket",
+        "de": "Gruppenklammer hinzufügen",
+    },
     "menu_bracket": {
         "en": "Difference {start} → {end}",
         "de": "Differenz {start} → {end}",
@@ -63,6 +90,22 @@ MESSAGES: dict[str, dict[str, str]] = {
     "menu_cagr": {
         "en": "CAGR {start} → {end}",
         "de": "CAGR {start} → {end}",
+    },
+    "menu_between": {
+        "en": "Difference {start} vs. {end}",
+        "de": "Differenz {start} vs. {end}",
+    },
+    "menu_gap": {
+        "en": "Gap between {start} and {end}",
+        "de": "Lücke zwischen {start} und {end}",
+    },
+    "menu_group_bracket": {
+        "en": "Bracket over {start} to {end}",
+        "de": "Klammer von {start} bis {end}",
+    },
+    "menu_change_text": {
+        "en": "Change text...",
+        "de": "Text ändern...",
     },
     "menu_add_break": {
         "en": "Add axis break",
@@ -119,6 +162,22 @@ MESSAGES: dict[str, dict[str, str]] = {
     "break_too_high": {
         "en": "The upper value must not exceed the tallest column.",
         "de": "Der obere Wert darf die höchste Säule nicht übersteigen.",
+    },
+    "bracket_title": {
+        "en": "Group bracket",
+        "de": "Gruppenklammer",
+    },
+    "bracket_text": {
+        "en": "Text:",
+        "de": "Text:",
+    },
+    "bracket_text_missing": {
+        "en": "Please enter a text for the bracket.",
+        "de": "Bitte einen Text für die Klammer eingeben.",
+    },
+    "bracket_text_too_long": {
+        "en": "The text must be at most 80 characters long.",
+        "de": "Der Text darf höchstens 80 Zeichen lang sein.",
     },
     "button_ok": {
         "en": "OK",

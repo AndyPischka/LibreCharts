@@ -15,7 +15,7 @@ from dataclasses import dataclass, replace
 
 from librecharts.core.datasheet import ChartData, parse
 from librecharts.core.model import ChartState
-from librecharts.core.percent import positive_only
+from librecharts.core.percent import positive_only, shares
 
 WIDTH_ROW_NAMES = frozenset({"width", "breite"})
 
@@ -47,3 +47,14 @@ def parse_mekko(state: ChartState) -> MekkoData:
         column_sum = sum(v for s in data.series if (v := s.values[c]) is not None)
         widths.append(given if given is not None and given > 0 else column_sum)
     return MekkoData(data, tuple(widths))
+
+
+def levels(mekko: MekkoData, percent: bool) -> ChartData:
+    """The data an annotation of a Mekko measures: the segment values (M14).
+
+    On a percent Mekko they are the segments' **shares of their column in percent**
+    (``shares``), so an arrow's absolute difference reads as percentage points and a column
+    total is always 100. The layout anchors an arrow end at the segment's level — where the
+    segment ends, cumulatively — like a stacked column does (``column_top``).
+    """
+    return shares(mekko.data) if percent else mekko.data

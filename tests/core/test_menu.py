@@ -55,11 +55,25 @@ FORMAT_WATERFALL = MenuItem(
     "Format",
     children=(MenuItem("Show value axis", PROTOCOL + "ChangeFormat?axis=true"), NUMBER_FORMAT),
 )
-ADD = (
-    SEPARATOR,
+ARROWS = (
     MenuItem("Add difference arrow", PROTOCOL + "PickAnnotation?kind=difference"),
     MenuItem("Add level difference", PROTOCOL + "PickAnnotation?kind=difference&style=level"),
     MenuItem("Add CAGR arrow", PROTOCOL + "PickAnnotation?kind=cagr"),
+)
+GAPS = (
+    MenuItem("Add category gap", PROTOCOL + "PickAnnotation?kind=gap"),
+    MenuItem("Add group bracket", PROTOCOL + "PickAnnotation?kind=bracket"),
+)
+ADD = (
+    SEPARATOR,
+    *ARROWS,
+    *GAPS,
+    MenuItem("Add axis break", PROTOCOL + "AxisBreak"),
+    MenuItem("Add value line...", PROTOCOL + "ValueLine"),
+)
+ADD_WATERFALL = (
+    SEPARATOR,
+    *ARROWS,
     MenuItem("Add axis break", PROTOCOL + "AxisBreak"),
     MenuItem("Add value line...", PROTOCOL + "ValueLine"),
 )
@@ -159,7 +173,7 @@ def test_waterfall_charts_have_no_variants_or_sort() -> None:
         LINK,
         FORMAT_WATERFALL,
         *FORMAT_TOOLS,
-        *ADD,
+        *ADD_WATERFALL,
     )
 
 
@@ -171,6 +185,11 @@ def test_waterfall_annotations_are_titled_with_the_step_names() -> None:
 
 def test_a_percent_mekko_offers_the_data_the_switch_to_units_and_the_format() -> None:
     units = MenuItem("Show with units", PROTOCOL + "ChangeChart?percent=false")
+    add = (
+        SEPARATOR,
+        MenuItem("Add difference arrow", PROTOCOL + "PickAnnotation?kind=difference"),
+        MenuItem("Add level difference", PROTOCOL + "PickAnnotation?kind=difference&style=level"),
+    )
     assert chart_menu(sample_mekko_state(), "en-US").children == (
         EDIT,
         LINK,
@@ -178,7 +197,15 @@ def test_a_percent_mekko_offers_the_data_the_switch_to_units_and_the_format() ->
         colour_menu("Product A", "Product B", "Product C"),
         FORMAT_MEKKO,
         *FORMAT_TOOLS,
+        *add,
     )
+
+
+def test_a_units_mekko_also_offers_the_cagr_arrow() -> None:
+    state = replace(sample_mekko_state(), percent=False)
+    titles = [item.title for item in chart_menu(state, "en-US").children]
+    assert "Add CAGR arrow" in titles
+    assert "Add axis break" not in titles
 
 
 def test_a_units_mekko_offers_the_switch_back_to_percent_and_an_axis() -> None:
@@ -231,6 +258,9 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
             Annotation("cagr", 0, 1, series=1),
             Annotation("difference", 2, 1, style="level", label="absolute"),
             Annotation("axis_break", 0, 0, lower=10.0, upper=50.0),
+            Annotation("category_gap", 1, 2),
+            Annotation("group_bracket", 0, 1, text="Phase 1"),
+            Annotation("difference", 0, 0, series=1, series_end=2),
         ),
     )
     items = chart_menu(state, "en-US").children
@@ -245,8 +275,11 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
         "CAGR 2023 → 2024 (Product B)",
         "Level difference 2025 → 2024",
         "Axis break (10-50)",
+        "Gap between 2024 and 2025",
+        "Phase 1",
+        "Difference Product B vs. Product C",
     ]
-    difference, cagr, level, axis_break = annotation_items
+    difference, cagr, level, axis_break, gap, bracket, between = annotation_items
     assert commands(difference) == [
         PROTOCOL + "ChangeAnnotation?index=0&label=absolute",
         PROTOCOL + "ChangeAnnotation?index=0&style=level",
@@ -261,6 +294,16 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
     assert commands(axis_break) == [
         PROTOCOL + "EditAxisBreak",
         PROTOCOL + "RemoveAnnotation?index=3",
+    ]
+    assert commands(gap) == [PROTOCOL + "RemoveAnnotation?index=4"]
+    assert commands(bracket) == [
+        PROTOCOL + "EditBracketText?index=5",
+        PROTOCOL + "RemoveAnnotation?index=5",
+    ]
+    assert commands(between) == [
+        PROTOCOL + "ChangeAnnotation?index=6&label=absolute",
+        PROTOCOL + "ChangeAnnotation?index=6&style=level",
+        PROTOCOL + "RemoveAnnotation?index=6",
     ]
     assert items[-1].command == PROTOCOL + "RemoveAnnotations"
 
