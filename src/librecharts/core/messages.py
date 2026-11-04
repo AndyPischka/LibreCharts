@@ -543,6 +543,66 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Working days",
         "de": "Arbeitstage",
     },
+    "menu_import": {
+        "en": "Import",
+        "de": "Importieren",
+    },
+    "menu_import_csv": {
+        "en": "From CSV...",
+        "de": "Aus CSV...",
+    },
+    "menu_import_project": {
+        "en": "From ProjectLibre...",
+        "de": "Aus ProjectLibre...",
+    },
+    "import_csv_title": {
+        "en": "Import from CSV",
+        "de": "Aus CSV importieren",
+    },
+    "import_project_title": {
+        "en": "Import from ProjectLibre",
+        "de": "Aus ProjectLibre importieren",
+    },
+    "import_csv_filter": {
+        "en": "CSV files",
+        "de": "CSV-Dateien",
+    },
+    "import_project_filter": {
+        "en": "Project files",
+        "de": "Projektdateien",
+    },
+    "import_failed": {
+        "en": "The file could not be imported: {detail}",
+        "de": "Die Datei konnte nicht importiert werden: {detail}",
+    },
+    "import_empty": {
+        "en": "The file has no activities.",
+        "de": "Die Datei enthält keine Vorgänge.",
+    },
+    "import_too_large": {
+        "en": "The file is too large.",
+        "de": "Die Datei ist zu groß.",
+    },
+    "import_too_many_rows": {
+        "en": "The file has too many rows.",
+        "de": "Die Datei hat zu viele Zeilen.",
+    },
+    "import_not_project": {
+        "en": "The file is not a ProjectLibre or MS Project XML file.",
+        "de": "Die Datei ist keine ProjectLibre- oder MS-Project-XML-Datei.",
+    },
+    "import_linked": {
+        "en": "Remove the data link first.",
+        "de": "Bitte zuerst die Datenverknüpfung entfernen.",
+    },
+    "import_not_gantt": {
+        "en": "Only a Gantt chart can import project data.",
+        "de": "Nur ein Gantt-Diagramm kann Projektdaten importieren.",
+    },
+    "import_done": {
+        "en": "Imported {count} rows.",
+        "de": "{count} Zeilen importiert.",
+    },
     "menu_working_all": {
         "en": "All days",
         "de": "Alle Tage",

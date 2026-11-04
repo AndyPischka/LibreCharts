@@ -33,6 +33,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - **Working days** (M17, *Working days* in the context menu and the sidebar): a Gantt chart can
   hide weekends and holidays from its time scale. *All days* and *Monday to Friday* switch
   quickly; *Custom...* asks for the weekdays and a list of holidays.
+- **Importing project data** (M17, *Import* in the context menu and the sidebar): a Gantt chart's
+  data sheet can be filled from a CSV file or a ProjectLibre `.pod` / MS Project XML file. Summary
+  tasks become phases, milestones milestones, notes remarks; the project's working calendar is
+  taken over when the file has one.
 - **Consistent rounding** (M16): where value labels are the parts of a shown total they are rounded
   so that they add up to it — the segments of a stacked column or bar next to their total, and the
   shares of a 100 % column, a percent Mekko and a pie, which sum to exactly 100 %.

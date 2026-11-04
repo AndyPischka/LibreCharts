@@ -76,6 +76,10 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.insert_butterfly_chart(self.ctx, self.frame)
             elif url.Path == "InsertGanttChart":
                 commands.insert_gantt_chart(self.ctx, self.frame)
+            elif url.Path.startswith("ImportGanttCsv"):
+                commands.import_gantt_csv(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("ImportGanttProject"):
+                commands.import_gantt_project(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("InsertElement"):
                 commands.insert_element(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("SetElement"):

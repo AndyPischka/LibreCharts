@@ -2,8 +2,11 @@
 """Gantt charts in a real LibreOffice: insert, dates in the data sheet, date lines, persistence."""
 
 import datetime
+import tempfile
 import time
+from pathlib import Path
 
+import uno
 from helpers import (
     close_datasheets,
     datasheets,
@@ -132,6 +135,103 @@ def test_an_extra_bar_pair_is_a_date_column_and_draws_a_second_bar(ctx):
         assert not calc.isModified()
     finally:
         close_datasheets(ctx)
+        doc.close(True)
+
+
+PROJECT = """<?xml version="1.0" encoding="UTF-8"?>
+<Project xmlns="http://schemas.microsoft.com/project">
+  <BaseCalendarUID>1</BaseCalendarUID>
+  <Calendars>
+    <Calendar>
+      <UID>1</UID>
+      <WeekDays>
+        <WeekDay><DayType>1</DayType><DayWorking>0</DayWorking></WeekDay>
+        <WeekDay><DayType>2</DayType><DayWorking>1</DayWorking></WeekDay>
+        <WeekDay><DayType>3</DayType><DayWorking>1</DayWorking></WeekDay>
+        <WeekDay><DayType>4</DayType><DayWorking>1</DayWorking></WeekDay>
+        <WeekDay><DayType>5</DayType><DayWorking>1</DayWorking></WeekDay>
+        <WeekDay><DayType>6</DayType><DayWorking>1</DayWorking></WeekDay>
+        <WeekDay><DayType>7</DayType><DayWorking>0</DayWorking></WeekDay>
+      </WeekDays>
+      <Exceptions>
+        <Exception>
+          <TimePeriod>
+            <FromDate>2026-12-25T00:00:00</FromDate>
+            <ToDate>2026-12-25T23:59:59</ToDate>
+          </TimePeriod>
+        </Exception>
+      </Exceptions>
+    </Calendar>
+  </Calendars>
+  <Tasks>
+    <Task>
+      <UID>1</UID><ID>1</ID><Name>Design</Name>
+      <Start>2026-01-05T08:00:00</Start><Finish>2026-01-30T17:00:00</Finish>
+    </Task>
+    <Task>
+      <UID>2</UID><ID>2</ID><Name>Approved</Name>
+      <Start>2026-02-27T08:00:00</Start><Finish>2026-02-27T17:00:00</Finish>
+      <Milestone>1</Milestone>
+    </Task>
+  </Tasks>
+</Project>
+"""
+
+
+def test_a_csv_import_replaces_the_data_sheet_in_one_undo_step(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, INSERT)
+        _, chart_id = store.find_charts(first_page(doc))[0]
+        dispatch(ctx, doc, EDIT)
+        (calc,) = datasheets(ctx)
+        manager = doc.getUndoManager()
+        depth = len(manager.getAllUndoActionTitles())
+
+        path = Path(tempfile.mkdtemp(prefix="librecharts_")) / "project.csv"
+        path.write_text(
+            "Activity,Start,End,Remark,Phase\n"
+            "Design,2026-03-01,2026-03-20,Team A,\n"
+            "Approved,2026-04-01,,,\n",
+            encoding="utf-8",
+        )
+        dispatch(
+            ctx, doc, f"org.librecharts:ImportGanttCsv?url={uno.systemPathToFileUrl(str(path))}"
+        )
+        state = _state(doc, chart_id)
+        assert [row[0] for row in state.cells[1:]] == ["Design", "Approved"]
+        assert state.values[1][1] == serial(datetime.date(2026, 3, 1))
+        assert state.values[2][1] == serial(datetime.date(2026, 4, 1))
+        assert len(manager.getAllUndoActionTitles()) == depth + 1
+        _wait_for(lambda: _cell(calc, "A2").getString() == "Design")
+
+        uno_command(ctx, doc, ".uno:Undo")
+        restored = _state(doc, chart_id)
+        assert restored.cells[1][0] == "Concept"
+        assert restored.values[1][1] == serial(datetime.date(2026, 1, 5))
+    finally:
+        close_datasheets(ctx)
+        doc.close(True)
+
+
+def test_a_project_import_reads_tasks_and_the_calendar(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, INSERT)
+        _, chart_id = store.find_charts(first_page(doc))[0]
+        path = Path(tempfile.mkdtemp(prefix="librecharts_")) / "project.xml"
+        path.write_text(PROJECT, encoding="utf-8")
+        dispatch(
+            ctx,
+            doc,
+            f"org.librecharts:ImportGanttProject?url={uno.systemPathToFileUrl(str(path))}",
+        )
+        state = _state(doc, chart_id)
+        assert [row[0] for row in state.cells[1:]] == ["Design", "Approved"]
+        assert state.values[1][1] == serial(datetime.date(2026, 1, 5))
+        assert state.calendar.working_days == (0, 1, 2, 3, 4)
+        assert state.calendar.holidays == (datetime.date(2026, 12, 25),)
+    finally:
         doc.close(True)
 
 

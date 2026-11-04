@@ -277,6 +277,32 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m2i" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Import from CSV...</value>
+              <value xml:lang="de">Aus CSV importieren...</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:ImportGanttCsv</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="m2j" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Import from ProjectLibre...</value>
+              <value xml:lang="de">Aus ProjectLibre importieren...</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:ImportGanttProject</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
           <node oor:name="m3" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>

@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportMissingModuleSource=false
 """Menu commands, called by extension/entry.py with the frame the command was invoked in."""
 
 from __future__ import annotations
@@ -9,7 +10,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs
 
-from librecharts.core import annotations, elements, gantt, options, style
+import uno
+
+from librecharts.core import annotations, elements, gantt, gantt_import, options, style
 from librecharts.core import arrange as core_arrange
 from librecharts.core import calendar as working_calendar
 from librecharts.core import format as formats
@@ -345,6 +348,90 @@ def _refresh_datasheet(doc: Any, group: Any) -> None:
     chart_id = store.chart_id_of(group)
     if chart_id is not None:
         datasheet.refresh(doc, chart_id)
+
+
+def import_gantt_csv(ctx: Any, frame: Any, query: str) -> None:
+    """Import a CSV file into the selected Gantt chart's data sheet; one undo step."""
+    _import_gantt(ctx, frame, query, "csv")
+
+
+def import_gantt_project(ctx: Any, frame: Any, query: str) -> None:
+    """Import a ProjectLibre `.pod` or MS Project XML file; one undo step."""
+    _import_gantt(ctx, frame, query, "project")
+
+
+def _import_gantt(ctx: Any, frame: Any, query: str, kind: str) -> None:
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    locale = ui.ui_locale(ctx)
+    if state.kind != "gantt":
+        ui.show_info(ctx, frame, text("import_not_gantt", locale))
+        return
+    if state.link is not None:
+        ui.show_info(ctx, frame, text("import_linked", locale))
+        return
+    url = _query_arg(query, "url")
+    if url:
+        url = links.as_url(url)
+    else:
+        title = text("import_csv_title" if kind == "csv" else "import_project_title", locale)
+        url = _pick_import_file(ctx, title, kind, locale)
+        if url is None:
+            return
+    try:
+        path = uno.fileUrlToSystemPath(url)
+    except Exception:
+        ui.show_info(ctx, frame, text("import_failed", locale, detail=url))
+        return
+    try:
+        data = Path(path).read_bytes()
+        if kind == "csv":
+            table = gantt_import.parse_csv(_text_of(data), state.format.language)
+        else:
+            table = gantt_import.parse_msppi(data, state.format.language)
+        if not table.rows:
+            ui.show_info(ctx, frame, text("import_empty", locale))
+            return
+        imported = gantt_import.state_from_table(table, state)
+        if kind == "project":
+            calendar = gantt_import.calendar_from_msppi(data)
+            if calendar is not None:
+                imported = replace(imported, calendar=calendar)
+    except (OSError, gantt_import.GanttImportError) as exc:
+        detail = (
+            text(exc.key, locale) if isinstance(exc, gantt_import.GanttImportError) else str(exc)
+        )
+        ui.show_info(ctx, frame, text("import_failed", locale, detail=detail))
+        return
+    chart.redraw(frame.getController().getModel(), group, imported)
+    _refresh_datasheet(frame.getController().getModel(), group)
+    ui.show_info(ctx, frame, text("import_done", locale, count=str(len(table.rows))))
+
+
+def _query_arg(query: str, name: str) -> str:
+    values = parse_qs(query).get(name, [])
+    return values[-1] if values else ""
+
+
+def _text_of(data: bytes) -> str:
+    try:
+        return data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return data.decode("cp1252", errors="replace")
+
+
+def _pick_import_file(ctx: Any, title: str, kind: str, locale: str) -> str | None:
+    picker = ctx.ServiceManager.createInstanceWithContext("com.sun.star.ui.dialogs.FilePicker", ctx)
+    picker.setTitle(title)
+    label = text("import_csv_filter" if kind == "csv" else "import_project_filter", locale)
+    picker.appendFilter(label, "*.csv;*.txt;*.tsv" if kind == "csv" else "*.pod;*.xml")
+    picker.setCurrentFilter(label)
+    if picker.execute() != 1:  # com.sun.star.ui.dialogs.ExecutableDialogResults.OK
+        return None
+    files = picker.getFiles()
+    return str(files[0]) if files else None
 
 
 def add_annotation(ctx: Any, frame: Any, query: str) -> None:

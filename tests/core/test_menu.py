@@ -456,6 +456,19 @@ def test_a_gantt_chart_has_no_movable_labels() -> None:
     assert "ResetLabels" not in commands
 
 
+def test_a_gantt_chart_offers_import() -> None:
+    menu = chart_menu(sample_gantt_state(), "en")
+    import_menu = next(item for item in menu.children if item.title == "Import")
+    assert [item.title for item in import_menu.children] == [
+        "From CSV...",
+        "From ProjectLibre...",
+    ]
+    assert commands(import_menu) == [
+        PROTOCOL + "ImportGanttCsv",
+        PROTOCOL + "ImportGanttProject",
+    ]
+
+
 def test_a_gantt_chart_offers_working_days() -> None:
     menu = chart_menu(sample_gantt_state(), "en")
     working = next(item for item in menu.children if item.title == "Working days")

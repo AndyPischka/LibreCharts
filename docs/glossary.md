@@ -50,6 +50,7 @@ Use these terms consistently in code, UI strings and docs.
 | **Bar pair** | A start/end column pair of a Gantt data sheet: B/C is the first, F/G, H/I, ... give the same row further bars (M17). |
 | **Working calendar** | The working days of a Gantt chart (`ChartState.calendar`): the weekdays that take width on the time scale, plus holidays that take none (M17). |
 | **Holiday** | A single non-working day of a Gantt chart's working calendar, even when its weekday is a working day. |
+| **Import (a Gantt chart)** | Replacing a Gantt chart's data sheet from a CSV file or a ProjectLibre / MS Project XML file; one undo step, annotations and moved labels are dropped (M17). |
 | **Milestone** | A Gantt row with a single date (or start equal to end), drawn as a diamond with its date. |
 | **Phase** | A Gantt row with text in the phase column: a thin bar with ticks over the rows below it; it gives them its colour. |
 | **Heading row** | A Gantt row with a label but no dates: a bold label only. |

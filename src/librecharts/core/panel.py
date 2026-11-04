@@ -160,6 +160,20 @@ def content(
             _button(
                 "menu_show_data" if linked else "menu_edit_data", "EditData", "edit", locale, usable
             ),
+            *(
+                (
+                    _button("menu_import_csv", "ImportGanttCsv", "", locale, usable and not linked),
+                    _button(
+                        "menu_import_project",
+                        "ImportGanttProject",
+                        "",
+                        locale,
+                        usable and not linked,
+                    ),
+                )
+                if gantt
+                else ()
+            ),
         ),
         link_status=links.status(state.link, locale) if state and state.link else "",
         link=_link(linked, usable, locale),

@@ -45,6 +45,16 @@ def chart_menu(
     data = notes.measured(state)
     items = [_command("menu_show_data" if state.link else "menu_edit_data", "EditData", locale)]
     items += _link_items(state, locale)
+    if state.kind == "gantt":
+        items.append(
+            MenuItem(
+                text("menu_import", locale),
+                children=(
+                    _command("menu_import_csv", "ImportGanttCsv", locale),
+                    _command("menu_import_project", "ImportGanttProject", locale),
+                ),
+            )
+        )
     items += [
         _command(switch.title, switch.command, locale)
         for switch in options.variants(state)

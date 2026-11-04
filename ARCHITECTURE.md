@@ -50,6 +50,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `agenda.py` | The agenda: list shape names, chapters and their JSON, titles from the main slide's text, reconciling edits, what *Insert agenda*, *Start chapter here* and *Update agenda* change, the numbered and highlighted list lines (ADR 0022) |
 | `geometry.py` | Circle geometry: `polar` and `sector` (pie and doughnut segments as point lists; shared with the Harvey balls of M12) |
 | `gantt.py` | Gantt data sheet rules (one row per activity; label, start, end, remark, phase and further start/end pairs by column position) -> rows with bars and milestones, of type bar, milestone, phase or heading; Calc serial numbers <-> dates; sort by the earliest start (ADR 0019, M17) |
+| `gantt_import.py` | Import of Gantt data: CSV by header or position, MSPDI XML and ProjectLibre `.pod`, the base calendar, and the imported table as a data sheet (M17) |
 | `timescale.py` | The Gantt date scale: unit pair from the date range, periods, header labels and date texts per language; working days take the width, non-working days none (M17) |
 | `calendar.py` | Working-day calendars: working days and holidays, counting working days in a range, parsing the dialog's holidays and the `WorkingDays` query (M17) |
 | `scatter.py` | Scatter data sheet rules (one row per point; label, x, y, size, group by column position) -> points and groups (ADR 0018) |
@@ -102,7 +103,7 @@ so every released schema version must stay readable (`state_io.py`).
 | `datasheet.py` | Calc window as a transient view: write stored cells (Gantt date columns in a date format), sync every committed edit back; a protected read-only view for linked charts |
 | `links.py` | Data links: find, open (hidden, read-only, no macros) and read the sources of linked charts, each once per update; the info bar when sources changed (ADR 0020) |
 | `linkdialog.py` | The link dialog (modal, built in code): file, sheet, range or name; reads the range before it links |
-| `commands.py` | Menu commands (selection handling, messages, same scale, copy format, scheme files, data links); called by `extension/entry.py` |
+| `commands.py` | Menu commands (selection handling, messages, same scale, copy format, scheme files, data links, Gantt import); called by `extension/entry.py` |
 | `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place, including their scale group (ADRs 0007, 0017); looks for moved labels where one can have moved (ADR 0023) |
 | `labels.py` | Moved labels: reads the shapes' boxes, stores the offsets `core/labels.moved` finds (no undo action) and puts other dragged shapes back; the *Move labels* session (ADR 0023) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
