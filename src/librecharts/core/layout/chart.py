@@ -92,6 +92,7 @@ def _layout(
             height,
             state.format,
             state.annotations,
+            state.sort,
         )
     if state.kind == "butterfly":
         return layout_butterfly(data, width, height, state.format, length_per_unit)
@@ -141,6 +142,8 @@ def _layout(
 
 def display_order(state: ChartState, data: ChartData | None = None) -> tuple[int, ...]:
     """Display position -> data sheet index of the categories."""
+    if state.kind == "pie":  # a pie sorts its segments per pie, not its categories
+        return tuple(range(len((data or parse(state)).categories)))
     # A butterfly chart sorts by its first series, like a clustered chart.
     grouping = "clustered" if state.kind == "butterfly" else state.grouping
     return sorting.order(data or parse(state), grouping, state.sort)

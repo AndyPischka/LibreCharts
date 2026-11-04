@@ -232,3 +232,27 @@ def test_layout_chart_draws_pies_and_doughnuts_from_the_state() -> None:
     assert any(isinstance(p, Polygon) for p in pie)
     assert not any(isinstance(p, Text) and p.role == "total" for p in pie)
     assert any(isinstance(p, Text) and p.role == "total" for p in doughnut)
+
+
+def test_pie_segments_run_largest_first_when_sorted_descending() -> None:
+    chart = data(
+        ("A", (40.0, 20.0)), ("B", (35.0, 50.0)), ("C", (25.0, 30.0)), categories=("2024", "2025")
+    )
+    unsorted_ = layout_pie(chart, False, 8000, 4000)
+    sorted_ = layout_pie(chart, False, 8000, 4000, sort="descending")
+    sectors = [p for p in sorted_ if isinstance(p, Polygon)]
+    # the first sector of each pie starts at 12 o'clock either way, but its series changes
+    assert [s.series for s in sectors[:2]] == [0, 1]  # 2024: A=40 largest; 2025: B=50 largest
+    labels = [p.text for p in sorted_ if isinstance(p, Text) and p.role == "value"]
+    assert labels[0].startswith("40")  # A's share of 2024 comes first
+    # unsorted, 2025 also starts with A, but at a different angle: the geometry differs
+    assert [p for p in unsorted_ if isinstance(p, Polygon)] != sectors
+
+
+def test_pie_at_hit_tests_in_the_sorted_segment_order() -> None:
+    chart = data(("A", (40.0,)), ("B", (60.0,)), categories=("2025",))
+    # one pie centred at (4000, 1500) with radius ~739: 3 o'clock is (4700, 1500)
+    # descending: B (60 %) runs first from 12 o'clock, so 3 o'clock is inside B
+    assert pie_at(chart, False, 8000, 4000, 4700, 1500, sort="descending") == (0, 1)
+    # without sorting A (40 % = 144 deg) runs first, so 3 o'clock is still inside A
+    assert pie_at(chart, False, 8000, 4000, 4700, 1500) == (0, 0)

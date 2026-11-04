@@ -4,6 +4,7 @@ from librecharts.core import style
 from librecharts.core.datasheet import (
     sample_gantt_state,
     sample_mekko_state,
+    sample_pie_state,
     sample_state,
     sample_waterfall_state,
     state_from_table,
@@ -453,3 +454,13 @@ def test_a_gantt_chart_has_no_movable_labels() -> None:
     commands = [item.command.removeprefix(PROTOCOL) for item in chart_menu(moved, "en").children]
     assert "MoveLabels" not in commands
     assert "ResetLabels" not in commands
+
+
+def test_a_pie_chart_offers_segment_sorting() -> None:
+    menu = chart_menu(sample_pie_state(), "en-US")
+    sort = next(item for item in menu.children if item.title == "Sort segments")
+    assert [item.title for item in sort.children] == ["Descending", "Ascending"]
+    assert commands(sort) == [
+        PROTOCOL + "ChangeChart?sort=descending",
+        PROTOCOL + "ChangeChart?sort=ascending",
+    ]

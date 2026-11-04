@@ -97,7 +97,15 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
         )
     if state.kind == "pie":
         return pie_at(
-            parse(state), state.doughnut, width, height, x, y, state.annotations, state.format
+            parse(state),
+            state.doughnut,
+            width,
+            height,
+            x,
+            y,
+            state.annotations,
+            state.format,
+            state.sort,
         )
     if state.kind == "scatter":
         return scatter_at(

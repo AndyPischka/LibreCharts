@@ -117,3 +117,13 @@ def test_an_error_bar_chart_scales_to_value_plus_error() -> None:
     assert not any(
         isinstance(p, Text) and p.role == "value" and p.text == "25" for p in primitives
     )  # the whisker top is not labelled
+
+
+def test_a_sorted_pie_keeps_its_categories_and_orders_its_segments() -> None:
+    state = replace(datasheet.sample_pie_state(), sort="descending")
+    primitives = layout_chart(state, 8000, 4000)
+    names = [p.text for p in primitives if isinstance(p, Text) and p.role == "category"]
+    assert names == ["2024", "2025"]  # categories stay in data sheet order
+    sectors = [p for p in primitives if isinstance(p, Polygon)]
+    assert [s.series for s in sectors[:3]] == [0, 1, 2]  # 2024: 40 > 35 > 25
+    assert [s.series for s in sectors[3:]] == [1, 0, 2]  # 2025: B=38, A=35, C=27

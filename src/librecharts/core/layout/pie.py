@@ -33,9 +33,10 @@ from librecharts.core.layout.common import (
     legend,
     level_arrow,
 )
-from librecharts.core.model import Annotation, Format, LabelKey
+from librecharts.core.model import Annotation, Format, LabelKey, SortOrder
 from librecharts.core.percent import column_total, share, share_label, shares
 from librecharts.core.primitives import Polygon, Primitive, Rect, Text
+from librecharts.core.sorting import pie_order
 
 CATEGORY_BAND = 1000.0  # room below the pies for category names
 LABEL_WIDTH = 1300.0  # width of a share or total label box
@@ -53,8 +54,12 @@ def layout_pie(
     height: float,
     fmt: Format | None = None,
     annotations: tuple[Annotation, ...] = (),
+    sort: SortOrder = "none",
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
+
+    With ``sort`` the segments of each pie run in that order (largest first for ``descending``);
+    it is a display order only, labels and arrows keep their data sheet series indices.
 
     Raises ``ValueError`` if the box leaves no room for the pies.
     """
@@ -82,11 +87,13 @@ def layout_pie(
     inside = radius * ((1 + DOUGHNUT_HOLE) / 2 if doughnut else INSIDE_RADIUS_PIE)
     cy = top + plot_height / 2
     arcs: dict[tuple[int, int], tuple[float, float]] = {}  # (category, series) -> arc midpoint
+    orders = pie_order(data, sort)
     for c, category in enumerate(data.categories):
         cx = (c + 0.5) * slot
         total = column_total(data, c)
         angle = 0.0
-        for index, series in enumerate(data.series):
+        for index in orders[c]:
+            series = data.series[index]
             value = series.values[c]
             if value is None or share(value, total) is None:
                 continue
@@ -192,6 +199,7 @@ def pie_at(
     y: float,
     annotations: tuple[Annotation, ...] = (),
     fmt: Format | None = None,
+    sort: SortOrder = "none",
 ) -> tuple[int, int | None] | None:
     """The segment at chart point (x, y): (category, series), or ``None``.
 
@@ -225,7 +233,8 @@ def pie_at(
     angle = math.degrees(math.atan2(dx, -dy if dy else 0.0)) % 360
     total = column_total(data, category)
     walked = 0.0
-    for index, series in enumerate(data.series):
+    for index in pie_order(data, sort)[category]:
+        series = data.series[index]
         value = series.values[category]
         if value is None or share(value, total) is None:
             continue
