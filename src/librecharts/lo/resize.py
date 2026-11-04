@@ -12,10 +12,16 @@ Reading every child of a chart costs milliseconds, so the children are only read
 have moved (``lo/labels.py``): in the chart whose child is selected (a label is selected while it
 is dragged, nudged or placed with the position dialog, and after an undo or redo inside the group),
 and in the charts of the current slide after an undo or redo that is not one of ours.
+
+The watcher never outlives its document: when the document disposes it, the watcher unregisters
+its listeners and drops its reference to the document on the document's own thread, so no proxy
+of it stays behind for pyuno's garbage collector to release later on its background thread (the
+mechanism behind the LibreOffice teardown crashes of issue #4).
 """
 
 from __future__ import annotations
 
+import contextlib
 import traceback
 from typing import Any
 
@@ -45,7 +51,8 @@ def is_watched(doc: Any) -> bool:
 
 class _Watcher(unohelper.Base, XModifyListener, XUndoManagerListener, XCallback):
     def __init__(self, key: str, doc: Any) -> None:
-        self.key, self.doc = key, doc
+        self.key = key
+        self.doc: Any = doc
         self._sizes: dict[str, tuple[int, int]] = {}
         self._pending = False
         self._busy = False
@@ -77,6 +84,16 @@ class _Watcher(unohelper.Base, XModifyListener, XUndoManagerListener, XCallback)
 
     def disposing(self, event: Any) -> None:
         _watchers.pop(self.key, None)
+        # Unregister on the document's own dispose thread and drop the document reference, so
+        # that no stale proxy of the document or its shapes stays behind in this Python object;
+        # pyuno's garbage collector thread would otherwise release it later from a bridge thread
+        # while LibreOffice is already tearing the document down (issue #4).
+        with contextlib.suppress(Exception):  # the document is already going away
+            self.doc.removeModifyListener(self)
+        with contextlib.suppress(Exception):
+            self.doc.getUndoManager().removeUndoManagerListener(self)
+        self.doc = None
+        self._sizes.clear()
 
     # XUndoManagerListener
     def actionUndone(self, event: Any) -> None:
@@ -124,6 +141,8 @@ class _Watcher(unohelper.Base, XModifyListener, XUndoManagerListener, XCallback)
     # XCallback
     def notify(self, data: Any) -> None:
         self._pending = False
+        if self.doc is None:  # the document is gone; the watcher waits to be collected
+            return
         if samescale.is_busy(self.doc):  # our own redraw: nothing to find in half-updated shapes
             return
         self._busy = True
