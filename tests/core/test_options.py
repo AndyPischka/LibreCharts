@@ -302,6 +302,11 @@ def test_a_100_percent_chart_rejects_line_series() -> None:
         changed(changed(sample_state(), "percent=true"), "line=0&on=true")
 
 
+def test_a_chart_with_error_bars_rejects_line_series() -> None:
+    with pytest.raises(ValueError, match="lines"):
+        changed(changed(sample_state(), "errors=true"), "line=0&on=true")
+
+
 def test_a_series_colour_is_one_option_with_a_palette_entry_or_default() -> None:
     assert color_query(1, 3) == "ChangeChart?color=1&palette=3"
     assert color_query(1, None) == "ChangeChart?color=1&palette=default"

@@ -33,7 +33,7 @@ from librecharts.core import annotations as notes
 from librecharts.core import value_line
 from librecharts.core.axis_break import Break, column_tops, resolve
 from librecharts.core.axis_break import axis as shortened_axis
-from librecharts.core.datasheet import ChartData, Series
+from librecharts.core.datasheet import ChartData, with_error_margins, with_from_levels
 from librecharts.core.layout.common import (
     AXIS_BAND,
     GAP_RATIO,
@@ -460,40 +460,10 @@ def _geometry(
     # Floating bars: the scale covers the from levels as well, and the bars measure clustered.
     # Error bars: the scale covers value ± error as well.
     if bases is not None:
-        scale_data = ChartData(
-            data.categories,
-            (*data.series, *(Series(f"From {i}", base) for i, base in enumerate(bases))),
-        )
+        scale_data = with_from_levels(data, bases)
         scale_grouping: Grouping = "clustered"
     elif errors is not None:
-        margins: list[Series] = []
-        for i, series in enumerate(columns_data.series):
-            err = errors[i] if i < len(errors) else None
-            if err is None:
-                continue
-            margins.append(
-                Series(
-                    f"{series.name} +",
-                    tuple(
-                        None if v is None or e is None else v + e
-                        for v, e in zip(series.values, err, strict=True)
-                    ),
-                )
-            )
-            margins.append(
-                Series(
-                    f"{series.name} -",
-                    tuple(
-                        None if v is None or e is None else v - e
-                        for v, e in zip(series.values, err, strict=True)
-                    ),
-                )
-            )
-        scale_data = (
-            ChartData(columns_data.categories, (*columns_data.series, *margins))
-            if margins
-            else columns_data
-        )
+        scale_data = with_error_margins(columns_data, errors)
         scale_grouping = grouping
     else:
         scale_data = columns_data

@@ -65,6 +65,8 @@ def test_error_bars_are_a_column_bar_and_line_option_only() -> None:
             replace(state, errors=True)
     with pytest.raises(ValueError, match="100 %"):
         replace(sample_state(), percent=True, errors=True)
+    with pytest.raises(ValueError, match="lines"):
+        replace(sample_state(), errors=True, lines=(0,))
 
 
 def test_horizontal_and_stacked_are_waterfall_options_only() -> None:

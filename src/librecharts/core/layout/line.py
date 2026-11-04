@@ -17,7 +17,7 @@ from librecharts.core import annotations as notes
 from librecharts.core import value_line
 from librecharts.core.axis_break import Break, resolve
 from librecharts.core.axis_break import axis as shortened_axis
-from librecharts.core.datasheet import ChartData, Series
+from librecharts.core.datasheet import ChartData, with_error_margins
 from librecharts.core.layout.common import (
     AXIS_BAND,
     LABEL_HEIGHT,
@@ -291,33 +291,7 @@ def _plot(
     scale_height = plot_height - (LABEL_HEIGHT if has_negative else 0.0)
     if plot_width <= 0 or scale_height <= 0:
         raise ValueError("chart area too small")
-    scale_data = data
-    if errors is not None:  # the scale covers value ± error as well
-        margins: list[Series] = []
-        for i, series in enumerate(data.series):
-            err = errors[i] if i < len(errors) else None
-            if err is None:
-                continue
-            margins.append(
-                Series(
-                    f"{series.name} +",
-                    tuple(
-                        None if v is None or e is None else v + e
-                        for v, e in zip(series.values, err, strict=True)
-                    ),
-                )
-            )
-            margins.append(
-                Series(
-                    f"{series.name} -",
-                    tuple(
-                        None if v is None or e is None else v - e
-                        for v, e in zip(series.values, err, strict=True)
-                    ),
-                )
-            )
-        if margins:
-            scale_data = ChartData(data.categories, (*data.series, *margins))
+    scale_data = with_error_margins(data, errors) if errors is not None else data
     cut = None if length_per_unit is not None else resolve(annotations, scale_data, "clustered")
     axis = (
         shortened_axis(scale_data, "clustered", cut) if cut else value_axis(scale_data, "clustered")

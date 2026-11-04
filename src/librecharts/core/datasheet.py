@@ -76,24 +76,19 @@ def ranged(state: ChartState) -> tuple[ChartData, tuple[tuple[float | None, ...]
     pair whose both rows are empty is dropped; a dangling unpaired last row stays stored and
     unused, like any dangling index after a data edit. An empty from cell means the baseline.
     """
-    rows = len(state.cells)
-    width = len(state.cells[0]) if rows else 0
-    if rows < 2 or width < 2:
+    paired = _paired_rows(state)
+    if paired is None:
         return ChartData((), ()), ()
-    used_cols = [c for c in range(1, width) if _column_used(state, c)]
-    if not used_cols:
-        return ChartData((), ()), ()
-    last_col = used_cols[-1]
-    categories = tuple(state.cells[0][c].strip() for c in range(1, last_col + 1))
-    series: list[Series] = []
-    bases: list[tuple[float | None, ...]] = []
-    for r in range(1, rows - 1, 2):
-        if not (_row_used(state, r) or _row_used(state, r + 1)):
-            continue
-        name = state.cells[r][0].strip() or f"Series {r}"
-        series.append(Series(name, tuple(state.values[r + 1][c] for c in range(1, last_col + 1))))
-        bases.append(tuple(state.values[r][c] for c in range(1, last_col + 1)))
-    return ChartData(categories, tuple(series)), tuple(bases)
+    categories, pairs = paired
+    series = tuple(
+        Series(name, tuple(state.values[lower][c] for c in range(1, len(categories) + 1)))
+        for name, _upper, lower in pairs
+    )
+    bases = tuple(
+        tuple(state.values[upper][c] for c in range(1, len(categories) + 1))
+        for _name, upper, _lower in pairs
+    )
+    return ChartData(categories, series), bases
 
 
 def errored(state: ChartState) -> tuple[ChartData, tuple[tuple[float | None, ...], ...]]:
@@ -104,24 +99,91 @@ def errored(state: ChartState) -> tuple[ChartData, tuple[tuple[float | None, ...
     point; a pair whose both rows are empty is dropped, and a dangling unpaired last row stays
     stored and unused.
     """
+    paired = _paired_rows(state)
+    if paired is None:
+        return ChartData((), ()), ()
+    categories, pairs = paired
+    series = tuple(
+        Series(name, tuple(state.values[upper][c] for c in range(1, len(categories) + 1)))
+        for name, upper, _lower in pairs
+    )
+    errs = tuple(
+        tuple(state.values[lower][c] for c in range(1, len(categories) + 1))
+        for _name, _upper, lower in pairs
+    )
+    return ChartData(categories, series), errs
+
+
+def _paired_rows(
+    state: ChartState,
+) -> tuple[tuple[str, ...], tuple[tuple[str, int, int], ...]] | None:
+    """The categories and the paired series rows of a data sheet whose rows come two by two.
+
+    Each pair is (name, upper row, lower row), the name from the upper row; rows start at 1, so
+    the upper row is odd. A pair whose both rows are empty is dropped, a dangling unpaired last
+    row stays stored and unused.
+    """
     rows = len(state.cells)
     width = len(state.cells[0]) if rows else 0
     if rows < 2 or width < 2:
-        return ChartData((), ()), ()
+        return None
     used_cols = [c for c in range(1, width) if _column_used(state, c)]
     if not used_cols:
-        return ChartData((), ()), ()
+        return None
     last_col = used_cols[-1]
     categories = tuple(state.cells[0][c].strip() for c in range(1, last_col + 1))
-    series: list[Series] = []
-    errs: list[tuple[float | None, ...]] = []
+    pairs: list[tuple[str, int, int]] = []
     for r in range(1, rows - 1, 2):
         if not (_row_used(state, r) or _row_used(state, r + 1)):
             continue
-        name = state.cells[r][0].strip() or f"Series {r}"
-        series.append(Series(name, tuple(state.values[r][c] for c in range(1, last_col + 1))))
-        errs.append(tuple(state.values[r + 1][c] for c in range(1, last_col + 1)))
-    return ChartData(categories, tuple(series)), tuple(errs)
+        pairs.append((state.cells[r][0].strip() or f"Series {r}", r, r + 1))
+    return categories, tuple(pairs)
+
+
+def with_error_margins(data: ChartData, errors: tuple[tuple[float | None, ...], ...]) -> ChartData:
+    """``data`` extended by two margin series per errored series, at value ± error.
+
+    The scale of a chart with error bars covers value ± error (M15); the added series hold the
+    upper and lower margin of every series that has an error row. Series without error data keep
+    ``data`` as it is.
+    """
+    margins: list[Series] = []
+    for i, series in enumerate(data.series):
+        err = errors[i] if i < len(errors) else None
+        if err is None:
+            continue
+        margins.append(
+            Series(
+                f"{series.name} +",
+                tuple(
+                    None if v is None or e is None else v + e
+                    for v, e in zip(series.values, err, strict=True)
+                ),
+            )
+        )
+        margins.append(
+            Series(
+                f"{series.name} -",
+                tuple(
+                    None if v is None or e is None else v - e
+                    for v, e in zip(series.values, err, strict=True)
+                ),
+            )
+        )
+    if not margins:
+        return data
+    return ChartData(data.categories, (*data.series, *margins))
+
+
+def with_from_levels(data: ChartData, bases: tuple[tuple[float | None, ...], ...]) -> ChartData:
+    """``data`` extended by one series per floating bar, at its from level.
+
+    The scale of a floating-bar chart covers the from levels as well (M15).
+    """
+    return ChartData(
+        data.categories,
+        (*data.series, *(Series(f"From {i}", base) for i, base in enumerate(bases))),
+    )
 
 
 def state_from_table(

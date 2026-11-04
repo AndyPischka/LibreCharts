@@ -16,7 +16,8 @@ option mechanism of ADRs 0012/0013: one `ChangeChart` command, one undo step eac
   14 adds them as `false`): `range` (column/bar only), `errors` (column/bar/line only),
   `horizontal` and `stacked` (waterfall only). Invalid combinations are rejected in
   `ChartState.__post_init__`: no `range`/`errors` on a 100 % chart, the two never combine (they
-  pair data rows differently), no `range` with line series.
+  pair data rows differently), no `range` and no `errors` with line series (line-drawn series get
+  neither whiskers nor a widened scale).
 - **Row pairing.** With `range=true` the series rows come in pairs: an odd data row is the *from*
   level, the row below it the *to* level of one floating bar (`datasheet.ranged`); the bar's name
   comes from the from row, an empty from cell means the baseline, a dangling unpaired last row

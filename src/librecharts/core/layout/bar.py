@@ -23,7 +23,7 @@ from librecharts.core import annotations as notes
 from librecharts.core import value_line
 from librecharts.core.axis_break import Break, column_tops, resolve
 from librecharts.core.axis_break import axis as shortened_axis
-from librecharts.core.datasheet import ChartData, Series
+from librecharts.core.datasheet import ChartData, with_error_margins, with_from_levels
 from librecharts.core.layout.column import (
     BREAK_GAP,
     BREAK_OVERHANG,
@@ -115,36 +115,10 @@ def layout_bar(
         groups = notes.group_brackets(annotations, data, "bar")
     # Floating bars: the scale covers the from levels as well, and the bars measure clustered.
     if bases is not None:
-        scale_data = ChartData(
-            data.categories,
-            (*data.series, *(Series(f"From {i}", base) for i, base in enumerate(bases))),
-        )
+        scale_data = with_from_levels(data, bases)
         scale_grouping: Grouping = "clustered"
     elif errors is not None:  # the scale covers value ± error as well
-        margins: list[Series] = []
-        for i, series in enumerate(data.series):
-            err = errors[i] if i < len(errors) else None
-            if err is None:
-                continue
-            margins.append(
-                Series(
-                    f"{series.name} +",
-                    tuple(
-                        None if v is None or e is None else v + e
-                        for v, e in zip(series.values, err, strict=True)
-                    ),
-                )
-            )
-            margins.append(
-                Series(
-                    f"{series.name} -",
-                    tuple(
-                        None if v is None or e is None else v - e
-                        for v, e in zip(series.values, err, strict=True)
-                    ),
-                )
-            )
-        scale_data = ChartData(data.categories, (*data.series, *margins)) if margins else data
+        scale_data = with_error_margins(data, errors)
         scale_grouping = grouping
     else:
         scale_data = data
@@ -326,36 +300,10 @@ def natural_length_per_unit(
     lines = notes.value_lines(annotations, data, "bar")
     groups = notes.group_brackets(annotations, data, "bar")
     if bases is not None:  # floating bars: the scale covers the from levels as well
-        scale_data = ChartData(
-            data.categories,
-            (*data.series, *(Series(f"From {i}", base) for i, base in enumerate(bases))),
-        )
+        scale_data = with_from_levels(data, bases)
         scale_grouping: Grouping = "clustered"
     elif errors is not None:  # error bars: the scale covers value ± error as well
-        margins: list[Series] = []
-        for i, series in enumerate(data.series):
-            err = errors[i] if i < len(errors) else None
-            if err is None:
-                continue
-            margins.append(
-                Series(
-                    f"{series.name} +",
-                    tuple(
-                        None if v is None or e is None else v + e
-                        for v, e in zip(series.values, err, strict=True)
-                    ),
-                )
-            )
-            margins.append(
-                Series(
-                    f"{series.name} -",
-                    tuple(
-                        None if v is None or e is None else v - e
-                        for v, e in zip(series.values, err, strict=True)
-                    ),
-                )
-            )
-        scale_data = ChartData(data.categories, (*data.series, *margins)) if margins else data
+        scale_data = with_error_margins(data, errors)
         scale_grouping = grouping
     else:
         scale_data = data

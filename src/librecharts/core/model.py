@@ -320,6 +320,8 @@ class ChartState:
             raise ValueError(f"a {self.kind} chart has no error bars")
         if self.errors and self.percent:
             raise ValueError("a 100 % chart cannot have error bars")
+        if self.errors and self.lines:
+            raise ValueError("a chart with error bars cannot draw series as lines")
         if self.horizontal and self.kind != "waterfall":
             raise ValueError("only a waterfall chart can be horizontal")
         if self.stacked and self.kind != "waterfall":

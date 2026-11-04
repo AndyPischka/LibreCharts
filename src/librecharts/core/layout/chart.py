@@ -16,7 +16,7 @@ from librecharts.core.layout.pie import layout_pie
 from librecharts.core.layout.scatter import layout_scatter
 from librecharts.core.layout.waterfall import layout_waterfall
 from librecharts.core.mekko import parse_mekko
-from librecharts.core.model import Annotation, ChartState
+from librecharts.core.model import Annotation, ChartState, Grouping
 from librecharts.core.primitives import Primitive
 from librecharts.core.scatter import parse_scatter
 from librecharts.core.waterfall import parse_waterfall
@@ -144,9 +144,11 @@ def display_order(state: ChartState, data: ChartData | None = None) -> tuple[int
     """Display position -> data sheet index of the categories."""
     if state.kind == "pie":  # a pie sorts its segments per pie, not its categories
         return tuple(range(len((data or parse(state)).categories)))
-    # A butterfly chart sorts by its first series, like a clustered chart.
-    grouping = "clustered" if state.kind == "butterfly" else state.grouping
-    return sorting.order(data or parse(state), grouping, state.sort)
+    # A butterfly chart sorts by its first series, like a clustered chart; floating bars are
+    # drawn clustered whatever the stored grouping says, so they sort like a clustered chart.
+    clustered = state.kind == "butterfly" or (state.range and state.kind in ("column", "bar"))
+    grouped: Grouping = "clustered" if clustered else state.grouping
+    return sorting.order(data or parse(state), grouped, state.sort)
 
 
 def display_data(state: ChartState) -> tuple[ChartData, tuple[Annotation, ...]]:

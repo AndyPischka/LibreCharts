@@ -237,6 +237,28 @@ def test_secondary_line_points_use_the_secondary_scale() -> None:
     assert target_at(state, WIDTH, HEIGHT, 700, 800 + (10 - 8) / 10 * 6200) == (1, 2)
 
 
+def test_floating_bars_sort_like_a_clustered_chart_whatever_the_grouping() -> None:
+    state = replace(
+        state_from_table(
+            "column",
+            "stacked",
+            [
+                [None, "A", "B", "C"],
+                ["Low", 0, 0, 0],
+                ["High", 10, 1, 5],
+                ["Low 2", 0, 0, 0],
+                ["High 2", 1, 20, 2],
+            ],
+        ),
+        range=True,
+        sort="descending",
+    )
+    # the column sums would order B, A, C; clustered sorts by the first to row: A, C, B
+    assert target_at(state, WIDTH, HEIGHT, 300, 5000) == (0, 0)
+    assert target_at(state, WIDTH, HEIGHT, 1300, 5000) == (2, 0)
+    assert target_at(state, WIDTH, HEIGHT, 2300, 5000) == (1, 0)
+
+
 def test_floating_bars_pick_the_series_of_the_clicked_bar() -> None:
     state = replace(
         state_from_table(
