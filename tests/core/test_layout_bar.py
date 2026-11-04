@@ -92,6 +92,53 @@ def test_narrow_segments_move_their_label_out_of_the_bar() -> None:
     assert total.x == pytest.approx(flat.x + LABEL_WIDTH - LABEL_GAP)
 
 
+def test_a_lane_of_flat_labels_moves_back_into_the_chart() -> None:
+    # The longest bar's lane cannot fit right of it; it shifts left as a whole, covering the
+    # bar, instead of growing the chart group past the box (test_layout_chart).
+    chart = data(("A", (999.0,)), ("B", (1.0,)), categories=("X",))
+    primitives = layout_bar(chart, "stacked", 9000, 5000)
+    labels = [p for p in primitives if isinstance(p, Text) and p.role in ("value", "total")]
+    assert all(p.x + p.width <= 9000.0 for p in labels)
+    total = next(p for p in labels if p.role == "total")
+    assert total.text == "1000"
+
+
+def test_a_lane_of_flat_percent_labels_moves_back_into_the_chart() -> None:
+    chart = data(("A", (90.0,)), ("B", (5.0,)), ("C", (5.0,)), categories=("X",))
+    primitives = layout_bar(chart, "stacked", 9000, 5000, percent=True)
+    labels = [p for p in primitives if isinstance(p, Text) and p.role in ("value", "total")]
+    assert all(p.x + p.width <= 9000.0 for p in labels)
+
+
+def test_an_all_negative_bar_carries_its_total_left_of_it() -> None:
+    chart = data(("A", (-3.0,)), ("B", (-2.0,)), categories=("X",))
+    primitives = layout_bar(chart, "stacked", 10000, 8000)
+    total = next(p for p in primitives if isinstance(p, Text) and p.role == "total")
+    left = min(p.x for p in primitives if isinstance(p, Rect))
+    assert total.x + total.width == pytest.approx(left - LABEL_GAP)  # left of the bar's end
+
+
+def test_negative_flat_segments_label_left_of_the_bar() -> None:
+    chart = data(("A", (-1000.0,)), ("B", (-1.0,)), categories=("X",))
+    primitives = layout_bar(chart, "stacked", 10000, 8000)
+    left = min(p.x for p in primitives if isinstance(p, Rect))
+    flat = next(
+        p for p in primitives if isinstance(p, Text) and p.role == "value" and p.text == "-1"
+    )
+    total = next(p for p in primitives if isinstance(p, Text) and p.role == "total")
+    assert flat.x + flat.width == pytest.approx(left - LABEL_GAP)
+    assert total.x + total.width == pytest.approx(flat.x)  # the total at the outer end
+    assert total.x >= 0.0  # the lane moves back into the chart
+
+
+def test_a_mixed_bar_carries_its_total_right_of_its_positive_part() -> None:
+    chart = data(("A", (5.0,)), ("B", (-3.0,)), categories=("X",))
+    primitives = layout_bar(chart, "stacked", 10000, 8000)
+    total = next(p for p in primitives if isinstance(p, Text) and p.role == "total")
+    positive = next(p for p in primitives if isinstance(p, Rect) and p.series == 0)
+    assert total.x == pytest.approx(positive.x + positive.width + LABEL_GAP)
+
+
 def test_clustered_negative_label_clears_the_category_names() -> None:
     chart = data(("A", (-10.0, 10.0)), categories=("X", "Y"))
     primitives = layout_bar(chart, "clustered", 9400, 4000)

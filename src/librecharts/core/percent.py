@@ -30,6 +30,11 @@ def column_total(data: ChartData, category: int) -> float:
     return sum(v for s in data.series if (v := s.values[category]) is not None and v > 0)
 
 
+def negative_total(data: ChartData, category: int) -> float:
+    """The sum of the negative values of one column (0 if it has none)."""
+    return sum(v for s in data.series if (v := s.values[category]) is not None and v < 0)
+
+
 def share(value: float | None, total: float) -> float | None:
     """``value`` as a percentage of ``total``; ``None`` if there is no share to draw."""
     if value is None or value <= 0 or total <= 0:

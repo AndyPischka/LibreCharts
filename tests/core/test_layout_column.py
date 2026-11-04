@@ -783,3 +783,50 @@ def test_percent_labels_add_up_to_one_hundred_percent() -> None:
     labels = [p.text for p in primitives if isinstance(p, Text) and p.role == "value"]
     assert labels == ["33.4%", "33.3%", "33.3%"]
     assert sum(float(label.rstrip("%")) for label in labels) == pytest.approx(100.0)
+
+
+def test_a_lane_of_flat_labels_moves_back_into_the_chart() -> None:
+    # The tallest column's lane cannot fit above it; it shifts down as a whole, covering the
+    # column, instead of growing the chart group past the box (test_layout_chart).
+    chart = data(("A", (999.0,)), ("B", (1.0,)), categories=("X",))
+    primitives = layout_column(chart, "stacked", 9000, 5000)
+    labels = [p for p in primitives if isinstance(p, Text) and p.role in ("value", "total")]
+    assert all(p.y >= 0.0 for p in labels)
+    total = next(p for p in labels if p.role == "total")
+    assert total.text == "1000"
+
+
+def test_a_lane_of_flat_percent_labels_moves_back_into_the_chart() -> None:
+    chart = data(("A", (90.0,)), ("B", (5.0,)), ("C", (5.0,)), categories=("X",))
+    primitives = layout_column(chart, "stacked", 9000, 5000, percent=True)
+    labels = [p for p in primitives if isinstance(p, Text) and p.role in ("value", "total")]
+    assert all(p.y >= 0.0 for p in labels)
+
+
+def test_an_all_negative_column_carries_its_total_below_it() -> None:
+    chart = data(("A", (-3.0,)), ("B", (-2.0,)), categories=("X",))
+    primitives = layout_column(chart, "stacked", 10000, 8000)
+    total = next(p for p in primitives if isinstance(p, Text) and p.role == "total")
+    bottom = max(p.y + p.height for p in primitives if isinstance(p, Rect))
+    assert total.y == pytest.approx(bottom)  # below the column, not above the baseline
+
+
+def test_negative_flat_segments_label_below_the_column() -> None:
+    chart = data(("A", (-1000.0,)), ("B", (-1.0,)), categories=("X",))
+    primitives = layout_column(chart, "stacked", 10000, 12000)
+    bottom = max(p.y + p.height for p in primitives if isinstance(p, Rect))
+    flat = next(
+        p for p in primitives if isinstance(p, Text) and p.role == "value" and p.text == "-1"
+    )
+    total = next(p for p in primitives if isinstance(p, Text) and p.role == "total")
+    assert flat.y == pytest.approx(bottom)  # directly below the column's bottom edge
+    assert total.y == pytest.approx(flat.y + LABEL_HEIGHT)  # the total at the outer end
+    assert total.y + total.height <= 12000  # the lane moves back into the chart
+
+
+def test_a_mixed_column_carries_its_total_above_the_positive_part() -> None:
+    chart = data(("A", (5.0,)), ("B", (-3.0,)), categories=("X",))
+    primitives = layout_column(chart, "stacked", 10000, 8000)
+    total = next(p for p in primitives if isinstance(p, Text) and p.role == "total")
+    positive = next(p for p in primitives if isinstance(p, Rect) and p.series == 0)
+    assert total.y + total.height <= positive.y  # above the positive stack, not at the net level

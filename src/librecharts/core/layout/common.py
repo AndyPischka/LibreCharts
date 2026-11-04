@@ -299,11 +299,25 @@ def spread(tops: list[float], height: float) -> list[float]:
     """Move label boxes (listed bottom-up) apart so that none overlaps the next.
 
     Each box keeps its place if it can; a box that would touch the one below moves up. If the
-    stack then reaches above the chart, it moves down as a whole. Shared by the Mekko and the
-    column layout.
+    stack then reaches above the chart, it moves down as a whole. Shared by the Mekko, the
+    flat label lanes and the line and pie layouts.
     """
     spread_tops: list[float] = []
     for top in tops:
         spread_tops.append(min(top, spread_tops[-1] - height) if spread_tops else top)
     overshoot = min(spread_tops, default=0.0)
     return [top - min(overshoot, 0.0) for top in spread_tops]
+
+
+def spread_back(starts: list[float], size: float, limit: float) -> list[float]:
+    """Shift a lane of label boxes back into the chart as a whole.
+
+    The mirror of :func:`spread`'s whole-stack shift for a lane that grows toward larger
+    coordinates (down, or right): the flat label lanes pitch their boxes at a fixed distance,
+    so none overlaps another, but the outermost box grows past the chart box with every label.
+    The lane keeps its pitch and moves back so the outermost box ends at ``limit`` (the
+    chart's height or width); it can then cover the column or bar it labels. A shape outside
+    the box would grow the chart group on every redraw instead (test_layout_chart).
+    """
+    shift = max(0.0, max(starts, default=0.0) + size - limit)
+    return [start - shift for start in starts]

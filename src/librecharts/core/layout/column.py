@@ -55,6 +55,7 @@ from librecharts.core.layout.common import (
     slot_at,
     slot_start,
     spread,
+    spread_back,
     value_axis,
     visible_ticks,
 )
@@ -62,7 +63,7 @@ from librecharts.core.layout.common import (
     MIN_ARROW_LABEL_WIDTH as MIN_ARROW_LABEL_WIDTH,
 )
 from librecharts.core.model import Annotation, Format, Grouping, LabelKey
-from librecharts.core.percent import column_total
+from librecharts.core.percent import column_total, negative_total
 from librecharts.core.primitives import (
     BACKGROUND,
     Line,
@@ -71,6 +72,7 @@ from librecharts.core.primitives import (
     Primitive,
     Rect,
     Text,
+    TextRole,
 )
 from librecharts.core.rounding import consistent, consistent_shares
 from librecharts.core.scale import Axis, nice_axis
@@ -240,7 +242,15 @@ def layout_column(
         elif grouping == "stacked":
             out.extend(
                 _stacked_column(
-                    columns_data, c, column_x, column_width, y, cut, percent=percent, fmt=fmt
+                    columns_data,
+                    c,
+                    column_x,
+                    column_width,
+                    y,
+                    cut,
+                    percent=percent,
+                    fmt=fmt,
+                    height=height,
                 )
             )
         else:
@@ -936,6 +946,7 @@ def _stacked_column(
     *,
     percent: bool = False,
     fmt: Format,
+    height: float,
 ) -> list[Primitive]:
     if percent:
         return _percent_column(data, c, x, width, y, fmt)
@@ -949,8 +960,22 @@ def _stacked_column(
     )
     positive = negative = 0.0
     segments = 0
-    flat_count = 0  # labels moved out of a segment too flat to hold them
-    column_top = y(fold(max(column_total(data, c), 0.0)))
+    # The lanes of the labels that do not fit into their segment (M16): above the column's top
+    # edge and below its bottom edge, one label height per slot. The total joins the lane of the
+    # positive end unless the column has no positive segment.
+    top_edge = y(fold(column_total(data, c)))
+    bottom_edge = y(fold(negative_total(data, c)))
+    above: list[tuple[int, Text]] = []  # (index into ``out``, label), one entry per lane slot
+    below: list[tuple[int, Text]] = []
+
+    def outside(
+        text: str, role: TextRole, key: LabelKey, top: float, lane: list[tuple[int, Text]]
+    ) -> None:
+        """Append a lane label (plain text, no segment fill) and book its slot."""
+        label = Text(x, top, width, LABEL_HEIGHT, text, "center", role, key=key)
+        out.append(label)
+        lane.append((len(out) - 1, label))
+
     for i, series in enumerate(data.series):
         value = series.values[c]
         if value is None or value == 0:
@@ -965,23 +990,9 @@ def _stacked_column(
         out.append(Rect(x, top, width, bottom - top, i))
         # Always emit the label right after its segment: the primitive structure must not depend
         # on the size, so a resized chart can be re-laid out in place (lo/render.py). A segment
-        # too flat to hold its label gets it outside the column instead, in a slot of the lane
-        # above the column (M16 decluttering); the label is plain text there, without a fill.
-        if bottom - top < MIN_SEGMENT_FOR_LABEL:
-            out.append(
-                Text(
-                    x,
-                    column_top - LABEL_HEIGHT * (flat_count + 1),
-                    width,
-                    LABEL_HEIGHT,
-                    texts[i] or "",
-                    "center",
-                    "value",
-                    key=LabelKey("value", c, i),
-                )
-            )
-            flat_count += 1
-        else:
+        # too flat to hold its label gets a slot in the lane at its outer end instead (M16
+        # decluttering).
+        if bottom - top >= MIN_SEGMENT_FOR_LABEL:
             out.append(
                 Text(
                     x,
@@ -995,19 +1006,45 @@ def _stacked_column(
                     key=LabelKey("value", c, i),
                 )
             )
-    if segments >= 2:  # a single segment's total would just repeat its own label
-        out.append(
-            Text(
-                x,
-                column_top - LABEL_HEIGHT * (flat_count + 1),
-                width,
-                LABEL_HEIGHT,
-                format_value(positive + negative, fmt),
-                "center",
-                "total",
-                key=LabelKey("total", c),
+        elif value > 0:
+            outside(
+                texts[i] or "",
+                "value",
+                LabelKey("value", c, i),
+                top_edge - LABEL_HEIGHT * (len(above) + 1),
+                above,
             )
-        )
+        else:
+            outside(
+                texts[i] or "",
+                "value",
+                LabelKey("value", c, i),
+                bottom_edge + LABEL_HEIGHT * len(below),
+                below,
+            )
+    if segments >= 2:  # a single segment's total would just repeat its own label
+        total = format_value(positive + negative, fmt)
+        if positive > 0.0:
+            outside(
+                total,
+                "total",
+                LabelKey("total", c),
+                top_edge - LABEL_HEIGHT * (len(above) + 1),
+                above,
+            )
+        else:
+            outside(
+                total, "total", LabelKey("total", c), bottom_edge + LABEL_HEIGHT * len(below), below
+            )
+    # A lane grows past the chart box with every label; it moves back as a whole instead — a
+    # shape outside the box would grow the chart group on every redraw (test_layout_chart) —
+    # and then covers the column it labels.
+    tops = spread([label.y for _, label in above], LABEL_HEIGHT)
+    for (index, label), top in zip(above, tops, strict=True):
+        out[index] = replace(label, y=top)
+    tops = spread_back([label.y for _, label in below], LABEL_HEIGHT, height)
+    for (index, label), top in zip(below, tops, strict=True):
+        out[index] = replace(label, y=top)
     if cut and cut.cuts(column_top_value):
         out.extend(break_mark(x, width, y(cut.lower), BREAK_OVERHANG))
     return out
@@ -1023,7 +1060,14 @@ def _percent_column(
     out: list[Primitive] = []
     level = 0.0
     percentages = consistent_shares([series.values[c] for series in data.series], total, fmt)
-    flat_count = 0
+    above: list[tuple[int, Text]] = []  # (index into ``out``, label), one entry per lane slot
+
+    def outside(text: str, role: TextRole, key: LabelKey, top: float) -> None:
+        """Append a lane label (plain text, no segment fill) and book its slot."""
+        label = Text(x, top, width, LABEL_HEIGHT, text, "center", role, key=key)
+        out.append(label)
+        above.append((len(out) - 1, label))
+
     for i, series in enumerate(data.series):
         value = series.values[c]
         percentage = percentages[i]
@@ -1034,23 +1078,8 @@ def _percent_column(
         level += height
         out.append(Rect(x, top, width, bottom - top, i))
         # Always emit the label: the structure must not depend on the size. A segment too flat to
-        # hold its label gets it outside the column instead, in a slot of the lane above the
-        # column (M16 decluttering), as plain text without a segment fill.
-        if bottom - top < MIN_SEGMENT_FOR_LABEL:
-            out.append(
-                Text(
-                    x,
-                    y(100.0) - LABEL_HEIGHT * (flat_count + 1),
-                    width,
-                    LABEL_HEIGHT,
-                    percentage,
-                    "center",
-                    "value",
-                    key=LabelKey("value", c, i),
-                )
-            )
-            flat_count += 1
-        else:
+        # hold its label gets a slot in the lane above the column instead (M16 decluttering).
+        if bottom - top >= MIN_SEGMENT_FOR_LABEL:
             out.append(
                 Text(
                     x,
@@ -1064,18 +1093,24 @@ def _percent_column(
                     key=LabelKey("value", c, i),
                 )
             )
-    out.append(
-        Text(
-            x,
-            y(100.0) - LABEL_HEIGHT * (flat_count + 1),
-            width,
-            LABEL_HEIGHT,
-            format_value(total, fmt),
-            "center",
-            "total",
-            key=LabelKey("total", c),
-        )
+        else:
+            outside(
+                percentage,
+                "value",
+                LabelKey("value", c, i),
+                y(100.0) - LABEL_HEIGHT * (len(above) + 1),
+            )
+    outside(
+        format_value(total, fmt),
+        "total",
+        LabelKey("total", c),
+        y(100.0) - LABEL_HEIGHT * (len(above) + 1),
     )
+    # A lane grows past the chart box with every label; it moves back as a whole instead — a
+    # shape outside the box would grow the chart group on every redraw (test_layout_chart).
+    tops = spread([label.y for _, label in above], LABEL_HEIGHT)
+    for (index, label), top in zip(above, tops, strict=True):
+        out[index] = replace(label, y=top)
     return out
 
 

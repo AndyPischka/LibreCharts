@@ -18,6 +18,7 @@ break mark, ticks inside the range are left out and the axis line gets a break m
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 
 from librecharts.core import annotations as notes
 from librecharts.core import value_line
@@ -43,12 +44,13 @@ from librecharts.core.layout.common import (
     slot_at,
     slot_start,
     spread,
+    spread_back,
     value_axis,
     visible_ticks,
 )
 from librecharts.core.model import Annotation, Format, Grouping, LabelKey
-from librecharts.core.percent import column_total
-from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
+from librecharts.core.percent import column_total, negative_total
+from librecharts.core.primitives import BACKGROUND, Align, Line, Primitive, Rect, Text, TextRole
 from librecharts.core.rounding import consistent, consistent_shares
 from librecharts.core.scale import Axis
 
@@ -191,7 +193,11 @@ def layout_bar(
         if bases is not None:
             out.extend(_range_bar(data, bases, c, bar_y, thickness, x, cut, fmt))
         elif grouping == "stacked":
-            out.extend(_stacked_bar(data, c, bar_y, thickness, x, cut, percent=percent, fmt=fmt))
+            out.extend(
+                _stacked_bar(
+                    data, c, bar_y, thickness, x, cut, percent=percent, fmt=fmt, width=width
+                )
+            )
         else:
             out.extend(_clustered_bar(data, c, bar_y, thickness, x, cut, fmt))
         if errors is not None:
@@ -610,9 +616,10 @@ def _stacked_bar(
     *,
     percent: bool = False,
     fmt: Format,
+    width: float,
 ) -> list[Primitive]:
     if percent:
-        return _percent_bar(data, c, y, thickness, x, fmt)
+        return _percent_bar(data, c, y, thickness, x, fmt, width)
     out: list[Primitive] = []
     texts = consistent(
         [series.values[c] for series in data.series],
@@ -621,8 +628,36 @@ def _stacked_bar(
     )
     positive = negative = 0.0
     segments = 0
-    flat_count = 0  # labels moved out of a segment too narrow to hold them
-    bar_end = x(column_total(data, c))
+    # The lanes of the labels that do not fit into their segment (M16): right of the bar's right
+    # end and left of its left end, one label width per slot. The total joins the lane of the
+    # positive end unless the bar has no positive segment.
+    right_edge = x(column_total(data, c))
+    left_edge = x(negative_total(data, c))
+    right_lane: list[tuple[int, Text]] = []  # (index into ``out``, label), one entry per slot
+    left_lane: list[tuple[int, Text]] = []
+
+    def outside(
+        text: str,
+        role: TextRole,
+        key: LabelKey,
+        left: float,
+        align: Align,
+        lane: list[tuple[int, Text]],
+    ) -> None:
+        """Append a lane label (plain text, no segment fill) and book its slot."""
+        label = Text(
+            left,
+            y + (thickness - LABEL_HEIGHT) / 2,
+            LABEL_WIDTH - LABEL_GAP,
+            LABEL_HEIGHT,
+            text,
+            align,
+            role,
+            key=key,
+        )
+        out.append(label)
+        lane.append((len(out) - 1, label))
+
     for i, series in enumerate(data.series):
         value = series.values[c]
         if value is None or value == 0:
@@ -637,23 +672,9 @@ def _stacked_bar(
         out.append(Rect(left, y, right - left, thickness, i))
         # Always emit the label right after its segment: the structure must not depend on the
         # size, so a resized chart can be re-laid out in place (lo/render.py). A segment too
-        # narrow to hold its label gets it right of the bar end instead, in a slot of the lane
-        # of the total (M16 decluttering), as plain text without a segment fill.
-        if right - left < MIN_SEGMENT_FOR_LABEL:
-            out.append(
-                Text(
-                    bar_end + LABEL_GAP + flat_count * (LABEL_WIDTH - LABEL_GAP),
-                    y + (thickness - LABEL_HEIGHT) / 2,
-                    LABEL_WIDTH - LABEL_GAP,
-                    LABEL_HEIGHT,
-                    texts[i] or "",
-                    "left",
-                    "value",
-                    key=LabelKey("value", c, i),
-                )
-            )
-            flat_count += 1
-        else:
+        # narrow to hold its label gets a slot in the lane at its outer end instead (M16
+        # decluttering).
+        if right - left >= MIN_SEGMENT_FOR_LABEL:
             out.append(
                 Text(
                     left,
@@ -667,26 +688,60 @@ def _stacked_bar(
                     key=LabelKey("value", c, i),
                 )
             )
-    if segments >= 2:  # a single segment's total would just repeat its own label
-        out.append(
-            Text(
-                bar_end + LABEL_GAP + flat_count * (LABEL_WIDTH - LABEL_GAP),
-                y + (thickness - LABEL_HEIGHT) / 2,
-                LABEL_WIDTH - LABEL_GAP,
-                LABEL_HEIGHT,
-                format_value(positive + negative, fmt),
+        elif value > 0:
+            outside(
+                texts[i] or "",
+                "value",
+                LabelKey("value", c, i),
+                right_edge + LABEL_GAP + len(right_lane) * (LABEL_WIDTH - LABEL_GAP),
                 "left",
-                "total",
-                key=LabelKey("total", c),
+                right_lane,
             )
-        )
+        else:
+            outside(
+                texts[i] or "",
+                "value",
+                LabelKey("value", c, i),
+                left_edge - LABEL_GAP - (len(left_lane) + 1) * (LABEL_WIDTH - LABEL_GAP),
+                "right",
+                left_lane,
+            )
+    if segments >= 2:  # a single segment's total would just repeat its own label
+        total = format_value(positive + negative, fmt)
+        if positive > 0.0:
+            outside(
+                total,
+                "total",
+                LabelKey("total", c),
+                right_edge + LABEL_GAP + len(right_lane) * (LABEL_WIDTH - LABEL_GAP),
+                "left",
+                right_lane,
+            )
+        else:
+            outside(
+                total,
+                "total",
+                LabelKey("total", c),
+                left_edge - LABEL_GAP - (len(left_lane) + 1) * (LABEL_WIDTH - LABEL_GAP),
+                "right",
+                left_lane,
+            )
+    # A lane grows past the chart box with every label; it moves back as a whole instead — a
+    # shape outside the box would grow the chart group on every redraw (test_layout_chart) —
+    # and then covers the bar it labels.
+    lefts = spread_back([label.x for _, label in right_lane], LABEL_WIDTH - LABEL_GAP, width)
+    for (index, label), left in zip(right_lane, lefts, strict=True):
+        out[index] = replace(label, x=left)
+    lefts = spread([label.x for _, label in left_lane], LABEL_WIDTH - LABEL_GAP)
+    for (index, label), left in zip(left_lane, lefts, strict=True):
+        out[index] = replace(label, x=left)
     if cut and cut.cuts(column_tops(data, "stacked")[c]):
         out.extend(_break_mark(x(cut.lower), y, thickness, BREAK_OVERHANG))
     return out
 
 
 def _percent_bar(
-    data: ChartData, c: int, y: float, thickness: float, x: _XScale, fmt: Format
+    data: ChartData, c: int, y: float, thickness: float, x: _XScale, fmt: Format, width: float
 ) -> list[Primitive]:
     """A 100 % long bar: shares inside, the absolute column sum right of it."""
     total = column_total(data, c)
@@ -695,7 +750,23 @@ def _percent_bar(
     out: list[Primitive] = []
     level = 0.0
     percentages = consistent_shares([series.values[c] for series in data.series], total, fmt)
-    flat_count = 0
+    right_lane: list[tuple[int, Text]] = []  # (index into ``out``, label), one entry per slot
+
+    def outside(text: str, role: TextRole, key: LabelKey, left: float) -> None:
+        """Append a lane label (plain text, no segment fill) and book its slot."""
+        label = Text(
+            left,
+            y + (thickness - LABEL_HEIGHT) / 2,
+            LABEL_WIDTH - LABEL_GAP,
+            LABEL_HEIGHT,
+            text,
+            "left",
+            role,
+            key=key,
+        )
+        out.append(label)
+        right_lane.append((len(out) - 1, label))
+
     for i, series in enumerate(data.series):
         value = series.values[c]
         percentage = percentages[i]
@@ -706,23 +777,9 @@ def _percent_bar(
         level += length
         out.append(Rect(left, y, right - left, thickness, i))
         # Always emit the label right after its segment: the structure must not depend on the
-        # size. A segment too narrow to hold its label gets it right of the bar end instead, in
-        # a slot of the lane of the total (M16 decluttering), as plain text without a fill.
-        if right - left < MIN_SEGMENT_FOR_LABEL:
-            out.append(
-                Text(
-                    x(100.0) + LABEL_GAP + flat_count * (LABEL_WIDTH - LABEL_GAP),
-                    y + (thickness - LABEL_HEIGHT) / 2,
-                    LABEL_WIDTH - LABEL_GAP,
-                    LABEL_HEIGHT,
-                    percentage,
-                    "left",
-                    "value",
-                    key=LabelKey("value", c, i),
-                )
-            )
-            flat_count += 1
-        else:
+        # size. A segment too narrow to hold its label gets a slot in the lane right of the bar
+        # instead (M16 decluttering), as plain text without a fill.
+        if right - left >= MIN_SEGMENT_FOR_LABEL:
             out.append(
                 Text(
                     left,
@@ -736,18 +793,24 @@ def _percent_bar(
                     key=LabelKey("value", c, i),
                 )
             )
-    out.append(
-        Text(
-            x(100.0) + LABEL_GAP + flat_count * (LABEL_WIDTH - LABEL_GAP),
-            y + (thickness - LABEL_HEIGHT) / 2,
-            LABEL_WIDTH - LABEL_GAP,
-            LABEL_HEIGHT,
-            format_value(total, fmt),
-            "left",
-            "total",
-            key=LabelKey("total", c),
-        )
+        else:
+            outside(
+                percentage,
+                "value",
+                LabelKey("value", c, i),
+                x(100.0) + LABEL_GAP + len(right_lane) * (LABEL_WIDTH - LABEL_GAP),
+            )
+    outside(
+        format_value(total, fmt),
+        "total",
+        LabelKey("total", c),
+        x(100.0) + LABEL_GAP + len(right_lane) * (LABEL_WIDTH - LABEL_GAP),
     )
+    # A lane grows past the chart box with every label; it moves back as a whole instead — a
+    # shape outside the box would grow the chart group on every redraw (test_layout_chart).
+    lefts = spread_back([label.x for _, label in right_lane], LABEL_WIDTH - LABEL_GAP, width)
+    for (index, label), left in zip(right_lane, lefts, strict=True):
+        out[index] = replace(label, x=left)
     return out
 
 

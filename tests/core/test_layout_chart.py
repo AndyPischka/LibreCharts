@@ -41,6 +41,34 @@ LAST_DAY = replace(
     datasheet.sample_gantt_state(),
     annotations=(Annotation("value_line", 0, 0, value=float(GO_LIVE)),),
 )
+# Charts whose labels leave their segments (M16): flat segments fill the label lanes, negative
+# columns and bars label at their negative end, and close line values and tiny pie segments
+# spread apart. None of that may reach out of the box.
+FLAT_COLUMN = datasheet.state_from_table("column", "stacked", [[None, "X"], ["A", 999], ["B", 1]])
+FLAT_BAR = datasheet.state_from_table("bar", "stacked", [[None, "X"], ["A", 999], ["B", 1]])
+FLAT_PERCENT_COLUMN = replace(
+    datasheet.state_from_table("column", "stacked", [[None, "X"], ["A", 90], ["B", 5], ["C", 5]]),
+    percent=True,
+)
+FLAT_PERCENT_BAR = replace(
+    datasheet.state_from_table("bar", "stacked", [[None, "X"], ["A", 90], ["B", 5], ["C", 5]]),
+    percent=True,
+)
+NEGATIVE_COLUMN = datasheet.state_from_table(
+    "column", "stacked", [[None, "X"], ["A", -999], ["B", -1]]
+)
+NEGATIVE_BAR = datasheet.state_from_table("bar", "stacked", [[None, "X"], ["A", -999], ["B", -1]])
+MIXED_COLUMN = datasheet.state_from_table("column", "stacked", [[None, "X"], ["A", 5], ["B", -3]])
+CLOSE_LINES = datasheet.state_from_table(
+    "line",
+    "stacked",
+    [[None, "X"], ["A", 10], ["B", 10], ["C", 10], ["D", 10], ["E", 10], ["F", 10], ["G", 10]],
+)
+TINY_PIE = datasheet.state_from_table(
+    "pie",
+    "stacked",
+    [[None, "X"], ["A", 1], ["B", 1], ["C", 1], ["D", 1], ["E", 1], ["F", 1], ["G", 92]],
+)
 
 
 def bounds(p: Primitive) -> tuple[float, float, float, float]:
@@ -57,7 +85,23 @@ def bounds(p: Primitive) -> tuple[float, float, float, float]:
     return min(xs), min(ys), max(xs), max(ys)
 
 
-@pytest.mark.parametrize("state", [*(sample() for sample in SAMPLES), BUBBLES, LAST_DAY])
+@pytest.mark.parametrize(
+    "state",
+    [
+        *(sample() for sample in SAMPLES),
+        BUBBLES,
+        LAST_DAY,
+        FLAT_COLUMN,
+        FLAT_BAR,
+        FLAT_PERCENT_COLUMN,
+        FLAT_PERCENT_BAR,
+        NEGATIVE_COLUMN,
+        NEGATIVE_BAR,
+        MIXED_COLUMN,
+        CLOSE_LINES,
+        TINY_PIE,
+    ],
+)
 @pytest.mark.parametrize("size", [(9000, 5000), (20000, 12000), (40000, 30000)])
 def test_nothing_reaches_out_of_the_box(state: ChartState, size: tuple[int, int]) -> None:
     # The group shape spans its children: anything outside the box grows the group, and every

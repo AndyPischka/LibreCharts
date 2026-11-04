@@ -12,7 +12,7 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 
-from librecharts.core.layout.common import format_value
+from librecharts.core.layout.common import format_share, format_value
 from librecharts.core.model import Format
 from librecharts.core.percent import share
 
@@ -54,7 +54,7 @@ def consistent_shares(
     shares = [share(v, total) for v in values]
     floors = _floors([None if p is None else p * unit for p in shares], round(100 * unit))
     return tuple(
-        None if i not in floors else _share_text(floors[i] / unit, fmt) for i in range(len(values))
+        None if i not in floors else format_share(floors[i] / unit, fmt) for i in range(len(values))
     )
 
 
@@ -86,14 +86,3 @@ def _decimals(values: Sequence[float], decimals: int | None) -> int:
     if decimals is not None:
         return decimals
     return 0 if all(v == round(v) for v in values) else 2
-
-
-def _share_text(value: float, fmt: Format) -> str:
-    """A percentage label in the format's precision and separator, like ``format_share``."""
-    decimals = 1 if fmt.decimals is None else fmt.decimals
-    text = f"{value:.{decimals}f}"
-    if fmt.decimals is None:
-        text = text.rstrip("0").rstrip(".") or "0"
-    if fmt.separator == ",":
-        text = text.replace(".", ",")
-    return text + "%"
