@@ -52,7 +52,7 @@ sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 f
 | | Milestone | Content | Status |
 |---|---|---|---|
 | M14 | Annotations everywhere | Difference and CAGR arrows on line, Mekko, pie and scatter charts; difference arrows between series, not only between categories; category gaps and brackets over groups of categories (ADR 0024) | done |
-| M15 | Range and waterfall variants | Floating (from/to) bars, error bars and intervals, stacked and horizontal waterfalls, sorting pie segments by size (deferred from M9) | open |
+| M15 | Range and waterfall variants | Floating (from/to) bars, error bars and intervals, stacked and horizontal waterfalls, sorting pie segments by size (deferred from M9) | done |
 | M16 | Consistent rounding and decluttering | Rounded labels that add up to the rounded total; labels that overlap move apart automatically (builds on M13) | open |
 | M17 | Gantt extensions | Several bars per row, working-day calendars and holidays, import from CSV and ProjectLibre (deferred from M10) | open |
 

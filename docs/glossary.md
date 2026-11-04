@@ -20,6 +20,11 @@ Use these terms consistently in code, UI strings and docs.
 | **Subtotal** | A waterfall column (marked in the "Total" row) that shows the running total instead of a change. |
 | **Step** | One change column of a waterfall, floating between the running totals before and after it. |
 | **Connector** | The thin line from the end of one waterfall column to the start of the next. |
+| **Floating bar (range bar)** | A column or bar drawn between a from and a to level instead of from the baseline; the data sheet holds the two levels in row pairs (ADR 0025). |
+| **Error bar** | A whisker with caps at value ± error over a bar or line point; the paired data row holds the absolute error magnitude (ADR 0025). |
+| **Stacked waterfall** | A waterfall whose data sheet value rows each add their change to one running total, drawn as stacked floating segments per column (ADR 0025). |
+| **Horizontal waterfall** | A waterfall chart turned on its side: steps top to bottom, values left to right (ADR 0025). |
+| **Segment order** | The display order of a pie's segments, sortable by size per pie; display only, labels and arrows keep their data sheet indices (ADR 0025). |
 | **Marimekko (Mekko)** | Stacked chart whose column width is also data (e.g. market size); segments show percent shares (ADR 0009). |
 | **Percent Mekko / Units Mekko** | The two Mekko variants: every column 100 % high with percent labels, or column heights by their sums with absolute labels (ADR 0012). |
 | **Chart option** | A per-chart switch the user can change after inserting, via the context menu or the sidebar (`ChangeChart` command, `core/options.py`). |

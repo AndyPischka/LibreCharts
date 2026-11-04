@@ -32,16 +32,16 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `value_line.py` | Value lines: the average of a chart, the level a line marks, validation of the dialog's value or date (Gantt date lines) |
 | `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows (between series, in percentage points on share charts), the bracket label check, command arguments (ADRs 0010, 0024) |
 | `axis_break.py` | The axis break: automatic or manual value range to remove from the scale, `fold`, validation of the dialog's input |
-| `options.py` | Chart options the user can switch after inserting (variants, 100 %, sorting, Mekko percent/units, line series and their axis): the switches offered for a chart and the `ChangeChart` command's arguments (ADRs 0012, 0013, 0015) |
+| `options.py` | Chart options the user can switch after inserting (variants, 100 %, sorting, Mekko percent/units, line series and their axis, floating bars, error bars, waterfall variants): the switches offered for a chart and the `ChangeChart` command's arguments (ADRs 0012, 0013, 0015, 0025) |
 | `percent.py` | Shares and the "negatives count as empty" rule for 100 % charts and the Mekko |
-| `sorting.py` | Display permutation of the categories, reordered data and annotation indices (ADR 0013) |
+| `sorting.py` | Display permutation of the categories (and of a pie's segments), reordered data and annotation indices (ADRs 0013, 0025) |
 | `picking.py` | Pick mode: chart point -> column, bar, line point, Mekko or pie segment or scatter point, `PickSession` collects the picks for one annotation, `placed` fits a between-series arrow to the chart (ADR 0024) |
 | `links.py` | Data links: range addresses and names, relative and absolute source URLs, the fetched grid (names as shown, values as numbers), the read-only view, update reports (ADR 0020) |
 | `menu.py` | Contents of the chart's context menu as plain data |
 | `panel.py` | Contents of the sidebar panel (buttons, status, annotation list) as plain data |
 | `state_io.py` | `ChartState` <-> JSON with schema migrations; malformed input raises `StateError` |
 | `messages.py` | All user-visible strings in English and German (a test enforces both) |
-| `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series); sample data |
+| `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series), row-paired grids for floating bars and error bars (`ranged`/`errored`); sample data |
 | `scale.py` | "Nice" value axis ranges |
 | `primitives.py` | `Rect`, `Line`, `Polyline`, `Polygon`, `Marker`, `Bubble`, `Text`: layout output in 1/100 mm, styling left to the renderer (`BACKGROUND` and `SHADE` fills, bold `heading` text) |
 | `elements.py` | Harvey ball and check mark names (state in the group name, ending in a letter), the cycle of states and the primitives of each (ADR 0021) |
@@ -51,15 +51,15 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `gantt.py` | Gantt data sheet rules (one row per activity; label, start, end, remark, phase by column position) -> rows of type bar, milestone, phase or heading; Calc serial numbers <-> dates; sort by start (ADR 0019) |
 | `timescale.py` | The Gantt date scale: unit pair from the date range, periods, header labels and date texts per language |
 | `scatter.py` | Scatter data sheet rules (one row per point; label, x, y, size, group by column position) -> points and groups (ADR 0018) |
-| `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked, clustered and 100 % columns / horizontal bars; columns also draw annotations (arrows with series ends, category gaps, group brackets) and line series on a secondary axis; `column_at`/`bar_at` hit-test, gap-aware |
-| `layout/line.py` | Points at the category centres, one `Polyline` per run of values, markers, a label at every point and the series names right of the last point |
+| `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked, clustered and 100 % columns / horizontal bars, plus floating (from/to) bars and error-bar whiskers (ADR 0025); columns also draw annotations (arrows with series ends, category gaps, group brackets) and line series on a secondary axis; `column_at`/`bar_at` hit-test, gap-aware |
+| `layout/line.py` | Points at the category centres, one `Polyline` per run of values, markers, a label at every point and the series names right of the last point, error-bar whiskers on request (ADR 0025) |
 | `layout/area.py` | Stacked and 100 % areas: one `Polygon` per series between its cumulative edges, labels inside, series names right of the last category |
-| `layout/pie.py` | Pies and doughnuts: one pie per category, one `Polygon` per segment clockwise from 12 o'clock, shares inside or outside by angle, the sum in a doughnut's hole; difference and CAGR arrows between segments; `pie_at` |
+| `layout/pie.py` | Pies and doughnuts: one pie per category, one `Polygon` per segment clockwise from 12 o'clock (in the segment sort order, ADR 0025), shares inside or outside by angle, the sum in a doughnut's hole; difference and CAGR arrows between segments; `pie_at` |
 | `layout/scatter.py` | Scatter and bubble charts: forced axes without zero, `Marker`s or `Bubble`s, group legend, value line, difference and CAGR arrows between points; `scatter_at` |
 | `layout/gantt.py` | Label column, two-level date header, a band per row with bars, milestone diamonds and phase brackets, remarks, shading, gridlines and date lines |
 | `layout/butterfly.py` | Two series as bars mirrored around a band of category names, one common scale, optional axis and gridlines |
-| `waterfall.py` | Waterfall data sheet rules (value row, "Total" marker row) -> steps with running totals |
-| `layout/waterfall.py` | Steps -> floating bars, totals, connectors and signed labels |
+| `waterfall.py` | Waterfall data sheet rules (value row, "Total" marker row; stacked: more value rows) -> steps with running totals and per-row segments |
+| `layout/waterfall.py` | Steps -> floating bars, totals, connectors and signed labels, stacked segments, and the horizontal (bar-oriented) variant |
 | `mekko.py` | Mekko data sheet rules (optional "Width" row, negatives ignored) -> segments, column widths and the segment values an annotation measures (ADR 0024) |
 | `layout/mekko.py` | Variable-width columns, 100 % high (percent) or scaled by their sums (units); value, total and width labels, series names, difference and CAGR arrows over segment levels; `mekko_at` |
 | `layout/common.py` | Number format, value axis and gridlines, series labels and legend, value-line lanes shared by the layouts |

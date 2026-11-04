@@ -27,6 +27,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   of the redrawn chart.
 
 ### Added
+- **Floating bars** (M15, *Floating bars* on column and bar charts): the data sheet's series rows
+  come in pairs — a from level and a to level — and each pair is drawn as a bar between the two
+  levels, labelled with the to value. Arrows on a floating bar measure its to level.
+- **Error bars** (M15, *Error bars* on column, bar and line charts): the row below each series row
+  holds its absolute error magnitude; every bar and line point gets a whisker with caps at value ±
+  error, and the scale covers value ± error.
+- **Stacked and horizontal waterfalls** (M15, *Stacked* and *Horizontal* on a waterfall chart):
+  several value rows stack their changes in one running total as floating segments per column, and
+  the horizontal variant turns the chart on its side (steps top to bottom, values left to right).
+- **Sorting pie segments** (M15, *Sort segments* on a pie chart): the segments of each pie can be
+  ordered by size, descending or ascending; display only, like the category sort.
 - **Annotations everywhere** (M14): difference and CAGR arrows now also connect **Mekko segments,
   pie segments and scatter points**, placed by clicking them like on column charts. On a percent
   Mekko and on pies the label shows the difference of the shares in percentage points; on a
