@@ -31,9 +31,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   so that they add up to it — the segments of a stacked column or bar next to their total, and the
   shares of a 100 % column, a percent Mekko and a pie, which sum to exactly 100 %.
 - **Decluttering** (M16): labels that overlap move apart automatically. A segment too small to
-  hold its label no longer hides it: the label stacks outside, above the column with its total
-  (right of a bar). The labels of several line series at one category move apart, as do the
-  outside labels of tiny pie segments.
+  hold its label no longer hides it: the label stacks outside with the column total — above a
+  column, right of a bar end, below a column of negative values (left of a negative bar's end)
+  — and stays inside the chart. The labels of several line series at one category move apart,
+  as do the outside labels of tiny pie segments.
 - **Floating bars** (M15, *Floating bars* on column and bar charts): the data sheet's series rows
   come in pairs — a from level and a to level — and each pair is drawn as a bar between the two
   levels, labelled with the to value. Arrows on a floating bar measure its to level.

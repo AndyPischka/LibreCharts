@@ -27,12 +27,18 @@ and LibreOffice's undo of a drag.
   and bars, percent Mekkos and pies (shares). Not applied where no sum is shown: clustered, line,
   scatter and area charts, waterfalls (step labels are changes, not parts), Gantt charts.
 - **Flat segments label outside (`layout/column.py`, `layout/bar.py`).** A segment below
-  `MIN_SEGMENT_FOR_LABEL` no longer hides its label: the label moves into the lane of the total —
-  above the column's top edge, one `LABEL_HEIGHT` per label, the total on top (right of the bar
-  end for bars, one label width per label, the total last) — as plain text without a segment fill.
-  The slot index of a flat label is data-only, and every label stays right after its segment in
-  the primitive sequence, so the structure stays independent of the size (ADR 0007) and a resize
-  that flips a segment across the threshold re-lays out in place.
+  `MIN_SEGMENT_FOR_LABEL` no longer hides its label: the label moves into the lane of the
+  total — above the column's top edge, one `LABEL_HEIGHT` per label, the total on top (right
+  of the bar end for bars, one label width per label, the total last) — as plain text without
+  a segment fill. A negative segment labels at the column's bottom edge (left of the bar's
+  left end); the total joins the lane of the positive end unless the column has no positive
+  segment, so an all-negative column carries its total below it (left of a negative bar).
+  The slot index of a flat label is data-only, and every label stays right after its segment
+  in the primitive sequence, so the structure stays independent of the size (ADR 0007) and a
+  resize that flips a segment across the threshold re-lays out in place. A lane that grows
+  past the chart box moves back as a whole (`common.spread`, `common.spread_back`): a shape
+  outside the box would grow the chart group on every redraw (the invariant of
+  `test_layout_chart`), so a long lane covers the column or bar it labels instead.
 - **Line labels spread per category (`layout/line.py`).** The labels above the points of one
   category are collected and moved apart with `common.spread` (the lowest keeps its place, the
   others move up); labels below negative points stay as they are.
@@ -66,6 +72,7 @@ and LibreOffice's undo of a drag.
 - The reveal replaces the `hidden` flag of the stacked column/bar and percent layouts; Mekko and
   area layouts still hide labels of too-small segments, and `labels.place` still reveals a hidden
   label the user moves.
-- The lane above a column grows with every flat label; a column of many flat segments can push
-  its total lane high, and the line/pie spread can push a label to the chart edge, where the
-  whole stack shifts back down (`common.spread`).
+- The lane above a column grows with every flat label; a lane that would leave the chart box
+  moves back as a whole and then covers the column or bar it labels (the line/pie spread shifts
+  its whole stack back from the chart edge the same way). A column of many flat segments can
+  therefore push its total lane high onto the column itself.
