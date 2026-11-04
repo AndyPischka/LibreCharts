@@ -14,7 +14,7 @@ from urllib.parse import parse_qs
 
 from librecharts.core import annotations as notes
 from librecharts.core import sorting
-from librecharts.core.datasheet import parse, ranged
+from librecharts.core.datasheet import errored, parse, ranged
 from librecharts.core.layout.bar import bar_at
 from librecharts.core.layout.column import column_at
 from librecharts.core.layout.line import line_at
@@ -46,7 +46,7 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
                 data, "clustered", width, annotations, x, y, state.format, height=height
             )
             return _to_data_index(target, order)
-        data = parse(state)
+        data = errored(state)[0] if state.errors else parse(state)
         order = sorting.order(data, state.grouping, state.sort)
         data = sorting.sorted_data(data, order)
         annotations = sorting.remap(state.annotations, order)
@@ -71,14 +71,15 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
             annotations = sorting.remap(state.annotations, order)
             target = bar_at(data, "clustered", width, height, annotations, x, y, state.format)
             return _to_data_index(target, order)
-        data = parse(state)
+        data = errored(state)[0] if state.errors else parse(state)
         order = sorting.order(data, state.grouping, state.sort)
         data = sorting.sorted_data(data, order)
         annotations = sorting.remap(state.annotations, order)
         target = bar_at(data, state.grouping, width, height, annotations, x, y, state.format)
         return _to_data_index(target, order)
     if state.kind == "line":
-        return line_at(parse(state), width, height, state.annotations, x, y, state.format)
+        data = errored(state)[0] if state.errors else parse(state)
+        return line_at(data, width, height, state.annotations, x, y, state.format)
     if state.kind == "waterfall":
         return step_at(parse_waterfall(state), width, state.annotations, x, y, state.format)
     if state.kind == "mekko":

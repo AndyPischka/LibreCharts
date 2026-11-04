@@ -17,7 +17,7 @@ from librecharts.core import annotations as notes
 from librecharts.core import value_line
 from librecharts.core.axis_break import Break, resolve
 from librecharts.core.axis_break import axis as shortened_axis
-from librecharts.core.datasheet import ChartData
+from librecharts.core.datasheet import ChartData, Series
 from librecharts.core.layout.common import (
     AXIS_BAND,
     LABEL_HEIGHT,
@@ -47,6 +47,7 @@ LANE_LINE_GAP = 100.0  # between an arrow's line and the point below it
 SERIES_BAND = 2600.0  # room right of the lanes for series names
 SERIES_LABEL_GAP = 150.0  # between the lanes and a series name
 PICK_TOLERANCE = 900.0  # how far a click may miss a point and still pick it, 1/100 mm
+ERROR_CAP = 150.0  # half the width of an error bar's cap, 1/100 mm
 
 _YScale = Callable[[float], float]
 
@@ -71,8 +72,12 @@ def layout_line(
     annotations: tuple[Annotation, ...] = (),
     fmt: Format | None = None,
     length_per_unit: float | None = None,
+    errors: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
+
+    With ``errors`` every point gets a whisker with caps at value ± ``errors[i][c]``; the scale
+    covers value ± error as well.
 
     ``length_per_unit`` (same-scale group, ADR 0017) draws one value unit as that many 1/100 mm and
     anchors the scale at the plot bottom; an axis break is then ignored.
@@ -80,7 +85,7 @@ def layout_line(
     Raises ``ValueError`` if the box leaves no room for the plot.
     """
     fmt = fmt or Format()
-    plot = _plot(data, width, height, annotations, fmt, length_per_unit)
+    plot = _plot(data, width, height, annotations, fmt, length_per_unit, errors)
     if not data.categories or not data.series:
         return ()
 
@@ -145,6 +150,18 @@ def layout_line(
                     key=LabelKey("value", c, index),
                 )
             )
+            if errors is not None:
+                err = errors[index][c] if index < len(errors) else None
+                if err:
+                    cx = plot.plot_left + (c + 0.5) * slot
+                    y_top, y_bottom = y(fold(value + err)), y(fold(value - err))
+                    out.extend(
+                        (
+                            Line(cx, y_top, cx, y_bottom, "annotation"),
+                            Line(cx - ERROR_CAP, y_top, cx + ERROR_CAP, y_top, "annotation"),
+                            Line(cx - ERROR_CAP, y_bottom, cx + ERROR_CAP, y_bottom, "annotation"),
+                        )
+                    )
 
     centre = {c: plot.plot_left + (c + 0.5) * slot for c in range(len(data.categories))}
     for lane, arrow in enumerate(plot.brackets):
@@ -258,6 +275,7 @@ def _plot(
     annotations: tuple[Annotation, ...],
     fmt: Format,
     length_per_unit: float | None = None,
+    errors: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> _Plot:
     brackets, levels = notes.arrows(annotations, data, "line")
     value_lines = notes.value_lines(annotations, data, "line")
@@ -273,8 +291,37 @@ def _plot(
     scale_height = plot_height - (LABEL_HEIGHT if has_negative else 0.0)
     if plot_width <= 0 or scale_height <= 0:
         raise ValueError("chart area too small")
-    cut = None if length_per_unit is not None else resolve(annotations, data, "clustered")
-    axis = shortened_axis(data, "clustered", cut) if cut else value_axis(data, "clustered")
+    scale_data = data
+    if errors is not None:  # the scale covers value ± error as well
+        margins: list[Series] = []
+        for i, series in enumerate(data.series):
+            err = errors[i] if i < len(errors) else None
+            if err is None:
+                continue
+            margins.append(
+                Series(
+                    f"{series.name} +",
+                    tuple(
+                        None if v is None or e is None else v + e
+                        for v, e in zip(series.values, err, strict=True)
+                    ),
+                )
+            )
+            margins.append(
+                Series(
+                    f"{series.name} -",
+                    tuple(
+                        None if v is None or e is None else v - e
+                        for v, e in zip(series.values, err, strict=True)
+                    ),
+                )
+            )
+        if margins:
+            scale_data = ChartData(data.categories, (*data.series, *margins))
+    cut = None if length_per_unit is not None else resolve(annotations, scale_data, "clustered")
+    axis = (
+        shortened_axis(scale_data, "clustered", cut) if cut else value_axis(scale_data, "clustered")
+    )
     return _Plot(
         plot_left, top_band, plot_width, plot_height, axis, cut, brackets, levels, value_lines
     )
@@ -286,10 +333,11 @@ def natural_length_per_unit(
     height: float,
     annotations: tuple[Annotation, ...] = (),
     fmt: Format | None = None,
+    errors: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> float | None:
     """How many 1/100 mm one value unit gets when the chart is drawn alone at this size."""
     try:
-        plot = _plot(data, width, height, annotations, fmt or Format())
+        plot = _plot(data, width, height, annotations, fmt or Format(), errors=errors)
     except ValueError:
         return None
     span = plot.axis.maximum - plot.axis.minimum

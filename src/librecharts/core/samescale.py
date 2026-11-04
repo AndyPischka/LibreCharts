@@ -15,7 +15,7 @@ from collections.abc import Sequence
 from typing import Literal
 
 from librecharts.core.layout import area, bar, butterfly, column, line, mekko, waterfall
-from librecharts.core.layout.chart import display_data, display_range
+from librecharts.core.layout.chart import display_data, display_errored, display_range
 from librecharts.core.mekko import parse_mekko
 from librecharts.core.model import ChartState
 from librecharts.core.waterfall import parse_waterfall
@@ -67,21 +67,34 @@ def natural_length_per_unit(state: ChartState, width: float, height: float) -> f
         )
     data, annotations = display_data(state)
     bases: tuple[tuple[float | None, ...], ...] | None = None
+    errors: tuple[tuple[float | None, ...], ...] | None = None
     if state.range:  # floating bars: the scale covers the from levels as well
         data, bases, annotations = display_range(state)
+    elif state.errors:  # error bars: the scale covers value ± error as well
+        data, errors, annotations = display_errored(state)
     if not data.categories or not data.series:
         return None
     if state.kind == "butterfly":
         return butterfly.natural_length_per_unit(data, width, height, state.format)
     if state.kind == "line":
-        return line.natural_length_per_unit(data, width, height, annotations, state.format)
+        return line.natural_length_per_unit(
+            data, width, height, annotations, state.format, errors=errors
+        )
     if state.kind == "area":
         return area.natural_length_per_unit(
             data, width, height, annotations, state.percent, state.format
         )
     if state.kind == "bar":
         return bar.natural_length_per_unit(
-            data, state.grouping, width, height, annotations, state.percent, state.format, bases
+            data,
+            state.grouping,
+            width,
+            height,
+            annotations,
+            state.percent,
+            state.format,
+            bases,
+            errors,
         )
     return column.natural_length_per_unit(
         data,
@@ -94,6 +107,7 @@ def natural_length_per_unit(state: ChartState, width: float, height: float) -> f
         state.lines,
         state.secondary,
         bases,
+        errors,
     )
 
 

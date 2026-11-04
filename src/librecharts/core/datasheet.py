@@ -96,6 +96,34 @@ def ranged(state: ChartState) -> tuple[ChartData, tuple[tuple[float | None, ...]
     return ChartData(categories, tuple(series)), tuple(bases)
 
 
+def errored(state: ChartState) -> tuple[ChartData, tuple[tuple[float | None, ...], ...]]:
+    """The data of a chart with error bars: the series values and the error magnitudes beside them.
+
+    Series rows come in pairs like in floating bars: the series value in an odd data row, its
+    absolute error magnitude (±) in the row below it. An empty error cell means no whisker for that
+    point; a pair whose both rows are empty is dropped, and a dangling unpaired last row stays
+    stored and unused.
+    """
+    rows = len(state.cells)
+    width = len(state.cells[0]) if rows else 0
+    if rows < 2 or width < 2:
+        return ChartData((), ()), ()
+    used_cols = [c for c in range(1, width) if _column_used(state, c)]
+    if not used_cols:
+        return ChartData((), ()), ()
+    last_col = used_cols[-1]
+    categories = tuple(state.cells[0][c].strip() for c in range(1, last_col + 1))
+    series: list[Series] = []
+    errs: list[tuple[float | None, ...]] = []
+    for r in range(1, rows - 1, 2):
+        if not (_row_used(state, r) or _row_used(state, r + 1)):
+            continue
+        name = state.cells[r][0].strip() or f"Series {r}"
+        series.append(Series(name, tuple(state.values[r][c] for c in range(1, last_col + 1))))
+        errs.append(tuple(state.values[r + 1][c] for c in range(1, last_col + 1)))
+    return ChartData(categories, tuple(series)), tuple(errs)
+
+
 def state_from_table(
     kind: ChartKind, grouping: Grouping, table: Sequence[Sequence[Cell]], percent: bool = False
 ) -> ChartState:

@@ -70,6 +70,7 @@ SERIES_BAND = 2600.0  # room right of the lanes for series names
 SERIES_LABEL_GAP = 150.0
 AXIS_BAND_HEIGHT = 700.0  # room below the plot for tick labels
 TICK_WIDTH = 1600.0  # width of one tick label box
+ERROR_CAP = 150.0  # half the height of an error bar's cap, 1/100 mm
 
 _XScale = Callable[[float], float]
 
@@ -84,6 +85,7 @@ def layout_bar(
     fmt: Format | None = None,
     length_per_unit: float | None = None,
     bases: tuple[tuple[float | None, ...], ...] | None = None,
+    errors: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
@@ -93,6 +95,9 @@ def layout_bar(
     With ``bases`` the chart shows floating bars: each series is drawn between its from level
     (``bases[i][c]``, baseline when empty) and its to level (the series value), clustered, and
     labelled with the to value outside the floating end.
+
+    With ``errors`` every bar gets a whisker with caps at value ± ``errors[i][c]``; the scale
+    covers value ± error as well.
 
     ``length_per_unit`` (same-scale group, ADR 0017) draws one value unit as that many 1/100 mm and
     anchors the scale at the plot's left edge, so a shallower chart leaves empty space on the right.
@@ -115,6 +120,32 @@ def layout_bar(
             (*data.series, *(Series(f"From {i}", base) for i, base in enumerate(bases))),
         )
         scale_grouping: Grouping = "clustered"
+    elif errors is not None:  # the scale covers value ± error as well
+        margins: list[Series] = []
+        for i, series in enumerate(data.series):
+            err = errors[i] if i < len(errors) else None
+            if err is None:
+                continue
+            margins.append(
+                Series(
+                    f"{series.name} +",
+                    tuple(
+                        None if v is None or e is None else v + e
+                        for v, e in zip(series.values, err, strict=True)
+                    ),
+                )
+            )
+            margins.append(
+                Series(
+                    f"{series.name} -",
+                    tuple(
+                        None if v is None or e is None else v - e
+                        for v, e in zip(series.values, err, strict=True)
+                    ),
+                )
+            )
+        scale_data = ChartData(data.categories, (*data.series, *margins)) if margins else data
+        scale_grouping = grouping
     else:
         scale_data = data
         scale_grouping = grouping
@@ -188,6 +219,8 @@ def layout_bar(
             out.extend(_stacked_bar(data, c, bar_y, thickness, x, cut, percent=percent, fmt=fmt))
         else:
             out.extend(_clustered_bar(data, c, bar_y, thickness, x, cut, fmt))
+        if errors is not None:
+            out.extend(_bar_error_bars(data, errors, c, bar_y, thickness, x, cut, grouping))
         out.append(
             Text(0, slot_top, LEFT_BAND - LABEL_GAP, slot, category, "right", "category"),
         )
@@ -283,6 +316,7 @@ def natural_length_per_unit(
     percent: bool = False,
     fmt: Format | None = None,
     bases: tuple[tuple[float | None, ...], ...] | None = None,
+    errors: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> float | None:
     """How many 1/100 mm one value unit gets when the chart is drawn alone at this size."""
     if percent:
@@ -297,6 +331,32 @@ def natural_length_per_unit(
             (*data.series, *(Series(f"From {i}", base) for i, base in enumerate(bases))),
         )
         scale_grouping: Grouping = "clustered"
+    elif errors is not None:  # error bars: the scale covers value ± error as well
+        margins: list[Series] = []
+        for i, series in enumerate(data.series):
+            err = errors[i] if i < len(errors) else None
+            if err is None:
+                continue
+            margins.append(
+                Series(
+                    f"{series.name} +",
+                    tuple(
+                        None if v is None or e is None else v + e
+                        for v, e in zip(series.values, err, strict=True)
+                    ),
+                )
+            )
+            margins.append(
+                Series(
+                    f"{series.name} -",
+                    tuple(
+                        None if v is None or e is None else v - e
+                        for v, e in zip(series.values, err, strict=True)
+                    ),
+                )
+            )
+        scale_data = ChartData(data.categories, (*data.series, *margins)) if margins else data
+        scale_grouping = grouping
     else:
         scale_data = data
         scale_grouping = grouping
@@ -749,6 +809,59 @@ def _clustered_bar(
         if cut and cut.cuts(value):  # bars sit one below the other: the mark stays on its bar
             out.extend(_break_mark(x(cut.lower), bar_y, bar_height, 0.0))
     return out
+
+
+def _bar_error_bars(
+    data: ChartData,
+    errors: tuple[tuple[float | None, ...], ...],
+    c: int,
+    y: float,
+    thickness: float,
+    x: _XScale,
+    cut: Break | None,
+    grouping: Grouping,
+) -> list[Primitive]:
+    """Whiskers with caps at value ± error over the bars of category ``c``.
+
+    On a stacked bar the whisker sits at the segment's outer (cumulative) level; on a clustered
+    one at the end of its bar. An empty error cell draws no whisker for that point.
+    """
+    fold = cut.fold if cut else _same
+    out: list[Primitive] = []
+    if grouping == "stacked":
+        positive = negative = 0.0
+        for i, series in enumerate(data.series):
+            value = series.values[c]
+            if value is None or value == 0:
+                continue
+            level = positive + value if value > 0 else negative + value
+            if value > 0:
+                positive += value
+            else:
+                negative += value
+            err = errors[i][c] if i < len(errors) else None
+            if err:
+                out.extend(_hwhisker(y + thickness / 2, level, err, x, fold))
+    else:
+        bar_height = thickness / len(data.series)
+        for i, series in enumerate(data.series):
+            value = series.values[c]
+            if value is None:
+                continue
+            err = errors[i][c] if i < len(errors) else None
+            if err:
+                out.extend(_hwhisker(y + i * bar_height + bar_height / 2, value, err, x, fold))
+    return out
+
+
+def _hwhisker(cy: float, value: float, err: float, x: _XScale, fold: _XScale) -> list[Primitive]:
+    """A horizontal whisker with caps from ``value - err`` to ``value + err`` at ``cy``."""
+    left, right = x(fold(value - err)), x(fold(value + err))
+    return [
+        Line(left, cy, right, cy, "annotation"),
+        Line(left, cy - ERROR_CAP, left, cy + ERROR_CAP, "annotation"),
+        Line(right, cy - ERROR_CAP, right, cy + ERROR_CAP, "annotation"),
+    ]
 
 
 def _range_bar(

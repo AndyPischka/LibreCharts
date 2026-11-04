@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from librecharts.core import labels, sorting
-from librecharts.core.datasheet import ChartData, parse, ranged
+from librecharts.core.datasheet import ChartData, errored, parse, ranged
 from librecharts.core.gantt import parse_gantt
 from librecharts.core.layout.area import layout_area
 from librecharts.core.layout.bar import layout_bar
@@ -78,8 +78,11 @@ def _layout(
         )
     data, annotations = display_data(state)
     bases: tuple[tuple[float | None, ...], ...] | None = None
+    errors: tuple[tuple[float | None, ...], ...] | None = None
     if state.range:  # floating bars: the to values as series, the from levels beside them
         data, bases, annotations = display_range(state)
+    elif state.errors:  # error bars: the series values, the error magnitudes beside them
+        data, errors, annotations = display_errored(state)
     if state.kind == "pie":
         return layout_pie(
             data,
@@ -92,7 +95,9 @@ def _layout(
     if state.kind == "butterfly":
         return layout_butterfly(data, width, height, state.format, length_per_unit)
     if state.kind == "line":
-        return layout_line(data, width, height, annotations, state.format, length_per_unit)
+        return layout_line(
+            data, width, height, annotations, state.format, length_per_unit, errors=errors
+        )
     if state.kind == "area":
         return layout_area(
             data,
@@ -115,6 +120,7 @@ def _layout(
             fmt=state.format,
             length_per_unit=length_per_unit,
             bases=bases,
+            errors=errors,
         )
     return layout_column(
         data,
@@ -128,6 +134,7 @@ def _layout(
         secondary=state.secondary,
         length_per_unit=length_per_unit,
         bases=bases,
+        errors=errors,
     )
 
 
@@ -158,5 +165,20 @@ def display_range(
     return (
         sorting.sorted_data(data, order),
         tuple(tuple(base[i] for i in order) for base in bases),
+        sorting.remap(state.annotations, order),
+    )
+
+
+def display_errored(
+    state: ChartState,
+) -> tuple[ChartData, tuple[tuple[float | None, ...], ...], tuple[Annotation, ...]]:
+    """The error-bar data in display order, the error magnitudes and the annotations moved along."""
+    data, errs = errored(state)
+    order = display_order(state, data)
+    if order == tuple(range(len(order))):
+        return data, errs, state.annotations
+    return (
+        sorting.sorted_data(data, order),
+        tuple(tuple(err[i] for i in order) for err in errs),
         sorting.remap(state.annotations, order),
     )

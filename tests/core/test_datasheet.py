@@ -5,6 +5,7 @@ import pytest
 from librecharts.core.datasheet import (
     ChartData,
     Series,
+    errored,
     parse,
     ranged,
     sample_state,
@@ -157,3 +158,24 @@ def test_ranged_drops_empty_pairs_and_a_dangling_last_row() -> None:
 def test_ranged_without_a_pair_has_no_series() -> None:
     state = replace(state_from_table("column", "stacked", [[None, "A"], ["Only", 3]]), range=True)
     assert ranged(state) == (ChartData(("A",), ()), ())
+
+
+def test_errored_pairs_each_series_row_with_the_error_row_below() -> None:
+    state = replace(
+        state_from_table(
+            "column",
+            "clustered",
+            [
+                [None, "A", "B"],
+                ["Sales", 10, 20],
+                ["Error", 2, None],
+                ["Costs", 6, 8],
+                ["Error", None, 1],
+            ],
+        ),
+        errors=True,
+    )
+    data, errs = errored(state)
+    assert [s.name for s in data.series] == ["Sales", "Costs"]
+    assert data.series[0].values == (10.0, 20.0)
+    assert errs == ((2.0, None), (None, 1.0))

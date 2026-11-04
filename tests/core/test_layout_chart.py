@@ -100,3 +100,20 @@ def test_a_floating_bar_chart_sorts_its_categories_with_the_bases() -> None:
     primitives = layout_chart(state, 2000, 10000)
     names = [p.text for p in primitives if isinstance(p, Text) and p.role == "category"]
     assert names == ["B", "A"]  # sorted by the to values
+
+
+def test_an_error_bar_chart_scales_to_value_plus_error() -> None:
+    state = replace(
+        datasheet.state_from_table(
+            "line",
+            "stacked",
+            [[None, "A", "B"], ["Sales", 10, 20], ["Error", 2, 5]],
+        ),
+        errors=True,
+    )
+    primitives = layout_chart(state, 3000, 10000)
+    whiskers = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    assert len(whiskers) == 6  # two points, a whisker line and two caps each
+    assert not any(
+        isinstance(p, Text) and p.role == "value" and p.text == "25" for p in primitives
+    )  # the whisker top is not labelled

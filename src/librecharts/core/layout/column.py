@@ -88,6 +88,7 @@ BREAK_SLANT = 100.0  # how far the break lines fall from left to right
 BREAK_OVERHANG = 100.0  # how far a break mark reaches beyond a stacked column
 LINE_LABEL_GAP = 100.0  # between a line point and its value label
 PICK_TOLERANCE = 900.0  # how far a click may miss a line point and still pick it, 1/100 mm
+ERROR_CAP = 150.0  # half the width of an error bar's cap, 1/100 mm
 
 _YScale = Callable[[float], float]
 
@@ -121,6 +122,7 @@ class _Geometry:
     secondary_series: tuple[int, ...]
     columns: int
     bases: tuple[tuple[float | None, ...], ...] | None = None  # from levels of floating bars
+    errors: tuple[tuple[float | None, ...], ...] | None = None  # error magnitudes per series
     length_per_unit: float | None = None
 
 
@@ -136,6 +138,7 @@ def layout_column(
     secondary: tuple[int, ...] = (),
     length_per_unit: float | None = None,
     bases: tuple[tuple[float | None, ...], ...] | None = None,
+    errors: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
@@ -145,6 +148,9 @@ def layout_column(
     With ``bases`` the chart shows floating bars: each series is drawn between its from level
     (``bases[i][c]``, baseline when empty) and its to level (the series value), clustered like a
     clustered chart, and labelled with the to value outside the floating end.
+
+    With ``errors`` every column gets a whisker with caps at value ± ``errors[i][c]``; the scale
+    covers value ± error as well.
 
     ``lines`` draws those series as lines instead of columns; ``secondary`` puts a subset of them on
     a right-hand axis, which is drawn even without ``Format.axis``.
@@ -168,6 +174,7 @@ def layout_column(
         secondary,
         length_per_unit,
         bases,
+        errors,
     )
     if not data.categories or not data.series:
         return ()
@@ -238,6 +245,20 @@ def layout_column(
         else:
             out.extend(
                 _clustered_column(columns_data, c, column_x, column_width, y, cut, fmt, geo.columns)
+            )
+        if geo.errors is not None:
+            out.extend(
+                _column_error_bars(
+                    columns_data,
+                    geo.errors,
+                    c,
+                    column_x,
+                    column_width,
+                    y,
+                    cut,
+                    grouping,
+                    geo.columns,
+                )
             )
         out.append(
             Text(
@@ -360,6 +381,7 @@ def natural_length_per_unit(
     lines: tuple[int, ...] = (),
     secondary: tuple[int, ...] = (),
     bases: tuple[tuple[float | None, ...], ...] | None = None,
+    errors: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> float | None:
     """How many 1/100 mm one value unit gets when the chart is drawn alone at this size.
 
@@ -380,6 +402,7 @@ def natural_length_per_unit(
             lines,
             secondary,
             bases=bases,
+            errors=errors,
         )
     except ValueError:
         return None
@@ -405,6 +428,7 @@ def _geometry(
     secondary: tuple[int, ...],
     length_per_unit: float | None = None,
     bases: tuple[tuple[float | None, ...], ...] | None = None,
+    errors: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> _Geometry:
     """Plot rectangle, axes and drawable annotations of a column chart."""
     line_set: frozenset[int] = (
@@ -434,12 +458,43 @@ def _geometry(
     )
     plot_height = height - top_band - CATEGORY_BAND
     # Floating bars: the scale covers the from levels as well, and the bars measure clustered.
+    # Error bars: the scale covers value ± error as well.
     if bases is not None:
         scale_data = ChartData(
             data.categories,
             (*data.series, *(Series(f"From {i}", base) for i, base in enumerate(bases))),
         )
         scale_grouping: Grouping = "clustered"
+    elif errors is not None:
+        margins: list[Series] = []
+        for i, series in enumerate(columns_data.series):
+            err = errors[i] if i < len(errors) else None
+            if err is None:
+                continue
+            margins.append(
+                Series(
+                    f"{series.name} +",
+                    tuple(
+                        None if v is None or e is None else v + e
+                        for v, e in zip(series.values, err, strict=True)
+                    ),
+                )
+            )
+            margins.append(
+                Series(
+                    f"{series.name} -",
+                    tuple(
+                        None if v is None or e is None else v - e
+                        for v, e in zip(series.values, err, strict=True)
+                    ),
+                )
+            )
+        scale_data = (
+            ChartData(columns_data.categories, (*columns_data.series, *margins))
+            if margins
+            else columns_data
+        )
+        scale_grouping = grouping
     else:
         scale_data = columns_data
         scale_grouping = grouping
@@ -497,6 +552,7 @@ def _geometry(
         secondary_series=tuple(sorted(secondary_set)),
         columns=len(data.series) - len(line_set),
         bases=bases,
+        errors=errors,
         length_per_unit=length_per_unit,
     )
 
@@ -1051,6 +1107,63 @@ def _clustered_column(
         if cut and cut.cuts(value):  # bars sit side by side: the mark stays on its bar
             out.extend(break_mark(bar_x, bar_width, y(cut.lower), 0.0))
     return out
+
+
+def _column_error_bars(
+    data: ChartData,
+    errors: tuple[tuple[float | None, ...], ...],
+    c: int,
+    x: float,
+    width: float,
+    y: _YScale,
+    cut: Break | None,
+    grouping: Grouping,
+    columns: int,
+) -> list[Primitive]:
+    """Whiskers with caps at value ± error over the columns of category ``c``.
+
+    On a stacked column the whisker sits at the segment's outer (cumulative) level; on a clustered
+    one at the top of its bar. An empty error cell draws no whisker for that point.
+    """
+    fold = cut.fold if cut else _same
+    out: list[Primitive] = []
+    if grouping == "stacked":
+        positive = negative = 0.0
+        for i, series in enumerate(data.series):
+            value = series.values[c]
+            if value is None or value == 0:
+                continue
+            level = positive + value if value > 0 else negative + value
+            if value > 0:
+                positive += value
+            else:
+                negative += value
+            err = errors[i][c] if i < len(errors) else None
+            if err:
+                out.extend(_whisker(x + width / 2, level, err, y, fold))
+    elif columns > 0:
+        bar_width = width / columns
+        drawn = 0
+        for i, series in enumerate(data.series):
+            value = series.values[c]
+            if value is None:
+                continue
+            bar_x = x + drawn * bar_width
+            drawn += 1
+            err = errors[i][c] if i < len(errors) else None
+            if err:
+                out.extend(_whisker(bar_x + bar_width / 2, value, err, y, fold))
+    return out
+
+
+def _whisker(cx: float, value: float, err: float, y: _YScale, fold: _YScale) -> list[Primitive]:
+    """A vertical whisker with caps from ``value - err`` to ``value + err`` at ``cx``."""
+    top, bottom = y(fold(value + err)), y(fold(value - err))
+    return [
+        Line(cx, top, cx, bottom, "annotation"),
+        Line(cx - ERROR_CAP, top, cx + ERROR_CAP, top, "annotation"),
+        Line(cx - ERROR_CAP, bottom, cx + ERROR_CAP, bottom, "annotation"),
+    ]
 
 
 def _range_column(

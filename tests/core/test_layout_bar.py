@@ -493,3 +493,18 @@ def test_a_narrowing_floating_bar_labels_left_of_its_left_end() -> None:
     label = next(p for p in primitives if isinstance(p, Text) and p.role == "value")
     assert (label.x, label.align) == (3800.0, "right")
     assert label.text == "5"
+
+
+def test_error_bars_draw_a_horizontal_whisker_at_the_end_of_each_bar() -> None:
+    # axis 0..15 covers 10+2 and maps to x 3000..7000; bar A sits at y 300..1700
+    chart = data(("S", (10.0,)), categories=("A",))
+    primitives = layout_bar(chart, "clustered", 8200, 2000, errors=((2.0,),))
+    whiskers = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    assert len(whiskers) == 3
+    horizontal = next(p for p in whiskers if p.y1 == p.y2)
+    cy = 300 + 1400 / 2
+    assert (horizontal.y1, horizontal.x1, horizontal.x2) == (
+        cy,
+        3000 + 8 / 15 * 4000,
+        3000 + 12 / 15 * 4000,
+    )

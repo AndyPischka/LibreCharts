@@ -733,3 +733,26 @@ def test_a_floating_bar_arrow_measures_the_to_level() -> None:
     ]
     tops = sorted(leg.y2 for leg in legs)  # the legs end above the measured to levels
     assert tops == [900.0, 4600.0]  # y(20)-700 and y(10)-700 with the arrow lane's top band
+
+
+def test_error_bars_draw_a_whisker_with_caps_at_value_plus_minus_error() -> None:
+    # axis 0..25 covers 20+2; y(v) = 800 + (25-v)/25 * 8200
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    primitives = layout_column(chart, "clustered", 2000, 10000, errors=((2.0, 1.0),))
+    whiskers = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    assert len(whiskers) == 6  # two bars, a vertical line and two caps each
+    vertical = [p for p in whiskers if p.x1 == p.x2]
+    assert sorted((p.x1, p.y1, p.y2) for p in vertical) == [
+        (500.0, 5064.0, 6376.0),  # bar A at centre 500: y(12) to y(8)
+        (1500.0, 2112.0, 2768.0),  # bar B at centre 1500: y(21) to y(19)
+    ]
+
+
+def test_an_empty_error_cell_draws_no_whisker_and_the_structure_stays_stable() -> None:
+    chart = data(("S", (10.0, 20.0)), ("T", (12.0, 18.0)), categories=("A", "B"))
+    errs = ((2.0, None), (None, 1.0))
+    small = layout_column(chart, "clustered", 2000, 10000, errors=errs)
+    large = layout_column(chart, "clustered", 4000, 20000, errors=errs)
+    assert [type(p) for p in small] == [type(p) for p in large]
+    whiskers = [p for p in small if isinstance(p, Line) and p.role == "annotation"]
+    assert len(whiskers) == 6  # only two of the four points have an error

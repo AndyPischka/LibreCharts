@@ -221,3 +221,12 @@ def test_geometry_stays_inside_the_box() -> None:
             assert p.x + p.width <= 24000 + 1e-9
             assert p.y >= 0
             assert p.y + p.height <= 12000 + 1e-9
+
+
+def test_error_bars_draw_a_whisker_at_every_point_with_an_error() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    primitives = layout_line(chart, 3000, 10000, errors=((2.0, None),))
+    whiskers = [p for p in primitives if isinstance(p, Line) and p.role == "annotation"]
+    assert len(whiskers) == 3  # only the first point has an error: a line and two caps
+    vertical = [p for p in whiskers if p.x1 == p.x2]
+    assert len(vertical) == 1
