@@ -14,7 +14,7 @@ from urllib.parse import parse_qs
 
 from librecharts.core import annotations as notes
 from librecharts.core import sorting
-from librecharts.core.datasheet import parse
+from librecharts.core.datasheet import parse, ranged
 from librecharts.core.layout.bar import bar_at
 from librecharts.core.layout.column import column_at
 from librecharts.core.layout.line import line_at
@@ -37,6 +37,15 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
     The returned category is the data sheet index, even when sorting drew the category elsewhere.
     """
     if state.kind == "column":
+        if state.range:  # floating bars are picked like a clustered chart, at their to level
+            data, _bases = ranged(state)
+            order = sorting.order(data, "clustered", state.sort)
+            data = sorting.sorted_data(data, order)
+            annotations = sorting.remap(state.annotations, order)
+            target = column_at(
+                data, "clustered", width, annotations, x, y, state.format, height=height
+            )
+            return _to_data_index(target, order)
         data = parse(state)
         order = sorting.order(data, state.grouping, state.sort)
         data = sorting.sorted_data(data, order)
@@ -55,6 +64,13 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
         )
         return _to_data_index(target, order)
     if state.kind == "bar":
+        if state.range:  # floating bars are picked like a clustered chart, at their to level
+            data, _bases = ranged(state)
+            order = sorting.order(data, "clustered", state.sort)
+            data = sorting.sorted_data(data, order)
+            annotations = sorting.remap(state.annotations, order)
+            target = bar_at(data, "clustered", width, height, annotations, x, y, state.format)
+            return _to_data_index(target, order)
         data = parse(state)
         order = sorting.order(data, state.grouping, state.sort)
         data = sorting.sorted_data(data, order)

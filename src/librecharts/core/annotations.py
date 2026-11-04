@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import replace
 from urllib.parse import parse_qs
 
-from librecharts.core.datasheet import ChartData, parse
+from librecharts.core.datasheet import ChartData, parse, ranged
 from librecharts.core.gantt import parse_gantt, starts
 from librecharts.core.mekko import levels as mekko_levels
 from librecharts.core.mekko import parse_mekko
@@ -64,6 +64,8 @@ def measured(state: ChartState) -> ChartData:
         return scatter_levels(parse_scatter(state))
     if state.kind == "gantt":
         return starts(parse_gantt(state, state.sort))
+    if state.range:
+        return ranged(state)[0]  # a floating bar is measured at its to level
     return parse(state)
 
 

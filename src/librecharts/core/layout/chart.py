@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from librecharts.core import labels, sorting
-from librecharts.core.datasheet import ChartData, parse
+from librecharts.core.datasheet import ChartData, parse, ranged
 from librecharts.core.gantt import parse_gantt
 from librecharts.core.layout.area import layout_area
 from librecharts.core.layout.bar import layout_bar
@@ -77,6 +77,9 @@ def _layout(
             parse_gantt(state, state.sort), width, height, state.annotations, state.format
         )
     data, annotations = display_data(state)
+    bases: tuple[tuple[float | None, ...], ...] | None = None
+    if state.range:  # floating bars: the to values as series, the from levels beside them
+        data, bases, annotations = display_range(state)
     if state.kind == "pie":
         return layout_pie(
             data,
@@ -111,6 +114,7 @@ def _layout(
             percent=state.percent,
             fmt=state.format,
             length_per_unit=length_per_unit,
+            bases=bases,
         )
     return layout_column(
         data,
@@ -123,6 +127,7 @@ def _layout(
         lines=state.lines,
         secondary=state.secondary,
         length_per_unit=length_per_unit,
+        bases=bases,
     )
 
 
@@ -140,3 +145,18 @@ def display_data(state: ChartState) -> tuple[ChartData, tuple[Annotation, ...]]:
     if order == tuple(range(len(order))):
         return data, state.annotations
     return sorting.sorted_data(data, order), sorting.remap(state.annotations, order)
+
+
+def display_range(
+    state: ChartState,
+) -> tuple[ChartData, tuple[tuple[float | None, ...], ...], tuple[Annotation, ...]]:
+    """The floating-bar data in display order, the from levels and the annotations moved along."""
+    data, bases = ranged(state)
+    order = display_order(state, data)
+    if order == tuple(range(len(order))):
+        return data, bases, state.annotations
+    return (
+        sorting.sorted_data(data, order),
+        tuple(tuple(base[i] for i in order) for base in bases),
+        sorting.remap(state.annotations, order),
+    )

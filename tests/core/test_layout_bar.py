@@ -468,3 +468,28 @@ def test_between_series_arrow_meets_both_bars_of_one_category() -> None:
     assert sorted({leg.y1 for leg in legs}) == [pytest.approx(650.0), pytest.approx(1350.0)]
     label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
     assert label.text == "-50%"  # 10 vs. 5
+
+
+def test_floating_bars_golden_geometry() -> None:
+    # axis 0..20 maps to x 3000..7000; the bars float from 2 to 10 and from 5 to 20
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    assert layout_bar(chart, "clustered", 8200, 4000, bases=((2.0, 5.0),)) == (
+        Line(3000, 0, 3000, 4000, "baseline"),
+        Rect(3400, 300, 1600, 1400, 0),  # x(2)=3400 to x(10)=5000
+        Text(5150, 700, 1050, LABEL_HEIGHT, "10", "left", "value", key=LabelKey("value", 0, 0)),
+        Text(0, 0, 2850, 2000, "A", "right", "category"),
+        Rect(4000, 2300, 3000, 1400, 0),  # x(5)=4000 to x(20)=7000
+        Text(7150, 2700, 1050, LABEL_HEIGHT, "20", "left", "value", key=LabelKey("value", 1, 0)),
+        Text(0, 2000, 2850, 2000, "B", "right", "category"),
+    )
+
+
+def test_a_narrowing_floating_bar_labels_left_of_its_left_end() -> None:
+    # axis 0..10 maps to x 3000..7000; the bar narrows from 10 to 5
+    chart = data(("S", (5.0,)), categories=("A",))
+    primitives = layout_bar(chart, "clustered", 8200, 2000, bases=((10.0,),))
+    bar = next(p for p in primitives if isinstance(p, Rect))
+    assert (bar.x, bar.width) == (5000.0, 2000.0)  # x(5) to x(10)
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "value")
+    assert (label.x, label.align) == (3800.0, "right")
+    assert label.text == "5"

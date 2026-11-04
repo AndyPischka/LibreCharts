@@ -1,9 +1,12 @@
+from dataclasses import replace
+
 import pytest
 
 from librecharts.core.datasheet import (
     ChartData,
     Series,
     parse,
+    ranged,
     sample_state,
     state_from_sheet,
     state_from_table,
@@ -105,3 +108,52 @@ def test_state_from_sheet_treats_text_errors_and_bools_as_empty() -> None:
 def test_state_from_sheet_rejects_mismatched_grids() -> None:
     with pytest.raises(ValueError, match="same number of rows"):
         state_from_sheet("column", "stacked", formulas=[["1"], ["2"]], results=[[1.0]])
+
+
+def test_ranged_pairs_the_series_rows_into_from_and_to() -> None:
+    state = replace(
+        state_from_table(
+            "column",
+            "stacked",
+            [
+                [None, "A", "B"],
+                ["Low", 2, 5],
+                ["High", 10, 20],
+                ["Next low", 1, 1],
+                ["Next high", 3, 4],
+            ],
+        ),
+        range=True,
+    )
+    data, bases = ranged(state)
+    assert data.categories == ("A", "B")
+    assert [s.name for s in data.series] == ["Low", "Next low"]
+    assert data.series[0].values == (10.0, 20.0)
+    assert data.series[1].values == (3.0, 4.0)
+    assert bases == ((2.0, 5.0), (1.0, 1.0))
+
+
+def test_ranged_drops_empty_pairs_and_a_dangling_last_row() -> None:
+    state = replace(
+        state_from_table(
+            "bar",
+            "clustered",
+            [
+                [None, "A", "B"],
+                ["Low", 2, 5],
+                ["High", 10, 20],
+                [None, None, None],
+                [None, None, None],
+                ["Dangling", 7, 8],
+            ],
+        ),
+        range=True,
+    )
+    data, bases = ranged(state)
+    assert [s.name for s in data.series] == ["Low"]
+    assert bases == ((2.0, 5.0),)
+
+
+def test_ranged_without_a_pair_has_no_series() -> None:
+    state = replace(state_from_table("column", "stacked", [[None, "A"], ["Only", 3]]), range=True)
+    assert ranged(state) == (ChartData(("A",), ()), ())

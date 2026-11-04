@@ -357,3 +357,8 @@ def test_the_mekko_variant_clears_the_moved_labels() -> None:
 def test_the_current_variant_sort_and_colours_keep_the_moved_labels(query: str) -> None:
     state = replace(sample_state(), labels=MOVED)
     assert changed(state, query).labels == MOVED
+
+
+def test_a_floating_bar_chart_offers_only_the_way_back_to_the_baseline() -> None:
+    state = changed(sample_state(), "range=true")
+    assert variants(state) == (Switch("menu_baseline", "ChangeChart?range=false", True),)

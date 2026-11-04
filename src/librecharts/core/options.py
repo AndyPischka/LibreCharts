@@ -66,6 +66,8 @@ def variants(state: ChartState) -> tuple[Switch, ...]:
         )
     if state.kind not in ("column", "bar"):
         return ()
+    if state.range:  # floating bars are always clustered and draw from their from level
+        return (Switch("menu_baseline", "ChangeChart?range=false", True),)
     clustered = state.grouping == "clustered"
     switches = [
         Switch("menu_stacked", "ChangeChart?grouping=stacked", not clustered and not state.percent),

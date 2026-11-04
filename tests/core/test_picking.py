@@ -235,3 +235,17 @@ def test_secondary_line_points_use_the_secondary_scale() -> None:
     state = replace(STACKED, lines=(2,), secondary=(2,))
     # the right axis covers the line values only (0..10) and takes one axis band of the plot
     assert target_at(state, WIDTH, HEIGHT, 700, 800 + (10 - 8) / 10 * 6200) == (1, 2)
+
+
+def test_floating_bars_pick_the_series_of_the_clicked_bar() -> None:
+    state = replace(
+        state_from_table(
+            "column",
+            "clustered",
+            [[None, "A", "B"], ["Low", 2, 5], ["High", 10, 20], ["Low 2", 4, 6], ["High 2", 8, 9]],
+        ),
+        range=True,
+    )
+    # width 3000, two categories: slots of 1500, columns of 1050 from x=225, bars 525 wide
+    assert target_at(state, 3000, 8000, 300, 4000) == (0, 0)
+    assert target_at(state, 3000, 8000, 800, 4000) == (0, 1)

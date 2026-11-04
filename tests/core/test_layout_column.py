@@ -676,3 +676,60 @@ def test_combination_geometry_stays_inside_the_box() -> None:
             assert isinstance(p, Line)
             assert min(p.y1, p.y2) >= 0
             assert max(p.y1, p.y2) <= 12000
+
+
+def test_floating_bars_draw_between_their_from_and_to_levels() -> None:
+    # axis 0..20 like the clustered golden chart, but the bars float from 2 to 10 and 5 to 20
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    assert layout_column(chart, "clustered", 2000, 10000, bases=((2.0, 5.0),)) == (
+        Line(0, 9000, 2000, 9000, "baseline"),
+        Rect(150, 4900, 700, 3280, 0),  # y(10)=4900 to y(2)=8180
+        Text(150, 4300, 700, LABEL_HEIGHT, "10", "center", "value", key=LabelKey("value", 0, 0)),
+        Text(0, 9000, 1000, CATEGORY_BAND, "A", "center", "category"),
+        Rect(1150, 800, 700, 6150, 0),  # y(20)=800 to y(5)=6950
+        Text(1150, 200, 700, LABEL_HEIGHT, "20", "center", "value", key=LabelKey("value", 1, 0)),
+        Text(1000, 9000, 1000, CATEGORY_BAND, "B", "center", "category"),
+    )
+
+
+def test_a_falling_floating_bar_labels_below_its_lower_end() -> None:
+    chart = data(("S", (5.0,)), categories=("A",))
+    primitives = layout_column(chart, "clustered", 1000, 10000, bases=((10.0,),))
+    bar = next(p for p in primitives if isinstance(p, Rect))
+    assert (bar.y, bar.height) == (800.0, 4100.0)  # axis 0..10: y(10)=800 to y(5)=4900
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "value")
+    assert label.y == 4900.0  # below the bar
+    assert label.text == "5"
+
+
+def test_floating_bars_of_several_series_sit_side_by_side_without_totals() -> None:
+    chart = data(("S", (10.0,)), ("T", (12.0,)), categories=("A",))
+    primitives = layout_column(
+        chart,
+        "stacked",
+        1000,
+        10000,
+        bases=((2.0,), (4.0,)),  # stacked still floats clustered
+    )
+    bars = [p for p in primitives if isinstance(p, Rect)]
+    assert [(b.x, b.width) for b in bars] == [(150.0, 350.0), (500.0, 350.0)]
+    assert not any(isinstance(p, Text) and p.role == "total" for p in primitives)
+
+
+def test_floating_bars_keep_their_primitive_structure_at_every_size() -> None:
+    chart = data(("S", (10.0, 20.0)), ("T", (12.0, 18.0)), categories=("A", "B"))
+    bases = ((2.0, 5.0), (1.0, 3.0))
+    small = layout_column(chart, "clustered", 2000, 10000, bases=bases)
+    large = layout_column(chart, "clustered", 4000, 20000, bases=bases)
+    assert [type(p) for p in small] == [type(p) for p in large]
+
+
+def test_a_floating_bar_arrow_measures_the_to_level() -> None:
+    chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
+    arrow = Annotation("difference", 0, 1, series=0)
+    primitives = layout_column(chart, "clustered", 2000, 10000, (arrow,), bases=((2.0, 5.0),))
+    legs = [
+        p for p in primitives if isinstance(p, Line) and p.role == "annotation" and p.y1 != p.y2
+    ]
+    tops = sorted(leg.y2 for leg in legs)  # the legs end above the measured to levels
+    assert tops == [900.0, 4600.0]  # y(20)-700 and y(10)-700 with the arrow lane's top band

@@ -23,7 +23,7 @@ from librecharts.core import annotations as notes
 from librecharts.core import value_line
 from librecharts.core.axis_break import Break, column_tops, resolve
 from librecharts.core.axis_break import axis as shortened_axis
-from librecharts.core.datasheet import ChartData
+from librecharts.core.datasheet import ChartData, Series
 from librecharts.core.layout.column import (
     BREAK_GAP,
     BREAK_OVERHANG,
@@ -83,11 +83,16 @@ def layout_bar(
     percent: bool = False,
     fmt: Format | None = None,
     length_per_unit: float | None = None,
+    bases: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
     With ``percent`` the bars are 100 % long and the segments show their share; such a chart has
     no annotations (they stay stored but are neither drawn nor offered).
+
+    With ``bases`` the chart shows floating bars: each series is drawn between its from level
+    (``bases[i][c]``, baseline when empty) and its to level (the series value), clustered, and
+    labelled with the to value outside the floating end.
 
     ``length_per_unit`` (same-scale group, ADR 0017) draws one value unit as that many 1/100 mm and
     anchors the scale at the plot's left edge, so a shallower chart leaves empty space on the right.
@@ -103,20 +108,44 @@ def layout_bar(
         lines = notes.value_lines(annotations, data, "bar")
         gaps = notes.category_gaps(annotations, data, "bar")
         groups = notes.group_brackets(annotations, data, "bar")
+    # Floating bars: the scale covers the from levels as well, and the bars measure clustered.
+    if bases is not None:
+        scale_data = ChartData(
+            data.categories,
+            (*data.series, *(Series(f"From {i}", base) for i, base in enumerate(bases))),
+        )
+        scale_grouping: Grouping = "clustered"
+    else:
+        scale_data = data
+        scale_grouping = grouping
     gap_starts = tuple(sorted({gap.start for gap in gaps}))
     plot_left, plot_top, plot_width, plot_height = _plot(
-        data, width, height, len(brackets) + len(groups), len(levels) + len(lines), fmt, percent
+        scale_data,
+        width,
+        height,
+        len(brackets) + len(groups),
+        len(levels) + len(lines),
+        fmt,
+        percent,
     )
     if plot_height <= 0 or plot_width <= 0:
         raise ValueError("chart area too small")
     if not data.categories or not data.series:
         return ()
 
-    cut = None if percent or length_per_unit is not None else resolve(annotations, data, grouping)
+    cut = (
+        None
+        if percent or length_per_unit is not None
+        else resolve(annotations, scale_data, scale_grouping)
+    )
     axis = (
         PERCENT_AXIS
         if percent
-        else (shortened_axis(data, grouping, cut) if cut else value_axis(data, grouping))
+        else (
+            shortened_axis(scale_data, scale_grouping, cut)
+            if cut
+            else value_axis(scale_data, scale_grouping)
+        )
     )
     span = axis.maximum - axis.minimum
     fold = cut.fold if cut else _same
@@ -153,7 +182,9 @@ def layout_bar(
     for c, category in enumerate(data.categories):
         slot_top = slot_y(c)
         bar_y = slot_top + (slot - thickness) / 2
-        if grouping == "stacked":
+        if bases is not None:
+            out.extend(_range_bar(data, bases, c, bar_y, thickness, x, cut, fmt))
+        elif grouping == "stacked":
             out.extend(_stacked_bar(data, c, bar_y, thickness, x, cut, percent=percent, fmt=fmt))
         else:
             out.extend(_clustered_bar(data, c, bar_y, thickness, x, cut, fmt))
@@ -164,7 +195,8 @@ def layout_bar(
     def edges(category: int, series: int | None) -> tuple[float, float]:
         """Top and bottom edge of the measured bar, or of one bar of a clustered chart."""
         bar_y = slot_y(category) + (slot - thickness) / 2
-        if series is not None and grouping == "clustered":
+        clustered = grouping == "clustered" or bases is not None  # floating bars are clustered
+        if series is not None and clustered:
             bar_height = thickness / len(data.series)
             return bar_y + series * bar_height, bar_y + (series + 1) * bar_height
         return bar_y, bar_y + thickness
@@ -172,7 +204,8 @@ def layout_bar(
     def anchor(category: int, series: int | None) -> tuple[float, float]:
         """Where a bracket arrow meets a bar: right of its outside label, at mid-height."""
         top, bottom = edges(category, series)
-        end = x(column_top(data, grouping, category, series))
+        measured_grouping = "clustered" if bases is not None else grouping
+        end = x(column_top(data, measured_grouping, category, series))
         return end + LABEL_WIDTH + ANCHOR_GAP, (top + bottom) / 2
 
     def level(category: int, series: int | None) -> tuple[float, float]:
@@ -249,6 +282,7 @@ def natural_length_per_unit(
     annotations: tuple[Annotation, ...] = (),
     percent: bool = False,
     fmt: Format | None = None,
+    bases: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> float | None:
     """How many 1/100 mm one value unit gets when the chart is drawn alone at this size."""
     if percent:
@@ -257,13 +291,26 @@ def natural_length_per_unit(
     brackets, levels = notes.arrows(annotations, data, "bar")
     lines = notes.value_lines(annotations, data, "bar")
     groups = notes.group_brackets(annotations, data, "bar")
+    if bases is not None:  # floating bars: the scale covers the from levels as well
+        scale_data = ChartData(
+            data.categories,
+            (*data.series, *(Series(f"From {i}", base) for i, base in enumerate(bases))),
+        )
+        scale_grouping: Grouping = "clustered"
+    else:
+        scale_data = data
+        scale_grouping = grouping
     _, _, plot_width, plot_height = _plot(
-        data, width, height, len(brackets) + len(groups), len(levels) + len(lines), fmt, False
+        scale_data, width, height, len(brackets) + len(groups), len(levels) + len(lines), fmt, False
     )
     if plot_width <= 0 or plot_height <= 0 or not data.categories or not data.series:
         return None
-    cut = resolve(annotations, data, grouping)
-    axis = shortened_axis(data, grouping, cut) if cut else value_axis(data, grouping)
+    cut = resolve(annotations, scale_data, scale_grouping)
+    axis = (
+        shortened_axis(scale_data, scale_grouping, cut)
+        if cut
+        else value_axis(scale_data, scale_grouping)
+    )
     span = axis.maximum - axis.minimum
     if span <= 0:
         return None
@@ -700,5 +747,61 @@ def _clustered_bar(
         out.append(Rect(left, bar_y, right - left, bar_height, i))
         out.append(label)
         if cut and cut.cuts(value):  # bars sit one below the other: the mark stays on its bar
+            out.extend(_break_mark(x(cut.lower), bar_y, bar_height, 0.0))
+    return out
+
+
+def _range_bar(
+    data: ChartData,
+    bases: tuple[tuple[float | None, ...], ...],
+    c: int,
+    y: float,
+    thickness: float,
+    x: _XScale,
+    cut: Break | None,
+    fmt: Format,
+) -> list[Primitive]:
+    """One category of floating bars: each series pair as a rect from its from to its to level.
+
+    The bars sit one below the other like a clustered bar chart. The label shows the to value
+    outside the floating end (right of a widening bar, left of a narrowing one).
+    """
+    out: list[Primitive] = []
+    bar_height = thickness / len(data.series)
+    fold = cut.fold if cut else _same
+    for i, series in enumerate(data.series):
+        to = series.values[c]
+        if to is None:
+            continue
+        base = bases[i][c] if i < len(bases) else None
+        base = 0.0 if base is None else base  # an empty from cell means the baseline
+        bar_y = y + i * bar_height
+        label_y = bar_y + (bar_height - LABEL_HEIGHT) / 2
+        left, right = x(fold(min(to, base))), x(fold(max(to, base)))
+        out.append(Rect(left, bar_y, right - left, bar_height, i))
+        if to >= base:
+            label = Text(
+                right + LABEL_GAP,
+                label_y,
+                LABEL_WIDTH - LABEL_GAP,
+                LABEL_HEIGHT,
+                format_value(to, fmt),
+                "left",
+                "value",
+                key=LabelKey("value", c, i),
+            )
+        else:
+            label = Text(
+                left - LABEL_WIDTH,
+                label_y,
+                LABEL_WIDTH - LABEL_GAP,
+                LABEL_HEIGHT,
+                format_value(to, fmt),
+                "right",
+                "value",
+                key=LabelKey("value", c, i),
+            )
+        out.append(label)
+        if cut and (cut.cuts(to) or cut.cuts(base)):
             out.extend(_break_mark(x(cut.lower), bar_y, bar_height, 0.0))
     return out

@@ -68,6 +68,34 @@ def _column_used(state: ChartState, c: int) -> bool:
     return bool(state.cells[0][c].strip()) or any(row[c] is not None for row in state.values[1:])
 
 
+def ranged(state: ChartState) -> tuple[ChartData, tuple[tuple[float | None, ...], ...]]:
+    """The data of a floating-bar chart: the to values as series, the from levels beside them.
+
+    Series rows come in pairs: data row 1 is the from level and row 2 the to level of the first
+    floating bar, rows 3 and 4 the second, and so on; the bar's name comes from the from row. A
+    pair whose both rows are empty is dropped; a dangling unpaired last row stays stored and
+    unused, like any dangling index after a data edit. An empty from cell means the baseline.
+    """
+    rows = len(state.cells)
+    width = len(state.cells[0]) if rows else 0
+    if rows < 2 or width < 2:
+        return ChartData((), ()), ()
+    used_cols = [c for c in range(1, width) if _column_used(state, c)]
+    if not used_cols:
+        return ChartData((), ()), ()
+    last_col = used_cols[-1]
+    categories = tuple(state.cells[0][c].strip() for c in range(1, last_col + 1))
+    series: list[Series] = []
+    bases: list[tuple[float | None, ...]] = []
+    for r in range(1, rows - 1, 2):
+        if not (_row_used(state, r) or _row_used(state, r + 1)):
+            continue
+        name = state.cells[r][0].strip() or f"Series {r}"
+        series.append(Series(name, tuple(state.values[r + 1][c] for c in range(1, last_col + 1))))
+        bases.append(tuple(state.values[r][c] for c in range(1, last_col + 1)))
+    return ChartData(categories, tuple(series)), tuple(bases)
+
+
 def state_from_table(
     kind: ChartKind, grouping: Grouping, table: Sequence[Sequence[Cell]], percent: bool = False
 ) -> ChartState:

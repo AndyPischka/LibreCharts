@@ -69,3 +69,34 @@ def test_nothing_reaches_out_of_the_box(state: ChartState, size: tuple[int, int]
         assert top >= 0, p
         assert right <= width, p
         assert bottom <= height, p
+
+
+def test_a_floating_bar_chart_lays_out_from_and_to_levels() -> None:
+    state = replace(
+        datasheet.state_from_table(
+            "column",
+            "clustered",
+            [[None, "A", "B"], ["Low", 2, 5], ["High", 10, 20]],
+        ),
+        range=True,
+    )
+    primitives = layout_chart(state, 2000, 10000)
+    bars = [p for p in primitives if isinstance(p, Rect)]
+    assert [(b.y, b.height) for b in bars] == [(4900.0, 3280.0), (800.0, 6150.0)]
+    labels = [p.text for p in primitives if isinstance(p, Text) and p.role == "value"]
+    assert labels == ["10", "20"]
+
+
+def test_a_floating_bar_chart_sorts_its_categories_with_the_bases() -> None:
+    state = replace(
+        datasheet.state_from_table(
+            "column",
+            "clustered",
+            [[None, "A", "B"], ["Low", 2, 5], ["High", 10, 20]],
+        ),
+        range=True,
+        sort="descending",
+    )
+    primitives = layout_chart(state, 2000, 10000)
+    names = [p.text for p in primitives if isinstance(p, Text) and p.role == "category"]
+    assert names == ["B", "A"]  # sorted by the to values

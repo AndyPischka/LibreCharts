@@ -33,7 +33,7 @@ from librecharts.core import annotations as notes
 from librecharts.core import value_line
 from librecharts.core.axis_break import Break, column_tops, resolve
 from librecharts.core.axis_break import axis as shortened_axis
-from librecharts.core.datasheet import ChartData
+from librecharts.core.datasheet import ChartData, Series
 from librecharts.core.layout.common import (
     AXIS_BAND,
     GAP_RATIO,
@@ -120,6 +120,7 @@ class _Geometry:
     line_series: tuple[int, ...]
     secondary_series: tuple[int, ...]
     columns: int
+    bases: tuple[tuple[float | None, ...], ...] | None = None  # from levels of floating bars
     length_per_unit: float | None = None
 
 
@@ -134,11 +135,16 @@ def layout_column(
     lines: tuple[int, ...] = (),
     secondary: tuple[int, ...] = (),
     length_per_unit: float | None = None,
+    bases: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
     With ``percent`` the columns are 100 % high and the segments show their share; such a chart has
     no annotations (they stay stored but are neither drawn nor offered) and no line series.
+
+    With ``bases`` the chart shows floating bars: each series is drawn between its from level
+    (``bases[i][c]``, baseline when empty) and its to level (the series value), clustered like a
+    clustered chart, and labelled with the to value outside the floating end.
 
     ``lines`` draws those series as lines instead of columns; ``secondary`` puts a subset of them on
     a right-hand axis, which is drawn even without ``Format.axis``.
@@ -151,7 +157,17 @@ def layout_column(
     """
     fmt = fmt or Format()
     geo = _geometry(
-        data, grouping, width, height, annotations, percent, fmt, lines, secondary, length_per_unit
+        data,
+        grouping,
+        width,
+        height,
+        annotations,
+        percent,
+        fmt,
+        lines,
+        secondary,
+        length_per_unit,
+        bases,
     )
     if not data.categories or not data.series:
         return ()
@@ -207,7 +223,13 @@ def layout_column(
     for c, category in enumerate(data.categories):
         left = slot_x(c)
         column_x = left + (slot - column_width) / 2
-        if grouping == "stacked":
+        if geo.bases is not None:
+            out.extend(
+                _range_column(
+                    columns_data, geo.bases, c, column_x, column_width, y, cut, fmt, geo.columns
+                )
+            )
+        elif grouping == "stacked":
             out.extend(
                 _stacked_column(
                     columns_data, c, column_x, column_width, y, cut, percent=percent, fmt=fmt
@@ -236,7 +258,8 @@ def layout_column(
     def edges(category: int, series: int | None) -> tuple[float, float]:
         """Left and right edge of the measured column, or of one bar of a clustered column."""
         column_x = slot_x(category) + (slot - column_width) / 2
-        if series is not None and grouping == "clustered" and geo.columns:
+        clustered = grouping == "clustered" or geo.bases is not None  # floating bars are clustered
+        if series is not None and clustered and geo.columns:
             bar_width = column_width / geo.columns
             position = column_indices.index(series) if series in column_indices else 0
             return column_x + position * bar_width, column_x + (position + 1) * bar_width
@@ -249,8 +272,9 @@ def layout_column(
             scale = y_secondary if series in secondary else y_data
             return centre(category), scale(value) - LABEL_HEIGHT - LANE_LINE_GAP
         left, right = edges(category, series)
+        measured_grouping = "clustered" if geo.bases is not None else grouping
         return (left + right) / 2, y_data(
-            column_top(columns_data, grouping, category, series)
+            column_top(columns_data, measured_grouping, category, series)
         ) - LABEL_HEIGHT - LANE_LINE_GAP
 
     def level(category: int, series: int | None) -> tuple[float, float]:
@@ -335,6 +359,7 @@ def natural_length_per_unit(
     fmt: Format | None = None,
     lines: tuple[int, ...] = (),
     secondary: tuple[int, ...] = (),
+    bases: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> float | None:
     """How many 1/100 mm one value unit gets when the chart is drawn alone at this size.
 
@@ -344,7 +369,18 @@ def natural_length_per_unit(
         return None
     fmt = fmt or Format()
     try:
-        geo = _geometry(data, grouping, width, height, annotations, False, fmt, lines, secondary)
+        geo = _geometry(
+            data,
+            grouping,
+            width,
+            height,
+            annotations,
+            False,
+            fmt,
+            lines,
+            secondary,
+            bases=bases,
+        )
     except ValueError:
         return None
     span = geo.axis.maximum - geo.axis.minimum
@@ -368,6 +404,7 @@ def _geometry(
     lines: tuple[int, ...],
     secondary: tuple[int, ...],
     length_per_unit: float | None = None,
+    bases: tuple[tuple[float | None, ...], ...] | None = None,
 ) -> _Geometry:
     """Plot rectangle, axes and drawable annotations of a column chart."""
     line_set: frozenset[int] = (
@@ -396,8 +433,19 @@ def _geometry(
         - (AXIS_BAND if secondary_axis is not None else 0.0)
     )
     plot_height = height - top_band - CATEGORY_BAND
-    has_negative = not percent and any(
-        v is not None and v < 0 for s in data.series for v in s.values
+    # Floating bars: the scale covers the from levels as well, and the bars measure clustered.
+    if bases is not None:
+        scale_data = ChartData(
+            data.categories,
+            (*data.series, *(Series(f"From {i}", base) for i, base in enumerate(bases))),
+        )
+        scale_grouping: Grouping = "clustered"
+    else:
+        scale_data = columns_data
+        scale_grouping = grouping
+    has_negative = not percent and (
+        any(v is not None and v < 0 for s in data.series for v in s.values)
+        or any(v is not None and v < 0 for base in (bases or ()) for v in base)
     )
     # Labels of negative columns hang below them and must not run into the category names.
     scale_height = plot_height - (LABEL_HEIGHT if has_negative else 0.0)
@@ -407,7 +455,7 @@ def _geometry(
     cut = (
         None
         if percent or length_per_unit is not None
-        else resolve(annotations, columns_data, grouping)
+        else resolve(annotations, scale_data, scale_grouping)
     )
     fold = cut.fold if cut else _same
     if percent:
@@ -416,9 +464,9 @@ def _geometry(
         axis = Axis(0.0, 1.0, 1.0)  # nothing to scale; the layout returns no primitives
     else:
         axis = (
-            shortened_axis(columns_data, grouping, cut)
+            shortened_axis(scale_data, scale_grouping, cut)
             if cut
-            else value_axis(columns_data, grouping)
+            else value_axis(scale_data, scale_grouping)
         )
     primary_lines = tuple(i for i in sorted(line_set) if i not in secondary_set)
     axis = _with_line_values(axis, data, primary_lines, fold)
@@ -448,6 +496,7 @@ def _geometry(
         line_series=tuple(sorted(line_set)),
         secondary_series=tuple(sorted(secondary_set)),
         columns=len(data.series) - len(line_set),
+        bases=bases,
         length_per_unit=length_per_unit,
     )
 
@@ -1000,5 +1049,53 @@ def _clustered_column(
             )
         )
         if cut and cut.cuts(value):  # bars sit side by side: the mark stays on its bar
+            out.extend(break_mark(bar_x, bar_width, y(cut.lower), 0.0))
+    return out
+
+
+def _range_column(
+    data: ChartData,
+    bases: tuple[tuple[float | None, ...], ...],
+    c: int,
+    x: float,
+    width: float,
+    y: _YScale,
+    cut: Break | None,
+    fmt: Format,
+    columns: int,
+) -> list[Primitive]:
+    """One category of floating bars: each series pair as a rect from its from to its to level.
+
+    The bars sit side by side like a clustered column. The label shows the to value outside the
+    floating end (above a rising bar, below a falling one); there is no total label.
+    """
+    if columns <= 0:
+        return []
+    fold = cut.fold if cut else _same
+    bar_width = width / columns
+    out: list[Primitive] = []
+    for i, series in enumerate(data.series):
+        to = series.values[c]
+        if to is None:
+            continue
+        base = bases[i][c] if i < len(bases) else None
+        base = 0.0 if base is None else base  # an empty from cell means the baseline
+        bar_x = x + i * bar_width
+        top, bottom = y(fold(max(to, base))), y(fold(min(to, base)))
+        out.append(Rect(bar_x, top, bar_width, bottom - top, i))
+        label_y = top - LABEL_HEIGHT if to >= base else bottom
+        out.append(
+            Text(
+                bar_x,
+                label_y,
+                bar_width,
+                LABEL_HEIGHT,
+                format_value(to, fmt),
+                "center",
+                "value",
+                key=LabelKey("value", c, i),
+            )
+        )
+        if cut and (cut.cuts(to) or cut.cuts(base)):
             out.extend(break_mark(bar_x, bar_width, y(cut.lower), 0.0))
     return out
