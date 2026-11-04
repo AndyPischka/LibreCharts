@@ -45,7 +45,7 @@ def chart_menu(
     data = notes.measured(state)
     items = [_command("menu_show_data" if state.link else "menu_edit_data", "EditData", locale)]
     items += _link_items(state, locale)
-    if state.kind == "gantt":
+    if state.kind == "gantt" and state.link is None:
         items.append(
             MenuItem(
                 text("menu_import", locale),

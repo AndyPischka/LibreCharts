@@ -469,6 +469,14 @@ def test_a_gantt_chart_offers_import() -> None:
     ]
 
 
+def test_a_linked_gantt_chart_offers_no_import() -> None:
+    linked = replace(
+        sample_gantt_state(),
+        link=Link(url="file:///x.ods", sheet="Sheet1", range="A1:B2"),
+    )
+    assert "Import" not in [item.title for item in chart_menu(linked, "en").children]
+
+
 def test_a_gantt_chart_offers_working_days() -> None:
     menu = chart_menu(sample_gantt_state(), "en")
     working = next(item for item in menu.children if item.title == "Working days")
