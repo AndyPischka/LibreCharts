@@ -23,13 +23,18 @@ _NOT_A_MARK = frozenset({"", "0", "false", "no", "nein", "n"})
 
 @dataclass(frozen=True, slots=True)
 class Step:
-    """One column of a waterfall: a change (start -> end) or a total (0 -> end)."""
+    """One column of a waterfall: a change (start -> end) or a total (0 -> end).
+
+    ``segments`` is empty for a single running total; a stacked waterfall (M15) fills it with one
+    (start, end, has_value) triple per series row of the data sheet.
+    """
 
     name: str
     start: float
     end: float
     is_total: bool
     has_value: bool  # False for the gap of an ordinary step
+    segments: tuple[tuple[float, float, bool], ...] = ()
 
     @property
     def change(self) -> float:
@@ -39,6 +44,7 @@ class Step:
 @dataclass(frozen=True, slots=True)
 class WaterfallData:
     steps: tuple[Step, ...]
+    stacked: bool = False
 
 
 def levels(data: WaterfallData) -> ChartData:
@@ -64,7 +70,12 @@ def floor(data: WaterfallData) -> float:
 
 
 def parse_waterfall(state: ChartState) -> WaterfallData:
-    """Extract the steps from the data sheet of ``state``; empty if there is nothing to draw."""
+    """Extract the steps from the data sheet of ``state``; empty if there is nothing to draw.
+
+    With ``state.stacked`` the value rows are row 1 and every used row from row 3 down (row 2 stays
+    the total-mark row): each value row is one series whose changes stack in the column, each from
+    its own running total. A total column is drawn as one segment from zero to the total.
+    """
     rows = len(state.cells)
     width = len(state.cells[0]) if rows else 0
     if rows < 2 or width < 2:
@@ -74,8 +85,13 @@ def parse_waterfall(state: ChartState) -> WaterfallData:
         return rows > 2 and state.cells[2][c].strip().lower() not in _NOT_A_MARK
 
     def used(c: int) -> bool:
-        return bool(state.cells[0][c].strip()) or state.values[1][c] is not None or is_total(c)
+        return (
+            bool(state.cells[0][c].strip())
+            or any(state.values[r][c] is not None for r in value_rows)
+            or is_total(c)
+        )
 
+    value_rows = [1] + [r for r in range(3, rows) if _row_used(state, r)] if state.stacked else [1]
     columns = [c for c in range(1, width) if used(c)]
     if not columns:
         return WaterfallData(())
@@ -83,13 +99,38 @@ def parse_waterfall(state: ChartState) -> WaterfallData:
     steps: list[Step] = []
     running = 0.0
     for c in range(1, columns[-1] + 1):
-        name, value = state.cells[0][c].strip(), state.values[1][c]
+        name = state.cells[0][c].strip()
         if is_total(c):
+            value = state.values[1][c]
             end = running if value is None else value
-            steps.append(Step(name, 0.0, end, True, True))
             running = end
-        else:
+            segments = ((0.0, end, True),) if state.stacked else ()
+            steps.append(Step(name, 0.0, end, True, True, segments))
+        elif not state.stacked:
+            value = state.values[1][c]
             end = running + (value or 0.0)
             steps.append(Step(name, running, end, False, value is not None))
             running = end
-    return WaterfallData(tuple(steps))
+        else:  # stacked: the series rows stack their changes in one running total
+            built: list[tuple[float, float, bool]] = []
+            for r in value_rows:
+                value = state.values[r][c]
+                end = running + (value or 0.0)
+                built.append((running, end, value is not None))
+                running = end
+            segments = tuple(built)
+            steps.append(
+                Step(
+                    name,
+                    segments[0][0],
+                    segments[-1][1],
+                    False,
+                    any(has for _, _, has in segments),
+                    segments,
+                )
+            )
+    return WaterfallData(tuple(steps), state.stacked)
+
+
+def _row_used(state: ChartState, r: int) -> bool:
+    return bool(state.cells[r][0].strip()) or any(v is not None for v in state.values[r][1:])

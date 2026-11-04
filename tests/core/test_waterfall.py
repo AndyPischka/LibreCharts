@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from librecharts.core.datasheet import sample_waterfall_state, state_from_table
@@ -118,3 +120,43 @@ def test_floor_is_the_lowest_level_a_step_touches() -> None:
 def test_floor_is_zero_without_steps() -> None:
     assert floor(WaterfallData((Step("Only", 0, 50, True, True),))) == 0
     assert floor(WaterfallData(())) == 0
+
+
+def test_a_stacked_waterfall_stacks_the_value_rows_in_one_column() -> None:
+    state = replace(
+        state_from_table(
+            "waterfall",
+            "stacked",
+            [
+                [None, "Start", "Growth", "End"],
+                ["S1", 100, 30, None],
+                ["Total", None, None, "x"],
+                ["S2", 5, -10, None],
+            ],
+        ),
+        stacked=True,
+    )
+    data = parse_waterfall(state)
+    assert data.stacked
+    assert data.steps[0].segments == ((0.0, 100.0, True), (100.0, 105.0, True))
+    assert data.steps[1].segments == ((105.0, 135.0, True), (135.0, 125.0, True))
+    assert data.steps[2] == Step("End", 0.0, 125.0, True, True, ((0.0, 125.0, True),))
+
+
+def test_a_stacked_waterfall_gap_step_has_segments_without_values() -> None:
+    state = replace(
+        state_from_table(
+            "waterfall",
+            "stacked",
+            [
+                [None, "A", "Gap", "B"],
+                ["S1", 10, None, 5],
+                ["Total", None, None, None],
+                ["S2", 2, None, 1],
+            ],
+        ),
+        stacked=True,
+    )
+    steps = parse_waterfall(state).steps
+    assert steps[1].segments == ((12.0, 12.0, False), (12.0, 12.0, False))
+    assert not steps[1].has_value

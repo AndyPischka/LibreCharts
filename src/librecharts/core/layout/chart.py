@@ -59,6 +59,7 @@ def _layout(
             state.annotations,
             state.format,
             length_per_unit,
+            horizontal=state.horizontal,
         )
     if state.kind == "mekko":
         return layout_mekko(

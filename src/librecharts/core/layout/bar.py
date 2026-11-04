@@ -253,7 +253,7 @@ def layout_bar(
     lane_start = plot_left + plot_width + RIGHT_BAND
     for lane, arrow in enumerate(brackets):
         out.extend(
-            _bracket(
+            bracket_lane(
                 anchor(arrow.start, arrow.series),
                 anchor(arrow.end, end_series(arrow)),
                 lane_start + lane * BRACKET_LANE_WIDTH + BRACKET_INSET,
@@ -272,7 +272,7 @@ def layout_bar(
     lane_top = plot_bottom + (AXIS_BAND_HEIGHT if fmt.axis else 0.0)
     for lane, arrow in enumerate(levels):
         out.extend(
-            _level(
+            level_lane(
                 level(arrow.start, arrow.series),
                 level(arrow.end, end_series(arrow)),
                 lane_top + lane * LEVEL_LANE_HEIGHT + LEVEL_ARROW_INSET,
@@ -576,7 +576,7 @@ def bar_at(
     return category, int(offset // (thickness / len(data.series)))
 
 
-def _bracket(
+def bracket_lane(
     start: tuple[float, float], end: tuple[float, float], lane_x: float, label: str
 ) -> list[Primitive]:
     """Out from ``start`` to ``lane_x``, along it, back onto ``end`` with an arrowhead."""
@@ -619,7 +619,7 @@ def _group_bracket(top: float, bottom: float, lane_x: float, label: str) -> list
     return out
 
 
-def _level(
+def level_lane(
     start: tuple[float, float], end: tuple[float, float], arrow_y: float, label: str
 ) -> list[Primitive]:
     """Dashed lines from both levels down to ``arrow_y``, an arrow from one level to the other."""

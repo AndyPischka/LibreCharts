@@ -35,6 +35,8 @@ def orientation(state: ChartState) -> Orientation | None:
         return "vertical"
     if state.kind in ("bar", "butterfly"):
         return "horizontal"
+    if state.kind == "waterfall":
+        return "horizontal" if state.horizontal else "vertical"
     if state.kind in VERTICAL_KINDS:
         return "vertical"
     return None
@@ -59,7 +61,12 @@ def natural_length_per_unit(state: ChartState, width: float, height: float) -> f
         return None
     if state.kind == "waterfall":
         return waterfall.natural_length_per_unit(
-            parse_waterfall(state), width, height, state.annotations, state.format
+            parse_waterfall(state),
+            width,
+            height,
+            state.annotations,
+            state.format,
+            state.horizontal,
         )
     if state.kind == "mekko":
         return mekko.natural_length_per_unit(

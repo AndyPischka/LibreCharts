@@ -319,3 +319,65 @@ def test_step_at_misses_the_lanes_and_the_outside_of_the_box() -> None:
     assert step_at(BRIDGE, 6000, (level,), 100, 100) == (0, None)
     assert step_at(BRIDGE, 6000, (level,), 6000 - LEVEL_LANE_WIDTH, 100) is None
     assert step_at(WaterfallData(()), 4000, (), 100, 100) is None
+
+
+def test_a_stacked_waterfall_draws_one_segment_per_series_row() -> None:
+    data = WaterfallData(
+        (
+            Step("A", 0, 130, False, True, ((0.0, 100.0, True), (100.0, 130.0, True))),
+            Step("B", 130, 120, False, True, ((130.0, 110.0, True), (110.0, 120.0, True))),
+        ),
+        stacked=True,
+    )
+    primitives = layout_waterfall(data, 2000, 10000)
+    bars = [p for p in primitives if isinstance(p, Rect)]
+    # two columns of 700 from x=150 and x=1150, each with two full-width segments
+    assert [(b.x, b.width) for b in bars] == [
+        (150.0, 700.0),
+        (150.0, 700.0),
+        (1150.0, 700.0),
+        (1150.0, 700.0),
+    ]
+    labels = [p.text for p in primitives if isinstance(p, Text) and p.role == "value"]
+    assert labels == ["+100", "+30", "-20", "+10"]
+    assert [p.key for p in primitives if isinstance(p, Text) and p.role == "value"] == [
+        LabelKey("value", 0, 0),
+        LabelKey("value", 0, 1),
+        LabelKey("value", 1, 0),
+        LabelKey("value", 1, 1),
+    ]
+
+
+def test_a_horizontal_waterfall_runs_top_to_bottom_like_a_bar_chart() -> None:
+    data = WaterfallData(
+        (
+            Step("A", 0, 100, True, True),
+            Step("B", 100, 60, False, True),
+        )
+    )
+    primitives = layout_waterfall(data, 9200, 4000, horizontal=True)
+    bars = [p for p in primitives if isinstance(p, Rect)]
+    # the falling step reserves a label band left of the plot: axis 0..100 maps to x 4200..8000
+    assert [(b.x, b.width, b.y, b.height) for b in bars] == [
+        (4200.0, 3800.0, 1040.0, 1120.0),  # A: 0..100, slot 1600, bar 1120 thick
+        (6480.0, 1520.0, 2640.0, 1120.0),  # B: 60..100
+    ]
+    names = [p.text for p in primitives if isinstance(p, Text) and p.role == "category"]
+    assert names == ["A", "B"]
+    labels = [p.text for p in primitives if isinstance(p, Text) and p.role == "value"]
+    assert labels == ["100", "-40"]
+    connectors = [p for p in primitives if isinstance(p, Line) and p.role == "connector"]
+    assert len(connectors) == 1
+    assert connectors[0].x1 == connectors[0].x2  # vertical
+
+
+def test_a_horizontal_waterfall_picks_steps_by_y() -> None:
+    data = WaterfallData((Step("A", 0, 100, True, True), Step("B", 100, 60, False, True)))
+    assert step_at(data, 9200, (), 5000, 1000, height=4000, horizontal=True) == (0, None)
+    assert step_at(data, 9200, (), 5000, 3000, height=4000, horizontal=True) == (1, None)
+
+
+def test_waterfall_variants_flow_through_layout_chart() -> None:
+    state = replace(sample_waterfall_state(), horizontal=True, stacked=True)
+    primitives = layout_chart(state, 9200, 4000)
+    assert any(isinstance(p, Rect) for p in primitives)

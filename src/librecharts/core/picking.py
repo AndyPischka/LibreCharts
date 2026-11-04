@@ -81,7 +81,16 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
         data = errored(state)[0] if state.errors else parse(state)
         return line_at(data, width, height, state.annotations, x, y, state.format)
     if state.kind == "waterfall":
-        return step_at(parse_waterfall(state), width, state.annotations, x, y, state.format)
+        return step_at(
+            parse_waterfall(state),
+            width,
+            state.annotations,
+            x,
+            y,
+            state.format,
+            horizontal=state.horizontal,
+            height=height,
+        )
     if state.kind == "mekko":
         return mekko_at(
             parse_mekko(state), width, height, state.percent, x, y, state.annotations, state.format
