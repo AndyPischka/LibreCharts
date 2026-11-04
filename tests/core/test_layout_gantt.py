@@ -6,12 +6,13 @@ import pytest
 from librecharts.core.datasheet import Cell, sample_gantt_state, state_from_table
 from librecharts.core.gantt import parse_gantt, serial
 from librecharts.core.layout.chart import layout_chart
-from librecharts.core.layout.gantt import DIAMOND, layout_gantt
-from librecharts.core.model import Annotation, ChartState, Format
+from librecharts.core.layout.gantt import DIAMOND, MIN_BAR, layout_gantt
+from librecharts.core.model import Annotation, Calendar, ChartState, Format
 from librecharts.core.primitives import SHADE, Line, Polygon, Primitive, Rect, Text
 
 HEADER = ["Activity", "Start", "End", "Remark", "Phase"]
 WIDTH, HEIGHT = 20000.0, 12000.0
+WEEKDAYS = Calendar((0, 1, 2, 3, 4))
 
 
 def day(month: int, number: int) -> int:
@@ -250,3 +251,61 @@ def test_a_phase_spans_all_bars_of_its_row() -> None:
     assert phase.x + phase.width > bar.x + bar.width
     ticks = [p for p in out if isinstance(p, Line) and p.role == "connector"]
     assert [tick.x1 for tick in ticks] == pytest.approx([phase.x, phase.x + phase.width])
+
+
+def test_a_weekend_between_two_bars_takes_no_width() -> None:
+    state = replace(
+        gantt(
+            ["Friday", day(3, 6), day(3, 7), None, None],
+            ["Monday", day(3, 9), day(3, 10), None, None],
+        ),
+        calendar=WEEKDAYS,
+    )
+    friday, monday = bars(lay(state))
+    assert friday.x + friday.width == pytest.approx(monday.x)  # the weekend has no gap
+
+
+def test_a_milestone_on_a_weekend_sits_on_the_boundary() -> None:
+    state = replace(
+        gantt(
+            ["Friday", day(3, 6), day(3, 7), None, None],
+            ["Saturday", day(3, 7), None, None, None],
+            ["Monday", day(3, 9), day(3, 10), None, None],
+        ),
+        calendar=WEEKDAYS,
+    )
+    out = lay(state)
+    friday, monday = bars(out)
+    (diamond,) = [p for p in out if isinstance(p, Polygon)]
+    xs = [x for x, _ in diamond.points]
+    centre = (min(xs) + max(xs)) / 2
+    assert centre == pytest.approx(friday.x + friday.width)
+    assert centre == pytest.approx(monday.x)
+
+
+def test_a_bar_without_a_working_day_keeps_a_minimum_width() -> None:
+    state = replace(
+        gantt(
+            ["Weekend", day(3, 7), day(3, 8), None, None],
+            ["Monday", day(3, 9), day(3, 10), None, None],
+        ),
+        calendar=WEEKDAYS,
+    )
+    weekend, _ = bars(lay(state))
+    assert weekend.width == pytest.approx(MIN_BAR)
+
+
+def test_a_date_line_on_a_weekend_sits_on_the_boundary() -> None:
+    state = replace(
+        gantt(
+            ["Friday", day(3, 6), day(3, 7), None, None],
+            ["Monday", day(3, 9), day(3, 10), None, None],
+        ),
+        calendar=WEEKDAYS,
+        annotations=(Annotation("value_line", 0, 0, value=float(day(3, 7))),),
+    )
+    out = lay(state)
+    friday, monday = bars(out)
+    (line,) = [p for p in out if isinstance(p, Line) and p.role == "helper"]
+    assert line.x1 == pytest.approx(friday.x + friday.width)
+    assert line.x1 == pytest.approx(monday.x)

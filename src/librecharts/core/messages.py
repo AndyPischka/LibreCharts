@@ -535,6 +535,46 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "{kind}, {count} rows",
         "de": "{kind}, {count} Zeilen",
     },
+    "status_gantt_calendar": {
+        "en": "{kind}, {count} rows, working days",
+        "de": "{kind}, {count} Zeilen, Arbeitstage",
+    },
+    "menu_working_days": {
+        "en": "Working days",
+        "de": "Arbeitstage",
+    },
+    "menu_working_all": {
+        "en": "All days",
+        "de": "Alle Tage",
+    },
+    "menu_working_weekdays": {
+        "en": "Monday to Friday",
+        "de": "Montag bis Freitag",
+    },
+    "menu_working_custom": {
+        "en": "Custom...",
+        "de": "Benutzerdefiniert...",
+    },
+    "working_days_title": {
+        "en": "Working days",
+        "de": "Arbeitstage",
+    },
+    "working_days_names": {
+        "en": "Mon,Tue,Wed,Thu,Fri,Sat,Sun",
+        "de": "Mo,Di,Mi,Do,Fr,Sa,So",
+    },
+    "working_days_holidays": {
+        "en": "Holidays (one date per line):",
+        "de": "Feiertage (ein Datum pro Zeile):",
+    },
+    "working_days_bad_date": {
+        "en": "Please enter dates such as 2026-12-25 or 25.12.2026.",
+        "de": "Bitte Daten wie 25.12.2026 eingeben.",
+    },
+    "working_days_none": {
+        "en": "Choose at least one working day.",
+        "de": "Bitte mindestens einen Arbeitstag wählen.",
+    },
     "menu_sort_start": {
         "en": "By start date",
         "de": "Nach Startdatum",

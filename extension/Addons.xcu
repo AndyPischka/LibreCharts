@@ -264,6 +264,19 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m2h" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Working days...</value>
+              <value xml:lang="de">Arbeitstage...</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:WorkingDays</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
           <node oor:name="m3" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>

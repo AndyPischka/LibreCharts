@@ -49,7 +49,8 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
    chart to others.
    A Gantt chart's data sheet has one row per activity (Activity, Start, End, Remark, Phase): two
    dates give a bar, one date a milestone, text in *Phase* makes a phase over the rows below it.
-   Further start/end pairs in F/G, H/I, ... give the same row more bars.
+   Further start/end pairs in F/G, H/I, ... give the same row more bars. *Working days* hides
+   weekends and holidays from the time scale.
    *Add date line...* and *Add today line* mark a date; the rows can be sorted by start date.
    *Link data...* takes a chart's data from a range (or named range) of a Calc, Excel or CSV
    file instead of its data sheet; *Update link* or *Update all links* reads the file again,

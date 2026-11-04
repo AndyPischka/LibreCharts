@@ -134,6 +134,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.value_line(self.ctx, self.frame)
             elif url.Path == "TodayLine":
                 commands.today_line(self.ctx, self.frame)
+            elif url.Path.startswith("WorkingDays"):
+                commands.working_days(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("EditValueLine"):
                 commands.edit_value_line(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("EditBracketText"):

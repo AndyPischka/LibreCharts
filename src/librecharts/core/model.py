@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from datetime import date
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 
 ChartKind = Literal[
     "column", "bar", "waterfall", "mekko", "line", "area", "pie", "scatter", "butterfly", "gantt"
@@ -62,6 +63,31 @@ class Format:
             raise ValueError(f"unknown decimal separator: {self.separator!r}")
         if len(self.language) != 2 or not self.language.isalpha():
             raise ValueError(f"language must be a two-letter code, not {self.language!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class Calendar:
+    """The working days of a Gantt chart (M17).
+
+    ``working_days`` are weekday numbers, Monday = 0. ``holidays`` are single days off. The default
+    (every day working, no holidays) keeps the time scale linear, as before M17. Any other calendar
+    hides its non-working days: they take no width on the time scale.
+    """
+
+    working_days: tuple[int, ...] = (0, 1, 2, 3, 4, 5, 6)
+    holidays: tuple[date, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.working_days:
+            raise ValueError("a calendar needs at least one working day")
+        if len(set(self.working_days)) != len(self.working_days):
+            raise ValueError("working days must be unique")
+        if any(day < 0 or day > 6 for day in self.working_days):
+            raise ValueError("working days are weekday numbers from 0 (Monday) to 6 (Sunday)")
+        if len(set(self.holidays)) != len(self.holidays):
+            raise ValueError("a holiday can only be listed once")
+        object.__setattr__(self, "working_days", tuple(sorted(self.working_days)))
+        object.__setattr__(self, "holidays", tuple(sorted(self.holidays)))
 
 
 @dataclass(frozen=True, slots=True)
@@ -246,7 +272,8 @@ class ChartState:
     butterfly chart draws the first two series as mirrored bars. A Gantt chart reads its data sheet
     by column position too (``core/gantt.py``); its only sort order besides ``"none"`` is
     ``"ascending"``, by start date. ``grouping`` has no meaning for these four and stays
-    ``"stacked"``.
+    ``"stacked"``. ``calendar`` hides the non-working days of a Gantt chart (M17); the default keeps
+    every day, so existing charts draw as before.
 
     ``link`` takes the data from an external spreadsheet instead of the data sheet (ADR 0020). The
     fetched values are stored in ``cells`` and ``values`` like data sheet values, so the chart draws
@@ -272,6 +299,7 @@ class ChartState:
     percent: bool = False
     sort: SortOrder = "none"
     format: Format = Format()
+    calendar: Calendar = Calendar()
     lines: tuple[int, ...] = ()
     secondary: tuple[int, ...] = ()
     colors: tuple[int | None, ...] = ()

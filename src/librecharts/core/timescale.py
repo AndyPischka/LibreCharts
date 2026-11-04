@@ -10,11 +10,13 @@ come from ``core/messages.py``.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Literal
 
+from librecharts.core.calendar import is_working, working_between
 from librecharts.core.messages import text
+from librecharts.core.model import Calendar
 
 Unit = Literal["day", "week", "month", "quarter", "year", "decade"]
 
@@ -44,14 +46,35 @@ class TimeScale:
     upper: Unit
     start: date
     end: date  # exclusive
+    calendar: Calendar = field(default_factory=Calendar)
 
     @property
     def days(self) -> int:
+        """The calendar days of the scale; ``working_days`` counts the days that take width."""
         return (self.end - self.start).days
 
+    @property
+    def working_days(self) -> int:
+        """How many days take width: the working days, or all days if none is working."""
+        count = working_between(self.calendar, self.start, self.end)
+        return count or self.days
+
     def fraction(self, day: date) -> float:
-        """Where the start of ``day`` lies on the scale: 0 at ``start``, 1 at ``end``."""
-        return (day - self.start).days / self.days
+        """Where the start of ``day`` lies on the scale: 0 at ``start``, 1 at ``end``.
+
+        Non-working days have no width: their fraction is the boundary of the next working day.
+        """
+        total = working_between(self.calendar, self.start, self.end)
+        if total == 0:  # no working day in the scale: fall back to calendar days
+            return min(max((day - self.start).days / self.days, 0.0), 1.0)
+        return min(max(working_between(self.calendar, self.start, day) / total, 0.0), 1.0)
+
+    def day_width(self, day: date) -> float:
+        """The share of the scale ``day`` takes: one working day, or nothing."""
+        total = working_between(self.calendar, self.start, self.end)
+        if total == 0:  # no working day in the scale: fall back to calendar days
+            return 1 / self.days
+        return 1 / total if is_working(self.calendar, day) else 0.0
 
     def periods(self, unit: Unit) -> tuple[Period, ...]:
         """The units of the scale, the first and last clipped to its range."""
@@ -64,10 +87,12 @@ class TimeScale:
         return tuple(out)
 
     def labelled(self, period: Period, unit: Unit) -> bool:
-        """Whether ``period`` keeps at least half of its unit; a shorter cut-off end of the
-        upper level stays unlabelled, its label would not fit."""
+        """Whether ``period`` keeps at least half of its unit's working days; a shorter cut-off
+        end of the upper level stays unlabelled, its label would not fit."""
         start = floor(period.start, unit)
-        return 2 * (period.end - period.start).days >= (after(start, unit) - start).days
+        whole = working_between(self.calendar, start, after(start, unit))
+        have = working_between(self.calendar, period.start, period.end)
+        return whole > 0 and 2 * have >= whole
 
     @property
     def years(self) -> int:
@@ -75,13 +100,18 @@ class TimeScale:
         return (self.end - timedelta(days=1)).year - self.start.year + 1
 
 
-def time_scale(first: date, last: date) -> TimeScale:
-    """The scale for the days ``first`` to ``last`` (both included)."""
+def time_scale(first: date, last: date, calendar: Calendar | None = None) -> TimeScale:
+    """The scale for the days ``first`` to ``last`` (both included).
+
+    ``calendar`` hides its non-working days; the unit pair still follows the calendar days, so the
+    number of units does not change when weekends are hidden.
+    """
+    calendar = calendar or Calendar()
     for lower, upper in PAIRS:
         start = floor(first, lower)
         end = after(floor(last, lower), lower)
         if (lower, upper) == PAIRS[-1] or _count(start, end, lower) <= MAX_UNITS:
-            return TimeScale(lower, upper, start, end)
+            return TimeScale(lower, upper, start, end, calendar)
     raise AssertionError("unreachable: the last pair always matches")
 
 

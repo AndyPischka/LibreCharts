@@ -9,11 +9,13 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from datetime import date
 from typing import Any, cast
 
 from librecharts.core.model import (
     SCHEMA_VERSION,
     Annotation,
+    Calendar,
     ChartState,
     Format,
     LabelKey,
@@ -128,6 +130,17 @@ def _v13_to_v14(raw: _Raw) -> _Raw:
     return {**raw, "range": False, "errors": False, "horizontal": False, "stacked": False}
 
 
+def _v14_to_v15(raw: _Raw) -> _Raw:
+    """Version 15 added the working-day calendar of Gantt charts (M17).
+
+    Existing charts keep every day working, so their time scale stays linear.
+    """
+    return {
+        **raw,
+        "calendar": {"working_days": [0, 1, 2, 3, 4, 5, 6], "holidays": []},
+    }
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -143,6 +156,7 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     11: _v11_to_v12,
     12: _v12_to_v13,
     13: _v13_to_v14,
+    14: _v14_to_v15,
 }
 
 
@@ -162,6 +176,7 @@ def to_json(state: ChartState) -> str:
             "percent": state.percent,
             "sort": state.sort,
             "format": _format_to_raw(state.format),
+            "calendar": _calendar_to_raw(state.calendar),
             "lines": list(state.lines),
             "secondary": list(state.secondary),
             "colors": list(state.colors),
@@ -197,6 +212,7 @@ def from_json(text: str) -> ChartState:
             percent=_as_bool(_get(raw, "percent")),
             sort=_get(raw, "sort"),
             format=_as_format(_get(raw, "format")),
+            calendar=_as_calendar(_get(raw, "calendar")),
             lines=_as_indices(_get(raw, "lines"), "line series"),
             secondary=_as_indices(_get(raw, "secondary"), "secondary series"),
             colors=_as_colors(_get(raw, "colors")),
@@ -241,6 +257,13 @@ def _format_to_raw(fmt: Format) -> _Raw:
         "separator": fmt.separator,
         "language": fmt.language,
         "markers": fmt.markers,
+    }
+
+
+def _calendar_to_raw(calendar: Calendar) -> _Raw:
+    return {
+        "working_days": list(calendar.working_days),
+        "holidays": [day.isoformat() for day in calendar.holidays],
     }
 
 
@@ -363,6 +386,29 @@ def _as_format(value: object) -> Format:
         language=_as_str(_get(raw, "language")),
         markers=_as_flag(_get(raw, "markers"), "markers"),
     )
+
+
+def _as_calendar(value: object) -> Calendar:
+    raw = _as_object(value)
+    return Calendar(
+        working_days=_as_indices(_get(raw, "working_days"), "working days"),
+        holidays=tuple(_as_date(day) for day in _as_array(_get(raw, "holidays"), "holidays")),
+    )
+
+
+def _as_date(value: object) -> date:
+    if not isinstance(value, str):
+        raise StateError("holidays must be ISO dates")
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise StateError(f"invalid holiday date: {value!r}") from exc
+
+
+def _as_array(value: object, name: str) -> list[object]:
+    if not isinstance(value, list):
+        raise StateError(f"{name} must be a list")
+    return cast("list[object]", value)
 
 
 def _as_flag(value: object, name: str) -> bool:

@@ -25,14 +25,14 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 
 | Module | Role |
 |---|---|
-| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations with their end series and bracket text, Mekko/100 % option `percent`, category `sort`, `format`, line series `lines`/`secondary`, series palette overrides `colors`, same-scale group `scale_group`, data `link`, moved-label offsets `labels`, schema version) |
+| `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations with their end series and bracket text, Mekko/100 % option `percent`, category `sort`, `format`, Gantt working `calendar`, line series `lines`/`secondary`, series palette overrides `colors`, same-scale group `scale_group`, data `link`, moved-label offsets `labels`, schema version) |
 | `format.py` | Chart format options: defaults for a new chart, `ChangeFormat` arguments, which chart kind supports what, number-format parsing and validation, locale rules, `apply` for "copy chart format" (ADR 0014) |
 | `style.py` | Colour schemes (palette, text, line, background, font), the built-ins, scheme JSON and the black/white text colour for a fill by WCAG relative luminance (ADRs 0014, 0016) |
 | `samescale.py` | Same-scale groups: orientation, joinability, the natural length per value unit of every layout and the smallest common one (ADR 0017) |
 | `value_line.py` | Value lines: the average of a chart, the level a line marks, validation of the dialog's value or date (Gantt date lines) |
 | `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows (between series, in percentage points on share charts), the bracket label check, command arguments (ADRs 0010, 0024) |
 | `axis_break.py` | The axis break: automatic or manual value range to remove from the scale, `fold`, validation of the dialog's input |
-| `options.py` | Chart options the user can switch after inserting (variants, 100 %, sorting, Mekko percent/units, line series and their axis, floating bars, error bars, waterfall variants): the switches offered for a chart and the `ChangeChart` command's arguments (ADRs 0012, 0013, 0015, 0025) |
+| `options.py` | Chart options the user can switch after inserting (variants, 100 %, sorting, Mekko percent/units, line series and their axis, floating bars, error bars, waterfall variants, Gantt working days): the switches offered for a chart and the `ChangeChart` command's arguments (ADRs 0012, 0013, 0015, 0025; M17) |
 | `percent.py` | Shares and the "negatives count as empty" rule for 100 % charts and the Mekko |
 | `rounding.py` | Consistent rounding: segment labels that add up to the rounded total, shares that sum to 100 % (largest remainder, ADR 0026) |
 | `sorting.py` | Display permutation of the categories (and of a pie's segments), reordered data and annotation indices (ADRs 0013, 0025) |
@@ -50,14 +50,15 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `agenda.py` | The agenda: list shape names, chapters and their JSON, titles from the main slide's text, reconciling edits, what *Insert agenda*, *Start chapter here* and *Update agenda* change, the numbered and highlighted list lines (ADR 0022) |
 | `geometry.py` | Circle geometry: `polar` and `sector` (pie and doughnut segments as point lists; shared with the Harvey balls of M12) |
 | `gantt.py` | Gantt data sheet rules (one row per activity; label, start, end, remark, phase and further start/end pairs by column position) -> rows with bars and milestones, of type bar, milestone, phase or heading; Calc serial numbers <-> dates; sort by the earliest start (ADR 0019, M17) |
-| `timescale.py` | The Gantt date scale: unit pair from the date range, periods, header labels and date texts per language |
+| `timescale.py` | The Gantt date scale: unit pair from the date range, periods, header labels and date texts per language; working days take the width, non-working days none (M17) |
+| `calendar.py` | Working-day calendars: working days and holidays, counting working days in a range, parsing the dialog's holidays and the `WorkingDays` query (M17) |
 | `scatter.py` | Scatter data sheet rules (one row per point; label, x, y, size, group by column position) -> points and groups (ADR 0018) |
 | `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked, clustered and 100 % columns / horizontal bars, plus floating (from/to) bars and error-bar whiskers (ADR 0025); labels of segments too small to hold them move out and stack in the total's lane (ADR 0026); columns also draw annotations (arrows with series ends, category gaps, group brackets) and line series on a secondary axis; `column_at`/`bar_at` hit-test, gap-aware |
 | `layout/line.py` | Points at the category centres, one `Polyline` per run of values, markers, a label at every point (the labels of one category move apart when they overlap, ADR 0026) and the series names right of the last point, error-bar whiskers on request (ADR 0025) |
 | `layout/area.py` | Stacked and 100 % areas: one `Polygon` per series between its cumulative edges, labels inside, series names right of the last category |
 | `layout/pie.py` | Pies and doughnuts: one pie per category, one `Polygon` per segment clockwise from 12 o'clock (in the segment sort order, ADR 0025), shares inside or outside by angle (outside labels move apart per side, ADR 0026), the sum in a doughnut's hole; difference and CAGR arrows between segments; `pie_at` |
 | `layout/scatter.py` | Scatter and bubble charts: forced axes without zero, `Marker`s or `Bubble`s, group legend, value line, difference and CAGR arrows between points; `scatter_at` |
-| `layout/gantt.py` | Label column, two-level date header, a band per row with one or more bars, milestone diamonds and phase brackets, remarks next to the last bar, shading, gridlines and date lines |
+| `layout/gantt.py` | Label column, two-level date header, a band per row with one or more bars, milestone diamonds and phase brackets, remarks next to the last bar, shading, gridlines and date lines; a working calendar hides non-working days (M17) |
 | `layout/butterfly.py` | Two series as bars mirrored around a band of category names, one common scale, optional axis and gridlines |
 | `waterfall.py` | Waterfall data sheet rules (value row, "Total" marker row; stacked: more value rows) -> steps with running totals and per-row segments |
 | `layout/waterfall.py` | Steps -> floating bars, totals, connectors and signed labels, stacked segments, and the horizontal (bar-oriented) variant |
@@ -106,6 +107,7 @@ so every released schema version must stay readable (`state_io.py`).
 | `labels.py` | Moved labels: reads the shapes' boxes, stores the offsets `core/labels.moved` finds (no undo action) and puts other dragged shapes back; the *Move labels* session (ADR 0023) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
 | `axisdialog.py` | The axis break dialog (modal, built in code); asks, then adds or changes the break |
+| `calendardialog.py` | The working-days dialog of a Gantt chart (modal, built in code): weekdays and holidays; validation in `core/calendar.py` (M17) |
 | `textdialog.py` | The group bracket label dialog (modal, built in code); asks for the text after the picks and for *Change text...* |
 | `formatdialog.py` | The number-format and value-line dialogs (modal, built in code); validation lives in `core/format.py` and `core/value_line.py` |
 | `pick.py` | Pick mode: enters the chart group, turns selected shapes into an annotation; a group bracket asks for its label (ADRs 0010, 0024) |

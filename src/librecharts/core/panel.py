@@ -12,6 +12,7 @@ from librecharts.core import annotations as notes
 from librecharts.core import format as formats
 from librecharts.core import labels as core_labels
 from librecharts.core import links, options, style
+from librecharts.core.calendar import active as calendar_active
 from librecharts.core.menu import GRID_COLUMNS, PROTOCOL, annotation_title, arrange_items
 from librecharts.core.messages import text
 from librecharts.core.model import AnnotationKind, ChartState
@@ -118,8 +119,13 @@ def content(
             kind = "doughnut"
         elif kind == "scatter" and parse_scatter(state).bubbles:
             kind = "bubble"
+        status_key = "status_chart"
+        if kind == "gantt":
+            status_key = (
+                "status_gantt_calendar" if calendar_active(state.calendar) else "status_gantt"
+            )
         status = text(
-            "status_gantt" if kind == "gantt" else "status_chart",
+            status_key,
             locale,
             kind=text(f"kind_{kind}", locale),
             count=str(len(data.categories)),
@@ -287,6 +293,12 @@ def _options(state: ChartState | None, usable: bool, locale: str) -> tuple[Butto
     toggle = options.sort_toggle(state)
     if toggle is not None:
         buttons += (_button(toggle.title, toggle.command, "", locale, usable),)
+    if state.kind == "gantt":
+        buttons += tuple(
+            _button(switch.title, switch.command, "", locale, usable and not switch.current)
+            for switch in options.calendar_options(state)
+        )
+        buttons += (_button("menu_working_days", "WorkingDays", "", locale, usable),)
     return buttons
 
 

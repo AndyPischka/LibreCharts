@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 import pytest
 
+from librecharts.core.model import Calendar
 from librecharts.core.timescale import (
     MAX_UNITS,
     Period,
@@ -11,6 +12,8 @@ from librecharts.core.timescale import (
     label,
     time_scale,
 )
+
+WEEKDAYS = Calendar((0, 1, 2, 3, 4))
 
 
 @pytest.mark.parametrize(
@@ -108,3 +111,44 @@ def test_dates_are_formatted_per_language() -> None:
     assert format_date(day, "en") == "30 Jun 2026"
     assert format_date(day, "en", with_year=False) == "30 Jun"
     assert format_date(day, "fr") == "30 Jun 2026"  # unknown languages fall back to English
+
+
+def test_a_working_calendar_gives_weekends_no_width() -> None:
+    scale = time_scale(date(2026, 3, 2), date(2026, 3, 8), WEEKDAYS)  # Monday to Sunday
+    assert scale.working_days == 5
+    assert scale.fraction(date(2026, 3, 2)) == 0  # Monday
+    assert scale.fraction(date(2026, 3, 6)) == pytest.approx(4 / 5)  # Friday
+    assert scale.fraction(date(2026, 3, 7)) == pytest.approx(1)  # Saturday: the boundary
+    assert scale.fraction(date(2026, 3, 8)) == pytest.approx(1)  # Sunday
+    assert scale.day_width(date(2026, 3, 6)) == pytest.approx(1 / 5)
+    assert scale.day_width(date(2026, 3, 7)) == 0
+
+
+def test_a_holiday_takes_no_width() -> None:
+    calendar = Calendar((0, 1, 2, 3, 4), (date(2026, 3, 4),))  # Wednesday off
+    scale = time_scale(date(2026, 3, 2), date(2026, 3, 6), calendar)
+    assert scale.working_days == 4
+    assert scale.fraction(date(2026, 3, 4)) == pytest.approx(2 / 4)
+    assert scale.fraction(date(2026, 3, 5)) == pytest.approx(2 / 4)  # Thursday starts there
+    assert scale.day_width(date(2026, 3, 4)) == 0
+
+
+def test_the_unit_pair_does_not_change_with_a_calendar() -> None:
+    first, last = date(2026, 1, 1), date(2026, 12, 31)
+    assert time_scale(first, last, WEEKDAYS).lower == time_scale(first, last).lower
+
+
+def test_a_scale_without_working_days_falls_back_to_calendar_days() -> None:
+    scale = time_scale(date(2026, 3, 7), date(2026, 3, 8), WEEKDAYS)  # Saturday to Sunday
+    assert scale.working_days == scale.days == 2
+    assert scale.fraction(date(2026, 3, 7)) == 0
+    assert scale.fraction(date(2026, 3, 8)) == pytest.approx(0.5)
+    assert scale.day_width(date(2026, 3, 7)) == pytest.approx(0.5)
+
+
+def test_a_label_needs_half_of_the_units_working_days() -> None:
+    calendar = Calendar((0, 1, 2, 3, 4), (date(2026, 3, 2),))  # a Monday off
+    scale = time_scale(date(2026, 3, 1), date(2026, 3, 31), calendar)
+    assert scale.labelled(scale.periods("month")[0], "month")
+    week = Period(date(2026, 3, 9), date(2026, 3, 10))
+    assert not scale.labelled(week, "week")

@@ -64,6 +64,14 @@ def chart_menu(
     if sorts:
         title = "menu_sort_segments" if state.kind == "pie" else "menu_sort"
         items.append(MenuItem(text(title, locale), children=sorts))
+    if state.kind == "gantt":
+        working = [
+            _command(switch.title, switch.command, locale)
+            for switch in options.calendar_options(state)
+            if not switch.current
+        ]
+        working.append(_command("menu_working_custom", "WorkingDays", locale))
+        items.append(MenuItem(text("menu_working_days", locale), children=tuple(working)))
     formats_menu = _format_menu(state, locale)
     if formats_menu.children:
         items.append(formats_menu)

@@ -456,6 +456,25 @@ def test_a_gantt_chart_has_no_movable_labels() -> None:
     assert "ResetLabels" not in commands
 
 
+def test_a_gantt_chart_offers_working_days() -> None:
+    menu = chart_menu(sample_gantt_state(), "en")
+    working = next(item for item in menu.children if item.title == "Working days")
+    assert [item.title for item in working.children] == ["Monday to Friday", "Custom..."]
+    assert commands(working) == [
+        PROTOCOL + "ChangeChart?working=weekdays",
+        PROTOCOL + "WorkingDays",
+    ]
+    german = next(
+        item
+        for item in chart_menu(sample_gantt_state(), "de").children
+        if item.title == "Arbeitstage"
+    )
+    assert [item.title for item in german.children] == [
+        "Montag bis Freitag",
+        "Benutzerdefiniert...",
+    ]
+
+
 def test_a_pie_chart_offers_segment_sorting() -> None:
     menu = chart_menu(sample_pie_state(), "en-US")
     sort = next(item for item in menu.children if item.title == "Sort segments")

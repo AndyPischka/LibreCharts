@@ -23,7 +23,7 @@ from librecharts.core import value_line
 from librecharts.core.datasheet import ChartData
 from librecharts.core.gantt import GanttData, Row, starts, to_date
 from librecharts.core.layout.common import LABEL_HEIGHT, TICK_GAP
-from librecharts.core.model import Annotation, Format
+from librecharts.core.model import Annotation, Calendar, Format
 from librecharts.core.primitives import SHADE, Line, Polygon, Primitive, Rect, Text, TextRole
 from librecharts.core.timescale import TimeScale, format_date, label, time_scale
 
@@ -43,6 +43,7 @@ RIGHT_LIMIT = 0.75  # a remark goes right of a mark that ends up to here (share 
 LEFT_LIMIT = 0.25  # else left of a mark that starts from here, else inside the bar
 DATE_BAND = 700.0  # below the rows, for the labels of date lines
 DATE_LABEL_WIDTH = 2400.0
+MIN_BAR = 60.0  # a bar without a working day stays visible, 1/100 mm
 
 _X = Callable[[date], float]
 
@@ -53,12 +54,15 @@ def layout_gantt(
     height: float,
     annotations: tuple[Annotation, ...] = (),
     fmt: Format | None = None,
+    calendar: Calendar | None = None,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
-    Raises ``ValueError`` if the box leaves no room for the rows.
+    ``calendar`` hides its non-working days (M17); the default keeps every day. Raises
+    ``ValueError`` if the box leaves no room for the rows.
     """
     fmt = fmt or Format()
+    calendar = calendar or Calendar()
     measured = starts(data)
     lines = notes.value_lines(annotations, measured, "gantt")
     longest = max((len(row.label) for row in data.rows), default=0)
@@ -78,8 +82,7 @@ def layout_gantt(
     days += [day for day in marked if day is not None]
     if not days:
         return ()
-    scale = time_scale(min(days), max(days))
-    day_width = time_width / scale.days
+    scale = time_scale(min(days), max(days), calendar)
     with_year = scale.years > 1
 
     def x(day: date) -> float:
@@ -112,12 +115,12 @@ def layout_gantt(
             out.append(Text(0, top, label_width - LABEL_PADDING, slot, row.label, "left", role))
         if row.start is None or row.end is None:
             continue
-        out.extend(_row(row, scale, x, day_width, top, slot, fmt, with_year, width))
+        out.extend(_row(row, scale, x, time_width, top, slot, fmt, with_year, width))
 
     for day in marked:
         if day is None:
             continue
-        centre = x(day) + day_width / 2
+        centre = x(day) + scale.day_width(day) * time_width / 2
         out.append(Line(centre, rows_top, centre, rows_bottom, "helper"))
         out.append(
             Text(
@@ -142,7 +145,7 @@ def _row(
     row: Row,
     scale: TimeScale,
     x: _X,
-    day_width: float,
+    time_width: float,
     top: float,
     slot: float,
     fmt: Format,
@@ -159,7 +162,7 @@ def _row(
     out: list[Primitive] = []
     if row.kind == "phase":
         start, end = cast("date", row.start), cast("date", row.end)
-        left, right = x(start), x(end + timedelta(days=1))
+        left, right = _extent(start, end, x)
         thickness = slot * PHASE_RATIO
         out.append(Rect(left, centre_y - thickness / 2, right - left, thickness, row.color))
         out.append(Line(left, centre_y, left, top + slot, "connector"))
@@ -185,7 +188,7 @@ def _row(
     for mark in row.marks:
         if mark.kind == "milestone":
             half = min(DIAMOND, slot * BAR_RATIO) / 2
-            centre = x(mark.start) + day_width / 2
+            centre = x(mark.start) + scale.day_width(mark.start) * time_width / 2
             out.append(
                 Polygon(
                     (
@@ -198,7 +201,7 @@ def _row(
                 )
             )
         else:
-            left, right = x(mark.start), x(mark.end + timedelta(days=1))
+            left, right = _extent(mark.start, mark.end, x)
             thickness = slot * BAR_RATIO
             out.append(Rect(left, centre_y - thickness / 2, right - left, thickness, row.color))
     if row.kind == "milestone":
@@ -207,7 +210,7 @@ def _row(
         if row.remark:
             side += f"  {row.remark}"
         half = min(DIAMOND, slot * BAR_RATIO) / 2
-        centre = x(start) + day_width / 2
+        centre = x(start) + scale.day_width(start) * time_width / 2
         out.append(
             _side_text(
                 side,
@@ -231,7 +234,7 @@ def _row(
             default=None,
         )
         if last is not None:
-            left, right = x(last.start), x(last.end + timedelta(days=1))
+            left, right = _extent(last.start, last.end, x)
             out.append(
                 _side_text(
                     row.remark,
@@ -249,6 +252,15 @@ def _row(
                 )
             )
     return out
+
+
+def _extent(start: date, end: date, x: _X) -> tuple[float, float]:
+    """The left and right edge of a bar from ``start`` to ``end`` (both included).
+
+    A bar without a working day has no width; it keeps ``MIN_BAR`` so that it stays visible.
+    """
+    left, right = x(start), x(end + timedelta(days=1))
+    return left, right if right > left else left + MIN_BAR
 
 
 def _side_text(

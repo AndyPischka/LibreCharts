@@ -7,7 +7,8 @@ chart switches between pie and doughnut. Area charts switch between stacked and 
 Marimekko chart switches between percent and units. A waterfall chart switches between vertical
 and horizontal and between a single and a stacked running total. A line chart switches error bars
 on and off. On a column chart, single series can be drawn as lines, optionally on a secondary
-axis.
+axis. A Gantt chart switches between all days and Monday to Friday as its working days (M17); the
+dialog behind *Custom...* sets other weekdays and holidays.
 
 Switching the layout variant clears the labels the user moved; sorting and colours keep them.
 
@@ -82,6 +83,24 @@ def variants(state: ChartState) -> tuple[Switch, ...]:
             Switch("menu_no_error_bars", "ChangeChart?errors=false", not state.errors),
         ]
     return tuple(switches)
+
+
+def calendar_options(state: ChartState) -> tuple[Switch, ...]:
+    """The quick working-day choices of a Gantt chart, the current one included (M17)."""
+    if state.kind != "gantt":
+        return ()
+    return (
+        Switch(
+            "menu_working_all",
+            "ChangeChart?working=all",
+            state.calendar.working_days == (0, 1, 2, 3, 4, 5, 6),
+        ),
+        Switch(
+            "menu_working_weekdays",
+            "ChangeChart?working=weekdays",
+            state.calendar.working_days == (0, 1, 2, 3, 4),
+        ),
+    )
 
 
 def sort_options(state: ChartState) -> tuple[Switch, ...]:
@@ -171,6 +190,8 @@ def changed(state: ChartState, query: str) -> ChartState:
         return _variant(state, _doughnut(state, value))
     if key in ("range", "errors", "horizontal", "stacked"):
         return _flag(state, key, value)
+    if key == "working":
+        return _working(state, value)
     if key == "sort":
         return _sort(state, value)
     if key in ("line", "secondary"):
@@ -246,6 +267,19 @@ def _flag(state: ChartState, key: str, value: str) -> ChartState:
     if key == "errors":
         return after  # error bars do not move the labels
     return _variant(state, after)
+
+
+def _working(state: ChartState, value: str) -> ChartState:
+    """Switch a Gantt chart between all days and Monday to Friday, keeping its holidays."""
+    if state.kind != "gantt":
+        raise ValueError(f"a {state.kind} chart has no working-days option")
+    if value == "all":
+        days = (0, 1, 2, 3, 4, 5, 6)
+    elif value == "weekdays":
+        days = (0, 1, 2, 3, 4)
+    else:
+        raise ValueError(f"working must be all or weekdays, not {value!r}")
+    return replace(state, calendar=replace(state.calendar, working_days=days))
 
 
 def _sort(state: ChartState, value: str) -> ChartState:

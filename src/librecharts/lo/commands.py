@@ -11,6 +11,7 @@ from urllib.parse import parse_qs
 
 from librecharts.core import annotations, elements, gantt, options, style
 from librecharts.core import arrange as core_arrange
+from librecharts.core import calendar as working_calendar
 from librecharts.core import format as formats
 from librecharts.core import labels as core_labels
 from librecharts.core import links as core_links
@@ -23,6 +24,7 @@ from librecharts.lo import agenda as lo_agenda
 from librecharts.lo import arrange as lo_arrange
 from librecharts.lo import (
     axisdialog,
+    calendardialog,
     chart,
     datasheet,
     formatdialog,
@@ -457,6 +459,32 @@ def today_line(ctx: Any, frame: Any) -> None:
     chart.add_annotation(
         frame.getController().getModel(), group, Annotation("value_line", 0, 0, value=today)
     )
+
+
+def working_days(ctx: Any, frame: Any, query: str) -> None:
+    """Set the working days of the selected Gantt chart; one undo step.
+
+    Without a query the dialog asks for weekdays and holidays; scripts and tests pass
+    ``working=1,2,3,4,5&holidays=2026-12-25`` (ISO weekdays, 1 = Monday).
+    """
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    locale = ui.ui_locale(ctx)
+    if state.kind != "gantt":
+        ui.show_info(ctx, frame, text("option_unsupported", locale))
+        return
+    if not query:
+        calendardialog.request(ctx, frame, group, state)
+        return
+    try:
+        chosen = working_calendar.changed(state.calendar, query, state.format.language)
+    except ValueError:
+        ui.show_info(ctx, frame, text("option_unsupported", locale))
+        return
+    if chosen != state.calendar:
+        chart.redraw(frame.getController().getModel(), group, replace(state, calendar=chosen))
 
 
 def edit_value_line(ctx: Any, frame: Any, query: str) -> None:

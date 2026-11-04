@@ -154,7 +154,12 @@ def test_the_panel_counts_rows_and_offers_a_today_line() -> None:
     assert all(b.enabled for b in panel.add[-2:])
     assert [row.title for row in panel.rows] == ["Date line (30 Jun 2026)"]
     assert "Number format..." not in [b.title for b in panel.format]
-    assert [b.title for b in panel.options] == ["By start date"]
+    assert [b.title for b in panel.options] == [
+        "By start date",
+        "All days",
+        "Monday to Friday",
+        "Working days",
+    ]
     assert content(sample_gantt_state(), True, "de-DE").status == "Gantt-Diagramm, 9 Zeilen"
 
 

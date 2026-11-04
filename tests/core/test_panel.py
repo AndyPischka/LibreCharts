@@ -2,6 +2,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from librecharts.core.datasheet import (
+    sample_gantt_state,
     sample_mekko_state,
     sample_scatter_state,
     sample_state,
@@ -9,7 +10,7 @@ from librecharts.core.datasheet import (
     state_from_table,
 )
 from librecharts.core.menu import PROTOCOL
-from librecharts.core.model import Annotation, Link
+from librecharts.core.model import Annotation, Calendar, Link
 from librecharts.core.panel import content
 
 
@@ -62,6 +63,20 @@ def test_a_100_percent_chart_says_so_and_disables_the_100_percent_button() -> No
     panel = content(replace(sample_state(), percent=True), True, "en-US")
     assert panel.status.startswith("Column chart (100 %), ")
     assert [b.enabled for b in panel.options] == [True, True, False, True]
+
+
+def test_a_gantt_chart_with_a_calendar_says_so_and_offers_working_days() -> None:
+    panel = content(sample_gantt_state(), True, "en-US")
+    assert panel.status == "Gantt chart, 9 rows"
+    assert [b.command for b in panel.options][-3:] == [
+        PROTOCOL + "ChangeChart?working=all",
+        PROTOCOL + "ChangeChart?working=weekdays",
+        PROTOCOL + "WorkingDays",
+    ]
+    working = content(
+        replace(sample_gantt_state(), calendar=Calendar((0, 1, 2, 3, 4))), True, "en-US"
+    )
+    assert working.status == "Gantt chart, 9 rows, working days"
 
 
 def test_without_a_chart_everything_else_is_disabled() -> None:

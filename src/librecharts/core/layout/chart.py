@@ -75,7 +75,12 @@ def _layout(
         return layout_scatter(parse_scatter(state), width, height, state.annotations, state.format)
     if state.kind == "gantt":
         return layout_gantt(
-            parse_gantt(state, state.sort), width, height, state.annotations, state.format
+            parse_gantt(state, state.sort),
+            width,
+            height,
+            state.annotations,
+            state.format,
+            state.calendar,
         )
     data, annotations = display_data(state)
     bases: tuple[tuple[float | None, ...], ...] | None = None

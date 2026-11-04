@@ -1,4 +1,5 @@
 import json
+from datetime import date
 from typing import Any
 
 import pytest
@@ -7,6 +8,7 @@ from librecharts.core import state_io
 from librecharts.core.model import (
     SCHEMA_VERSION,
     Annotation,
+    Calendar,
     ChartState,
     Format,
     LabelKey,
@@ -392,6 +394,13 @@ def test_integers_in_values_become_floats() -> None:
         lambda r: r.update(format={**r["format"], "separator": ";"}),
         lambda r: r.update(format={**r["format"], "language": "deu"}),
         lambda r: r.update(format={**r["format"], "markers": "yes"}),
+        lambda r: r.pop("calendar"),
+        lambda r: r.update(calendar=[]),
+        lambda r: r.update(calendar={"working_days": [], "holidays": []}),
+        lambda r: r.update(calendar={"working_days": [0, 0], "holidays": []}),
+        lambda r: r.update(calendar={"working_days": [7], "holidays": []}),
+        lambda r: r.update(calendar={"working_days": [0], "holidays": ["soon"]}),
+        lambda r: r.update(calendar={"working_days": [0], "holidays": [5]}),
         lambda r: r.pop("lines"),
         lambda r: r.update(lines="0"),
         lambda r: r.update(lines=[True]),
@@ -495,6 +504,20 @@ def test_version_11_state_has_no_moved_labels() -> None:
     restored = from_json(json.dumps(raw))
     assert restored.version == SCHEMA_VERSION
     assert restored.labels == ()
+
+
+def test_version_14_state_gets_the_default_calendar() -> None:
+    raw = valid_raw()
+    del raw["calendar"]
+    raw["v"] = 14
+    restored = from_json(json.dumps(raw))
+    assert restored.calendar == Calendar()
+    assert restored.version == SCHEMA_VERSION
+
+
+def test_round_trip_preserves_the_calendar() -> None:
+    state = make_state(calendar=Calendar((0, 1, 2, 3, 4), (date(2026, 12, 25), date(2027, 1, 1))))
+    assert from_json(to_json(state)).calendar == state.calendar
 
 
 def test_round_trip_preserves_label_offsets() -> None:

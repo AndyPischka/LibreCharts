@@ -163,6 +163,38 @@ def test_a_date_line_and_a_today_line_are_one_undo_step_each(ctx):
         doc.close(True)
 
 
+def test_working_days_are_set_in_one_undo_step_and_survive_reload(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, INSERT)
+        _, chart_id = store.find_charts(first_page(doc))[0]
+        manager = doc.getUndoManager()
+        depth = len(manager.getAllUndoActionTitles())
+
+        dispatch(
+            ctx,
+            doc,
+            "org.librecharts:WorkingDays?working=1,2,3,4,5&holidays=2026-04-03",
+        )
+        state = _state(doc, chart_id)
+        assert state.calendar.working_days == (0, 1, 2, 3, 4)
+        assert state.calendar.holidays == (datetime.date(2026, 4, 3),)
+        assert len(manager.getAllUndoActionTitles()) == depth + 1
+
+        for fmt in ("odp", "pptx"):
+            reloaded = save_and_reload(ctx, doc, fmt)
+            try:
+                ((_, reloaded_id),) = store.find_charts(first_page(reloaded))
+                assert _state(reloaded, reloaded_id).calendar == state.calendar, fmt
+            finally:
+                reloaded.close(True)
+
+        uno_command(ctx, doc, ".uno:Undo")
+        assert _state(doc, chart_id).calendar.working_days == (0, 1, 2, 3, 4, 5, 6)
+    finally:
+        doc.close(True)
+
+
 def test_sorting_by_start_date_is_one_undo_step(ctx):
     doc = new_impress(ctx)
     try:

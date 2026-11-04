@@ -1,8 +1,10 @@
 from dataclasses import replace
+from datetime import date
 
 import pytest
 
 from librecharts.core.datasheet import (
+    sample_gantt_state,
     sample_line_state,
     sample_mekko_state,
     sample_pie_state,
@@ -11,9 +13,10 @@ from librecharts.core.datasheet import (
     sample_waterfall_state,
     state_from_table,
 )
-from librecharts.core.model import ChartState, LabelKey, LabelOffset
+from librecharts.core.model import Calendar, ChartState, LabelKey, LabelOffset
 from librecharts.core.options import (
     Switch,
+    calendar_options,
     can_draw_lines,
     changed,
     color_query,
@@ -367,3 +370,29 @@ def test_the_current_variant_sort_and_colours_keep_the_moved_labels(query: str) 
 def test_a_floating_bar_chart_offers_only_the_way_back_to_the_baseline() -> None:
     state = changed(sample_state(), "range=true")
     assert variants(state) == (Switch("menu_baseline", "ChangeChart?range=false", True),)
+
+
+def test_a_gantt_chart_offers_all_days_and_weekdays() -> None:
+    state = sample_gantt_state()
+    assert calendar_options(state) == (
+        Switch("menu_working_all", "ChangeChart?working=all", True),
+        Switch("menu_working_weekdays", "ChangeChart?working=weekdays", False),
+    )
+    weekdays = changed(state, "working=weekdays")
+    assert weekdays.calendar == Calendar((0, 1, 2, 3, 4))
+    assert calendar_options(weekdays)[1].current
+
+
+def test_switching_working_days_keeps_the_holidays() -> None:
+    state = replace(sample_gantt_state(), calendar=Calendar((0, 1, 2, 3, 4), (date(2026, 12, 25),)))
+    assert changed(state, "working=all").calendar == Calendar(
+        (0, 1, 2, 3, 4, 5, 6), (date(2026, 12, 25),)
+    )
+
+
+def test_working_days_are_only_for_gantt_charts() -> None:
+    assert calendar_options(sample_state()) == ()
+    with pytest.raises(ValueError, match="working-days"):
+        changed(sample_state(), "working=all")
+    with pytest.raises(ValueError, match="all or weekdays"):
+        changed(sample_gantt_state(), "working=sometimes")
