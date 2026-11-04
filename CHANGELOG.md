@@ -27,6 +27,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   of the redrawn chart.
 
 ### Added
+- **Several bars per row** (M17): a Gantt row can carry more than one bar. The data sheet takes
+  further start/end pairs in columns F/G, H/I, ...; all bars of a row share its line, and the
+  remark follows the last bar.
 - **Consistent rounding** (M16): where value labels are the parts of a shown total they are rounded
   so that they add up to it — the segments of a stacked column or bar next to their total, and the
   shares of a 100 % column, a percent Mekko and a pie, which sum to exactly 100 %.

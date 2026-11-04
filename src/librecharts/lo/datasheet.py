@@ -25,7 +25,7 @@ from com.sun.star.util import XModifyListener
 
 from librecharts.core import links
 from librecharts.core.datasheet import state_from_sheet
-from librecharts.core.gantt import END, START
+from librecharts.core.gantt import pairs
 from librecharts.core.messages import text
 from librecharts.core.model import ChartState
 from librecharts.lo import chart, store
@@ -237,14 +237,17 @@ class _Session:
     def _show_dates(self) -> None:
         """Show the start and end columns of a Gantt sheet as dates, not serial numbers.
 
-        The standard date format of the Calc document's locale, so that dates typed in that
-        locale's style are recognised as well.
+        Every bar pair gets the format (B/C, F/G, H/I, ...), so that a pair typed into the sheet
+        is read as a date too. The standard date format of the Calc document's locale, so that
+        dates typed in that locale's style are recognised as well.
         """
         formats = self.calc.getNumberFormats()
         key = formats.getStandardFormat(_DATE, Locale())
         columns = self._sheet().getColumns()
-        for column in (START, END):
-            columns.getByIndex(column).NumberFormat = key
+        width = max(len(self.state.cells[0]) if self.state.cells else 0, 11)  # four bar pairs
+        for start, end in pairs(width):
+            for column in (start, end):
+                columns.getByIndex(column).NumberFormat = key
 
     def _read(self) -> ChartState:
         used = self._used()

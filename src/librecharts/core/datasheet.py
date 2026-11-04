@@ -334,7 +334,8 @@ def sample_butterfly_state() -> ChartState:
 
 def sample_gantt_state() -> ChartState:
     """A project of two phases, five activities and two milestones over half a year: what a new
-    Gantt chart shows. Dates are Calc serial numbers (``core/gantt.py``)."""
+    Gantt chart shows. Dates are Calc serial numbers (``core/gantt.py``). *Testing* has two bars,
+    to show that one row can carry several (M17)."""
 
     def day(month: int, number: int) -> int:
         return (date(2026, month, number) - date(1899, 12, 30)).days
@@ -343,16 +344,16 @@ def sample_gantt_state() -> ChartState:
         "gantt",
         "stacked",
         [
-            ["Activity", "Start", "End", "Remark", "Phase"],
-            ["Concept", day(1, 5), day(2, 27), None, "x"],
-            ["Requirements", day(1, 5), day(1, 30), "Team A", None],
-            ["Design", day(2, 2), day(2, 27), None, None],
-            ["Design approved", day(2, 27), None, None, None],
-            ["Implementation", day(3, 2), day(6, 30), None, "x"],
-            ["Development", day(3, 2), day(5, 15), "Team B", None],
-            ["Testing", day(4, 13), day(6, 12), None, None],
-            ["Rollout", day(6, 1), day(6, 26), None, None],
-            ["Go-live", day(6, 30), None, None, None],
+            ["Activity", "Start", "End", "Remark", "Phase", "Start", "End"],
+            ["Concept", day(1, 5), day(2, 27), None, "x", None, None],
+            ["Requirements", day(1, 5), day(1, 30), "Team A", None, None, None],
+            ["Design", day(2, 2), day(2, 27), None, None, None, None],
+            ["Design approved", day(2, 27), None, None, None, None, None],
+            ["Implementation", day(3, 2), day(6, 30), None, "x", None, None],
+            ["Development", day(3, 2), day(5, 15), "Team B", None, None, None],
+            ["Testing", day(4, 13), day(5, 15), None, None, day(5, 25), day(6, 12)],
+            ["Rollout", day(6, 1), day(6, 26), None, None, None, None],
+            ["Go-live", day(6, 30), None, None, None, None, None],
         ],
     )
 

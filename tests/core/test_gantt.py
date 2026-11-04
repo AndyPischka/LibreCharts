@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 
 from librecharts.core.datasheet import Cell, sample_gantt_state, state_from_table
-from librecharts.core.gantt import EPOCH, parse_gantt, serial, starts, to_date
+from librecharts.core.gantt import EPOCH, pairs, parse_gantt, serial, starts, to_date
 from librecharts.core.model import ChartState
 
 HEADER = ["Activity", "Start", "End", "Remark", "Phase"]
@@ -145,3 +145,70 @@ def test_annotations_measure_the_start_dates() -> None:
 def test_the_sample_has_two_phases_five_activities_and_two_milestones() -> None:
     kinds = [row.kind for row in parse_gantt(sample_gantt_state()).rows]
     assert (kinds.count("phase"), kinds.count("bar"), kinds.count("milestone")) == (2, 5, 2)
+
+
+WIDE_HEADER = ["Activity", "Start", "End", "Remark", "Phase", "Start", "End"]
+
+
+def wide_gantt(*rows: list[Cell]) -> ChartState:
+    return state_from_table("gantt", "stacked", [WIDE_HEADER, *rows])
+
+
+def test_further_pairs_add_bars_to_one_row() -> None:
+    (row,) = parse_gantt(
+        wide_gantt(["Split", day(1, 5), day(1, 9), None, None, day(1, 20), day(1, 23)])
+    ).rows
+    assert row.kind == "bar"
+    assert [(mark.start, mark.end, mark.kind) for mark in row.marks] == [
+        (date(2026, 1, 5), date(2026, 1, 9), "bar"),
+        (date(2026, 1, 20), date(2026, 1, 23), "bar"),
+    ]
+    assert (row.start, row.end) == (date(2026, 1, 5), date(2026, 1, 23))
+
+
+def test_a_single_date_in_a_further_pair_is_ignored() -> None:
+    (row,) = parse_gantt(wide_gantt(["A", day(1, 5), day(1, 9), None, None, day(1, 20), None])).rows
+    assert [mark.kind for mark in row.marks] == ["bar"]
+
+
+def test_a_one_day_further_pair_is_a_bar_not_a_milestone() -> None:
+    (row,) = parse_gantt(
+        wide_gantt(["A", day(1, 5), day(1, 9), None, None, day(1, 20), day(1, 20)])
+    ).rows
+    assert row.kind == "bar"
+    assert [mark.kind for mark in row.marks] == ["bar", "bar"]
+
+
+def test_a_milestone_with_a_further_bar_is_a_bar_row() -> None:
+    (row,) = parse_gantt(
+        wide_gantt(["A", day(1, 5), None, None, None, day(1, 20), day(1, 23)])
+    ).rows
+    assert row.kind == "bar"
+    assert [mark.kind for mark in row.marks] == ["milestone", "bar"]
+    assert (row.start, row.end) == (date(2026, 1, 5), date(2026, 1, 23))
+
+
+def test_a_phase_spans_all_its_bars() -> None:
+    (row,) = parse_gantt(
+        wide_gantt(["Phase", day(1, 5), day(1, 9), None, "x", day(1, 20), day(1, 23)])
+    ).rows
+    assert row.kind == "phase"
+    assert (row.start, row.end) == (date(2026, 1, 5), date(2026, 1, 23))
+
+
+def test_sorting_uses_the_earliest_start_of_a_row() -> None:
+    data = parse_gantt(
+        wide_gantt(
+            ["Late", day(3, 1), day(3, 9), None, None, day(1, 1), day(1, 9)],
+            ["Early", day(2, 1), day(2, 9), None, None, None, None],
+        ),
+        "ascending",
+    )
+    assert [row.label for row in data.rows] == ["Late", "Early"]
+
+
+def test_pairs_follow_the_phase_column() -> None:
+    assert pairs(5) == ((1, 2),)
+    assert pairs(6) == ((1, 2),)
+    assert pairs(7) == ((1, 2), (5, 6))
+    assert pairs(9) == ((1, 2), (5, 6), (7, 8))

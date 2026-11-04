@@ -22,6 +22,13 @@ def gantt(*rows: list[Cell]) -> ChartState:
     return state_from_table("gantt", "stacked", [HEADER, *rows])
 
 
+WIDE_HEADER = ["Activity", "Start", "End", "Remark", "Phase", "Start", "End"]
+
+
+def wide_gantt(*rows: list[Cell]) -> ChartState:
+    return state_from_table("gantt", "stacked", [WIDE_HEADER, *rows])
+
+
 def lay(state: ChartState, width: float = WIDTH, height: float = HEIGHT) -> tuple[Primitive, ...]:
     return layout_chart(state, width, height)
 
@@ -41,7 +48,7 @@ def test_the_sample_draws_bars_phases_milestones_and_a_two_level_header() -> Non
         assert expected in labels, expected
     assert "Jul 2026" not in labels  # only the first days of July: too short for a label
     assert len([p for p in out if isinstance(p, Polygon)]) == 2  # milestones
-    assert len(bars(out)) == 5 + 2  # activities and phase bars
+    assert len(bars(out)) == 5 + 2 + 1  # activities, phase bars and the second bar of Testing
 
 
 def test_bars_run_from_the_start_of_the_first_to_the_end_of_the_last_day() -> None:
@@ -55,7 +62,7 @@ def test_bars_run_from_the_start_of_the_first_to_the_end_of_the_last_day() -> No
 
 def test_bars_take_the_colour_of_their_phase() -> None:
     out = lay(sample_gantt_state())
-    assert [rect.series for rect in bars(out)] == [0, 0, 0, 1, 1, 1, 1]
+    assert [rect.series for rect in bars(out)] == [0, 0, 0, 1, 1, 1, 1, 1]
 
 
 def test_phases_and_headings_have_bold_labels() -> None:
@@ -208,3 +215,38 @@ def test_too_small_a_box_is_rejected() -> None:
         lay(sample_gantt_state(), 400, HEIGHT)
     with pytest.raises(ValueError, match="too small"):
         lay(sample_gantt_state(), WIDTH, 900)
+
+
+def test_a_row_with_two_bars_draws_both_on_one_line() -> None:
+    out = lay(wide_gantt(["Split", day(1, 5), day(1, 9), None, None, day(1, 20), day(1, 23)]))
+    first, second = bars(out)
+    assert first.x + first.width < second.x
+    assert first.y == pytest.approx(second.y)
+    assert first.height == pytest.approx(second.height)
+
+
+def test_the_remark_follows_the_last_bar() -> None:
+    out = lay(
+        wide_gantt(
+            ["Split", day(1, 5), day(1, 9), "after", None, day(1, 12), day(1, 14)],
+            ["Later", day(1, 25), day(1, 30), None, None, None, None],
+        )
+    )
+    _, second, _ = bars(out)
+    label = texts(out)["after"]
+    assert label.x > second.x + second.width
+    assert label.align == "left"
+
+
+def test_a_phase_spans_all_bars_of_its_row() -> None:
+    out = lay(
+        wide_gantt(
+            ["Phase", day(1, 5), day(1, 9), None, "x", day(1, 20), day(1, 23)],
+            ["A", day(1, 5), day(1, 9), None, None, None, None],
+        )
+    )
+    phase, bar = bars(out)
+    assert phase.x == pytest.approx(bar.x)
+    assert phase.x + phase.width > bar.x + bar.width
+    ticks = [p for p in out if isinstance(p, Line) and p.role == "connector"]
+    assert [tick.x1 for tick in ticks] == pytest.approx([phase.x, phase.x + phase.width])

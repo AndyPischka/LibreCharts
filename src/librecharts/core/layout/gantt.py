@@ -1,12 +1,13 @@
-"""Layout of Gantt charts: a label column, a two-level date header and one band per row (M10).
+"""Layout of Gantt charts: a label column, a two-level date header and one band per row (M10, M17).
 
 Bars run from the start of their first day to the end of their last day; milestones are diamonds of
 fixed size in the middle of their day, labelled with their date; a phase is a thin bar in its colour
-with ticks down at both ends, its label bold like a heading's. A remark goes right of the row's
-mark, left of it when the mark ends in the last quarter of the scale, or inside a bar that spans
-nearly the whole scale; the choice follows the dates, not the size. Every other unit of the upper
-level is shaded; gridlines (optional) mark the lower level. Date lines (value lines whose value is a
-serial number) are dashed vertical lines with their date below the rows.
+with ticks down at both ends, its label bold like a heading's. A row can have several bars (M17):
+they share the row's centre line, and the row's remark goes next to the last of them. A remark goes
+right of its mark, left of it when the mark ends in the last quarter of the scale, or inside a bar
+that spans nearly the whole scale; the choice follows the dates, not the size. Every other unit of
+the upper level is shaded; gridlines (optional) mark the lower level. Date lines (value lines whose
+value is a serial number) are dashed vertical lines with their date below the rows.
 
 The kinds and order of the primitives depend on the data only, never on the size (ADR 0007).
 """
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import date, timedelta
+from typing import cast
 
 from librecharts.core import annotations as notes
 from librecharts.core import value_line
@@ -110,9 +112,7 @@ def layout_gantt(
             out.append(Text(0, top, label_width - LABEL_PADDING, slot, row.label, "left", role))
         if row.start is None or row.end is None:
             continue
-        out.extend(
-            _row(row, row.start, row.end, scale, x, day_width, top, slot, fmt, with_year, width)
-        )
+        out.extend(_row(row, scale, x, day_width, top, slot, fmt, with_year, width))
 
     for day in marked:
         if day is None:
@@ -140,8 +140,6 @@ def _line_day(annotation: Annotation, measured: ChartData) -> date | None:
 
 def _row(
     row: Row,
-    start: date,
-    end: date,
     scale: TimeScale,
     x: _X,
     day_width: float,
@@ -151,68 +149,143 @@ def _row(
     with_year: bool,
     width: float,
 ) -> list[Primitive]:
-    """The mark of one dated row and its side text (remark, a milestone's date).
+    """The marks of one dated row and its side text (remark, a milestone's date).
 
-    A side text ends at the edge of the ``width`` wide box: a shape outside it would grow the group,
-    and every redraw at the group's size would widen the chart further.
+    All marks of a row share the row's centre line, so several bars of one activity read as one
+    row. A side text ends at the edge of the ``width`` wide box: a shape outside it would grow the
+    group, and every redraw at the group's size would widen the chart further.
     """
     centre_y = top + slot / 2
     out: list[Primitive] = []
-    side = row.remark
-    if row.kind == "milestone":
-        half = min(DIAMOND, slot * BAR_RATIO) / 2
-        centre = x(start) + day_width / 2
-        left, right = centre - half, centre + half
-        out.append(
-            Polygon(
-                (
-                    (centre, centre_y - half),
-                    (right, centre_y),
-                    (centre, centre_y + half),
-                    (left, centre_y),
-                ),
-                row.color,
+    if row.kind == "phase":
+        start, end = cast("date", row.start), cast("date", row.end)
+        left, right = x(start), x(end + timedelta(days=1))
+        thickness = slot * PHASE_RATIO
+        out.append(Rect(left, centre_y - thickness / 2, right - left, thickness, row.color))
+        out.append(Line(left, centre_y, left, top + slot, "connector"))
+        out.append(Line(right, centre_y, right, top + slot, "connector"))
+        if row.remark:
+            out.append(
+                _side_text(
+                    row.remark,
+                    left,
+                    right,
+                    start,
+                    end,
+                    scale,
+                    top,
+                    slot,
+                    centre_y,
+                    width,
+                    row.color,
+                    inside=False,
+                )
             )
-        )
+        return out
+    for mark in row.marks:
+        if mark.kind == "milestone":
+            half = min(DIAMOND, slot * BAR_RATIO) / 2
+            centre = x(mark.start) + day_width / 2
+            out.append(
+                Polygon(
+                    (
+                        (centre, centre_y - half),
+                        (centre + half, centre_y),
+                        (centre, centre_y + half),
+                        (centre - half, centre_y),
+                    ),
+                    row.color,
+                )
+            )
+        else:
+            left, right = x(mark.start), x(mark.end + timedelta(days=1))
+            thickness = slot * BAR_RATIO
+            out.append(Rect(left, centre_y - thickness / 2, right - left, thickness, row.color))
+    if row.kind == "milestone":
+        start = cast("date", row.start)
         side = format_date(start, fmt.language, with_year=with_year)
         if row.remark:
             side += f"  {row.remark}"
-    else:
-        left, right = x(start), x(end + timedelta(days=1))
-        if row.kind == "phase":
-            thickness = slot * PHASE_RATIO
-            out.append(Rect(left, centre_y - thickness / 2, right - left, thickness, row.color))
-            out.append(Line(left, centre_y, left, top + slot, "connector"))
-            out.append(Line(right, centre_y, right, top + slot, "connector"))
-        else:
-            thickness = slot * BAR_RATIO
-            out.append(Rect(left, centre_y - thickness / 2, right - left, thickness, row.color))
-    if not side:
-        return out
-    if scale.fraction(end + timedelta(days=1)) <= RIGHT_LIMIT:
-        box_left = right + SIDE_GAP
+        half = min(DIAMOND, slot * BAR_RATIO) / 2
+        centre = x(start) + day_width / 2
         out.append(
-            Text(box_left, top, min(SIDE_WIDTH, width - box_left), slot, side, "left", "value")
-        )
-    elif scale.fraction(start) >= LEFT_LIMIT or row.kind != "bar":
-        box_right = left - SIDE_GAP
-        box_left = max(box_right - SIDE_WIDTH, 0.0)
-        out.append(Text(box_left, top, box_right - box_left, slot, side, "right", "value"))
-    else:  # a bar across nearly the whole scale carries its remark inside
-        thickness = slot * BAR_RATIO
-        out.append(
-            Text(
-                left,
-                centre_y - thickness / 2,
-                right - left,
-                thickness,
+            _side_text(
                 side,
-                "center",
-                "value",
+                centre - half,
+                centre + half,
+                start,
+                start,
+                scale,
+                top,
+                slot,
+                centre_y,
+                width,
                 row.color,
+                inside=False,
             )
         )
+    elif row.remark:
+        last = max(
+            (mark for mark in row.marks if mark.kind == "bar"),
+            key=lambda mark: (mark.end, mark.start),
+            default=None,
+        )
+        if last is not None:
+            left, right = x(last.start), x(last.end + timedelta(days=1))
+            out.append(
+                _side_text(
+                    row.remark,
+                    left,
+                    right,
+                    last.start,
+                    last.end,
+                    scale,
+                    top,
+                    slot,
+                    centre_y,
+                    width,
+                    row.color,
+                    inside=True,
+                )
+            )
     return out
+
+
+def _side_text(
+    side: str,
+    left: float,
+    right: float,
+    start: date,
+    end: date,
+    scale: TimeScale,
+    top: float,
+    slot: float,
+    centre_y: float,
+    width: float,
+    color: int,
+    *,
+    inside: bool,
+) -> Text:
+    """A remark or milestone date next to a mark: right, left, or inside a long bar."""
+    if scale.fraction(end + timedelta(days=1)) <= RIGHT_LIMIT:
+        box_left = right + SIDE_GAP
+        return Text(box_left, top, min(SIDE_WIDTH, width - box_left), slot, side, "left", "value")
+    if scale.fraction(start) >= LEFT_LIMIT or not inside:
+        box_right = left - SIDE_GAP
+        box_left = max(box_right - SIDE_WIDTH, 0.0)
+        return Text(box_left, top, box_right - box_left, slot, side, "right", "value")
+    # a bar across nearly the whole scale carries its remark inside
+    thickness = slot * BAR_RATIO
+    return Text(
+        left,
+        centre_y - thickness / 2,
+        right - left,
+        thickness,
+        side,
+        "center",
+        "value",
+        color,
+    )
 
 
 def _header(scale: TimeScale, x: _X, language: str) -> list[Primitive]:

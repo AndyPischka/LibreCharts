@@ -49,7 +49,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `arrange.py` | Geometry of same width / height / size, grid and swap on rectangles |
 | `agenda.py` | The agenda: list shape names, chapters and their JSON, titles from the main slide's text, reconciling edits, what *Insert agenda*, *Start chapter here* and *Update agenda* change, the numbered and highlighted list lines (ADR 0022) |
 | `geometry.py` | Circle geometry: `polar` and `sector` (pie and doughnut segments as point lists; shared with the Harvey balls of M12) |
-| `gantt.py` | Gantt data sheet rules (one row per activity; label, start, end, remark, phase by column position) -> rows of type bar, milestone, phase or heading; Calc serial numbers <-> dates; sort by start (ADR 0019) |
+| `gantt.py` | Gantt data sheet rules (one row per activity; label, start, end, remark, phase and further start/end pairs by column position) -> rows with bars and milestones, of type bar, milestone, phase or heading; Calc serial numbers <-> dates; sort by the earliest start (ADR 0019, M17) |
 | `timescale.py` | The Gantt date scale: unit pair from the date range, periods, header labels and date texts per language |
 | `scatter.py` | Scatter data sheet rules (one row per point; label, x, y, size, group by column position) -> points and groups (ADR 0018) |
 | `layout/column.py`, `layout/bar.py` | `ChartData` + size -> primitives for stacked, clustered and 100 % columns / horizontal bars, plus floating (from/to) bars and error-bar whiskers (ADR 0025); labels of segments too small to hold them move out and stack in the total's lane (ADR 0026); columns also draw annotations (arrows with series ends, category gaps, group brackets) and line series on a secondary axis; `column_at`/`bar_at` hit-test, gap-aware |
@@ -57,7 +57,7 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `layout/area.py` | Stacked and 100 % areas: one `Polygon` per series between its cumulative edges, labels inside, series names right of the last category |
 | `layout/pie.py` | Pies and doughnuts: one pie per category, one `Polygon` per segment clockwise from 12 o'clock (in the segment sort order, ADR 0025), shares inside or outside by angle (outside labels move apart per side, ADR 0026), the sum in a doughnut's hole; difference and CAGR arrows between segments; `pie_at` |
 | `layout/scatter.py` | Scatter and bubble charts: forced axes without zero, `Marker`s or `Bubble`s, group legend, value line, difference and CAGR arrows between points; `scatter_at` |
-| `layout/gantt.py` | Label column, two-level date header, a band per row with bars, milestone diamonds and phase brackets, remarks, shading, gridlines and date lines |
+| `layout/gantt.py` | Label column, two-level date header, a band per row with one or more bars, milestone diamonds and phase brackets, remarks next to the last bar, shading, gridlines and date lines |
 | `layout/butterfly.py` | Two series as bars mirrored around a band of category names, one common scale, optional axis and gridlines |
 | `waterfall.py` | Waterfall data sheet rules (value row, "Total" marker row; stacked: more value rows) -> steps with running totals and per-row segments |
 | `layout/waterfall.py` | Steps -> floating bars, totals, connectors and signed labels, stacked segments, and the horizontal (bar-oriented) variant |

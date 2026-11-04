@@ -111,6 +111,30 @@ def test_the_data_sheet_shows_dates_and_an_edited_date_moves_the_bar(ctx):
         doc.close(True)
 
 
+def test_an_extra_bar_pair_is_a_date_column_and_draws_a_second_bar(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, INSERT)
+        group, chart_id = store.find_charts(first_page(doc))[0]
+        dispatch(ctx, doc, EDIT)
+        (calc,) = datasheets(ctx)
+        formats = calc.getNumberFormats()
+        for name in ("F3", "G3", "K3"):  # the second pair and the last formatted pair
+            key = _cell(calc, name).NumberFormat
+            assert formats.getByKey(key).Type & DATE_FORMAT, name
+
+        before = sorted(x for x, _, _, _ in _shapes(group, "RectangleShape"))
+        # The sample's Testing row (row 8) has a second bar in F/G.
+        _cell(calc, "F8").setValue(serial(datetime.date(2026, 6, 1)))
+        _wait_for(lambda: _state(doc, chart_id).values[7][5] == serial(datetime.date(2026, 6, 1)))
+        after = sorted(x for x, _, _, _ in _shapes(group, "RectangleShape"))
+        assert after != before
+        assert not calc.isModified()
+    finally:
+        close_datasheets(ctx)
+        doc.close(True)
+
+
 def test_a_date_line_and_a_today_line_are_one_undo_step_each(ctx):
     doc = new_impress(ctx)
     try:
