@@ -62,7 +62,7 @@ from librecharts.core.layout.common import (
     MIN_ARROW_LABEL_WIDTH as MIN_ARROW_LABEL_WIDTH,
 )
 from librecharts.core.model import Annotation, Format, Grouping, LabelKey
-from librecharts.core.percent import column_total, share_label
+from librecharts.core.percent import column_total
 from librecharts.core.primitives import (
     BACKGROUND,
     Line,
@@ -72,6 +72,7 @@ from librecharts.core.primitives import (
     Rect,
     Text,
 )
+from librecharts.core.rounding import consistent, consistent_shares
 from librecharts.core.scale import Axis, nice_axis
 
 PERCENT_AXIS = Axis(0.0, 100.0, 20.0)  # the fixed scale of a 100 % chart
@@ -941,6 +942,11 @@ def _stacked_column(
     out: list[Primitive] = []
     column_top_value = column_tops(data, "stacked")[c]
     fold = cut.fold if cut else _same
+    texts = consistent(
+        [series.values[c] for series in data.series],
+        sum(v for s in data.series if (v := s.values[c]) is not None),
+        fmt,
+    )
     positive = negative = 0.0
     segments = 0
     for i, series in enumerate(data.series):
@@ -963,7 +969,7 @@ def _stacked_column(
                 top,
                 width,
                 bottom - top,
-                format_value(value, fmt),
+                texts[i] or "",
                 "center",
                 "value",
                 fill=i,
@@ -998,9 +1004,10 @@ def _percent_column(
         return []
     out: list[Primitive] = []
     level = 0.0
+    percentages = consistent_shares([series.values[c] for series in data.series], total, fmt)
     for i, series in enumerate(data.series):
         value = series.values[c]
-        percentage = share_label(value, total, fmt)
+        percentage = percentages[i]
         if not percentage:
             continue
         height = (value or 0.0) / total * 100

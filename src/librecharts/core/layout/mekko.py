@@ -33,7 +33,6 @@ from librecharts.core.layout.common import (
     TICK_GAP,
     TICK_HEIGHT,
     bracket,
-    format_share,
     format_value,
     legend,
     level_arrow,
@@ -43,6 +42,7 @@ from librecharts.core.mekko import MekkoData
 from librecharts.core.mekko import levels as segment_values
 from librecharts.core.model import Annotation, Format, LabelKey
 from librecharts.core.primitives import Line, Primitive, Rect, Text, TextRole
+from librecharts.core.rounding import consistent_shares
 from librecharts.core.scale import Axis, nice_axis
 
 TOP_BAND = 800.0  # room above the plot for the width labels
@@ -134,6 +134,9 @@ def layout_mekko(
         level = plot_bottom
         last_segments = []
         tops: list[float] = []
+        percentages = (
+            consistent_shares([s.values[c] for s in series], column_sum, fmt) if percent else None
+        )
         for i, s in enumerate(series):
             value = s.values[c] or 0.0
             share = value / column_sum if column_sum > 0 else 0.0
@@ -141,7 +144,7 @@ def layout_mekko(
             top = level - segment_height
             out.append(Rect(column_x, top, column_width, segment_height, i))
             fits = segment_height >= MIN_SEGMENT_HEIGHT and column_width >= MIN_LABEL_WIDTH
-            shown = format_share(share * 100, fmt) if percent else format_value(value, fmt)
+            shown = (percentages[i] or "") if percent else format_value(value, fmt)
             out.append(
                 Text(
                     column_x,

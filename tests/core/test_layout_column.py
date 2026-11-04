@@ -19,7 +19,7 @@ from librecharts.core.layout.column import (
     layout_column,
 )
 from librecharts.core.layout.common import BRACKET_TICK
-from librecharts.core.model import Annotation, Grouping, LabelKey
+from librecharts.core.model import Annotation, Format, Grouping, LabelKey
 from librecharts.core.primitives import (
     BACKGROUND,
     Line,
@@ -756,3 +756,25 @@ def test_an_empty_error_cell_draws_no_whisker_and_the_structure_stays_stable() -
     assert [type(p) for p in small] == [type(p) for p in large]
     whiskers = [p for p in small if isinstance(p, Line) and p.role == "annotation"]
     assert len(whiskers) == 6  # only two of the four points have an error
+
+
+def test_stacked_labels_add_up_to_the_rounded_total() -> None:
+    chart = data(("A", (100.0,)), ("B", (100.0,)), ("C", (100.0,)), categories=("X",))
+    primitives = layout_column(chart, "stacked", 1000, 10000)
+    labels = [p for p in primitives if isinstance(p, Text) and p.role in ("value", "total")]
+    assert [p.text for p in labels] == ["100", "100", "100", "300"]
+
+
+def test_stacked_labels_split_a_remainder_instead_of_rounding_each_up() -> None:
+    chart = data(("A", (1.25,)), ("B", (1.25,)), categories=("X",))
+    primitives = layout_column(chart, "stacked", 1000, 10000, fmt=Format(decimals=1))
+    labels = [p for p in primitives if isinstance(p, Text) and p.role in ("value", "total")]
+    assert [p.text for p in labels] == ["1.3", "1.2", "2.5"]
+
+
+def test_percent_labels_add_up_to_one_hundred_percent() -> None:
+    chart = data(("A", (1.0,)), ("B", (1.0,)), ("C", (1.0,)), categories=("X",))
+    primitives = layout_column(chart, "stacked", 1000, 10000, percent=True)
+    labels = [p.text for p in primitives if isinstance(p, Text) and p.role == "value"]
+    assert labels == ["33.4%", "33.3%", "33.3%"]
+    assert sum(float(label.rstrip("%")) for label in labels) == pytest.approx(100.0)

@@ -34,8 +34,9 @@ from librecharts.core.layout.common import (
     level_arrow,
 )
 from librecharts.core.model import Annotation, Format, LabelKey, SortOrder
-from librecharts.core.percent import column_total, share, share_label, shares
+from librecharts.core.percent import column_total, share, shares
 from librecharts.core.primitives import Polygon, Primitive, Rect, Text
+from librecharts.core.rounding import consistent_shares
 from librecharts.core.sorting import pie_order
 
 CATEGORY_BAND = 1000.0  # room below the pies for category names
@@ -91,6 +92,7 @@ def layout_pie(
     for c, category in enumerate(data.categories):
         cx = (c + 0.5) * slot
         total = column_total(data, c)
+        percentages = consistent_shares([series.values[c] for series in data.series], total, fmt)
         angle = 0.0
         for index in orders[c]:
             series = data.series[index]
@@ -108,7 +110,7 @@ def layout_pie(
                     label_y - LABEL_HEIGHT / 2,
                     LABEL_WIDTH,
                     LABEL_HEIGHT,
-                    share_label(value, total, fmt),
+                    percentages[index] or "",
                     "center",
                     "value",
                     fill=index if is_inside else None,
