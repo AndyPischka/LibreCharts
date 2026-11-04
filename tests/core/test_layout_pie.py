@@ -5,6 +5,7 @@ import pytest
 
 from librecharts.core.datasheet import ChartData, Series, parse, sample_pie_state
 from librecharts.core.layout.chart import layout_chart
+from librecharts.core.layout.common import LABEL_HEIGHT
 from librecharts.core.layout.pie import (
     CATEGORY_BAND,
     DOUGHNUT_HOLE,
@@ -256,3 +257,15 @@ def test_pie_at_hit_tests_in_the_sorted_segment_order() -> None:
     assert pie_at(chart, False, 8000, 4000, 4700, 1500, sort="descending") == (0, 1)
     # without sorting A (40 % = 144 deg) runs first, so 3 o'clock is still inside A
     assert pie_at(chart, False, 8000, 4000, 4700, 1500) == (0, 0)
+
+
+def test_overlapping_outside_labels_move_apart_per_side() -> None:
+    chart = data(("A", (1.0,)), ("B", (1.0,)), ("C", (1.0,)), ("D", (97.0,)), categories=("X",))
+    labels = [
+        p for p in layout_pie(chart, False, 8000, 8000) if isinstance(p, Text) and p.role == "value"
+    ]
+    outside = [p for p in labels if p.fill is None]
+    assert len(outside) == 3  # the three tiny segments label outside
+    tops = sorted(p.y for p in outside)
+    assert tops[1] - tops[0] >= LABEL_HEIGHT - 1e-6  # moved apart, no overlap
+    assert tops[2] - tops[1] >= LABEL_HEIGHT - 1e-6

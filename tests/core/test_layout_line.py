@@ -230,3 +230,15 @@ def test_error_bars_draw_a_whisker_at_every_point_with_an_error() -> None:
     assert len(whiskers) == 3  # only the first point has an error: a line and two caps
     vertical = [p for p in whiskers if p.x1 == p.x2]
     assert len(vertical) == 1
+
+
+def test_labels_of_one_category_that_overlap_move_apart() -> None:
+    chart = data(("A", (10.0,)), ("B", (10.1,)), categories=("X",))
+    labels = [
+        p for p in layout_line(chart, 1000, 10000) if isinstance(p, Text) and p.role == "value"
+    ]
+    assert len(labels) == 2
+    upper, lower = sorted(labels, key=lambda p: p.y)
+    assert upper.y + LABEL_HEIGHT <= lower.y  # no overlap: the upper one moved up
+    assert upper.text == "10.1"
+    assert lower.text == "10"  # the lower point keeps its label's place

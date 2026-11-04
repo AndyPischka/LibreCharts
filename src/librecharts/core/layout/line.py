@@ -123,6 +123,7 @@ def layout_line(
             )
         )
 
+    above: dict[int, list[tuple[float, int, str]]] = {}
     for index, series in enumerate(data.series):
         points = [
             (plot.plot_left + (c + 0.5) * slot, y(fold(v)))
@@ -137,19 +138,25 @@ def layout_line(
             if value is None:
                 continue
             point_y = y(fold(value))
-            top = point_y - LABEL_HEIGHT - LABEL_GAP if value >= 0 else point_y + LABEL_GAP
-            out.append(
-                Text(
-                    plot.plot_left + c * slot,
-                    top,
-                    slot,
-                    LABEL_HEIGHT,
-                    format_value(value, fmt),
-                    "center",
-                    "value",
-                    key=LabelKey("value", c, index),
+            if value >= 0:
+                # Labels above their point are collected and moved apart after the loop, so that
+                # the labels of several series at one category do not overlap (M16 decluttering).
+                above.setdefault(c, []).append(
+                    (point_y - LABEL_HEIGHT - LABEL_GAP, index, format_value(value, fmt))
                 )
-            )
+            else:
+                out.append(
+                    Text(
+                        plot.plot_left + c * slot,
+                        point_y + LABEL_GAP,
+                        slot,
+                        LABEL_HEIGHT,
+                        format_value(value, fmt),
+                        "center",
+                        "value",
+                        key=LabelKey("value", c, index),
+                    )
+                )
             if errors is not None:
                 err = errors[index][c] if index < len(errors) else None
                 if err:
@@ -162,6 +169,23 @@ def layout_line(
                             Line(cx - ERROR_CAP, y_bottom, cx + ERROR_CAP, y_bottom, "annotation"),
                         )
                     )
+
+    for c in range(len(data.categories)):
+        entries = sorted(above.get(c, ()), key=lambda entry: -entry[0])  # bottom-up
+        tops = spread([entry[0] for entry in entries], LABEL_HEIGHT)
+        for (_, index, text), top in zip(entries, tops, strict=True):
+            out.append(
+                Text(
+                    plot.plot_left + c * slot,
+                    top,
+                    slot,
+                    LABEL_HEIGHT,
+                    text,
+                    "center",
+                    "value",
+                    key=LabelKey("value", c, index),
+                )
+            )
 
     centre = {c: plot.plot_left + (c + 0.5) * slot for c in range(len(data.categories))}
     for lane, arrow in enumerate(plot.brackets):

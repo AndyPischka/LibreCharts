@@ -90,13 +90,18 @@ def test_single_segment_has_no_total_label() -> None:
     assert {t.role for t in texts} == {"value", "category"}
 
 
-def test_flat_segments_hide_their_inside_label() -> None:
+def test_flat_segments_move_their_label_out_of_the_column() -> None:
     chart = data(("A", (1.0,)), ("B", (1000.0,)), categories=("X",))
     values = [
         p for p in layout_column(chart, "stacked", 1000, 10000) if isinstance(p, Text) and p.key
     ]
-    assert [p.shown for p in values if p.role == "value"] == ["", "1000"]
-    assert [p.text for p in values if p.role == "value"] == ["1", "1000"]
+    assert [p.shown for p in values if p.role == "value"] == ["1", "1000"]
+    flat, inside = [p for p in values if p.role == "value"]
+    assert flat.height == LABEL_HEIGHT  # the label of the flat segment leaves its segment
+    assert flat.fill is None  # outside its segment it is plain text
+    assert flat.y + LABEL_HEIGHT <= inside.y  # above the column top edge, no overlap
+    total = next(p for p in values if p.role == "total")
+    assert total.y == pytest.approx(flat.y - LABEL_HEIGHT)
 
 
 @pytest.mark.parametrize("grouping", ["stacked", "clustered"])

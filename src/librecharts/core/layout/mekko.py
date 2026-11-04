@@ -134,8 +134,10 @@ def layout_mekko(
         level = plot_bottom
         last_segments = []
         tops: list[float] = []
-        percentages = (
-            consistent_shares([s.values[c] for s in series], column_sum, fmt) if percent else None
+        texts = (
+            consistent_shares([s.values[c] for s in series], column_sum, fmt)
+            if percent
+            else [format_value(s.values[c] or 0.0, fmt) for s in series]
         )
         for i, s in enumerate(series):
             value = s.values[c] or 0.0
@@ -144,7 +146,7 @@ def layout_mekko(
             top = level - segment_height
             out.append(Rect(column_x, top, column_width, segment_height, i))
             fits = segment_height >= MIN_SEGMENT_HEIGHT and column_width >= MIN_LABEL_WIDTH
-            shown = (percentages[i] or "") if percent else format_value(value, fmt)
+            shown = texts[i] or ""
             out.append(
                 Text(
                     column_x,

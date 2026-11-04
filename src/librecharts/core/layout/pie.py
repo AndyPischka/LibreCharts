@@ -32,6 +32,7 @@ from librecharts.core.layout.common import (
     format_value,
     legend,
     level_arrow,
+    spread,
 )
 from librecharts.core.model import Annotation, Format, LabelKey, SortOrder
 from librecharts.core.percent import column_total, share, shares
@@ -94,6 +95,7 @@ def layout_pie(
         total = column_total(data, c)
         percentages = consistent_shares([series.values[c] for series in data.series], total, fmt)
         angle = 0.0
+        outside: list[tuple[float, float, int]] = []  # (y, x, series) of the labels outside
         for index in orders[c]:
             series = data.series[index]
             value = series.values[c]
@@ -104,21 +106,46 @@ def layout_pie(
             is_inside = sweep >= MIN_INSIDE_ANGLE
             label_radius = inside if is_inside else radius * OUTSIDE_RADIUS
             label_x, label_y = polar(cx, cy, label_radius, angle + sweep / 2)
-            out.append(
-                Text(
-                    label_x - LABEL_WIDTH / 2,
-                    label_y - LABEL_HEIGHT / 2,
-                    LABEL_WIDTH,
-                    LABEL_HEIGHT,
-                    percentages[index] or "",
-                    "center",
-                    "value",
-                    fill=index if is_inside else None,
-                    key=LabelKey("value", c, index),
+            if is_inside:
+                out.append(
+                    Text(
+                        label_x - LABEL_WIDTH / 2,
+                        label_y - LABEL_HEIGHT / 2,
+                        LABEL_WIDTH,
+                        LABEL_HEIGHT,
+                        percentages[index] or "",
+                        "center",
+                        "value",
+                        fill=index,
+                        key=LabelKey("value", c, index),
+                    )
                 )
-            )
+            else:
+                # Labels outside their segment are collected and moved apart per side of the
+                # pie after the loop, so that the labels of tiny segments do not overlap
+                # (M16 decluttering).
+                outside.append((label_y, label_x, index))
             arcs[(c, index)] = polar(cx, cy, radius, angle + sweep / 2)
             angle += sweep
+        for is_left in (True, False):
+            entries = sorted(
+                (entry for entry in outside if (entry[1] < cx) == is_left),
+                key=lambda entry: -entry[0],
+            )
+            tops = spread([entry[0] - LABEL_HEIGHT / 2 for entry in entries], LABEL_HEIGHT)
+            for (_, label_x, index), label_top in zip(entries, tops, strict=True):
+                out.append(
+                    Text(
+                        label_x - LABEL_WIDTH / 2,
+                        label_top,
+                        LABEL_WIDTH,
+                        LABEL_HEIGHT,
+                        percentages[index] or "",
+                        "center",
+                        "value",
+                        key=LabelKey("value", c, index),
+                    )
+                )
         if doughnut and total > 0:
             out.append(
                 Text(

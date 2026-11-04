@@ -949,6 +949,8 @@ def _stacked_column(
     )
     positive = negative = 0.0
     segments = 0
+    flat_count = 0  # labels moved out of a segment too flat to hold them
+    column_top = y(fold(max(column_total(data, c), 0.0)))
     for i, series in enumerate(data.series):
         value = series.values[c]
         if value is None or value == 0:
@@ -961,27 +963,43 @@ def _stacked_column(
             top, bottom = y(fold(negative)), y(fold(negative + value))
             negative += value
         out.append(Rect(x, top, width, bottom - top, i))
-        # Always emit the label (hidden if the segment is too flat): the primitive structure must
-        # not depend on the size, so a resized chart can be re-laid out in place (lo/render.py).
-        out.append(
-            Text(
-                x,
-                top,
-                width,
-                bottom - top,
-                texts[i] or "",
-                "center",
-                "value",
-                fill=i,
-                key=LabelKey("value", c, i),
-                hidden=bottom - top < MIN_SEGMENT_FOR_LABEL,
+        # Always emit the label right after its segment: the primitive structure must not depend
+        # on the size, so a resized chart can be re-laid out in place (lo/render.py). A segment
+        # too flat to hold its label gets it outside the column instead, in a slot of the lane
+        # above the column (M16 decluttering); the label is plain text there, without a fill.
+        if bottom - top < MIN_SEGMENT_FOR_LABEL:
+            out.append(
+                Text(
+                    x,
+                    column_top - LABEL_HEIGHT * (flat_count + 1),
+                    width,
+                    LABEL_HEIGHT,
+                    texts[i] or "",
+                    "center",
+                    "value",
+                    key=LabelKey("value", c, i),
+                )
             )
-        )
+            flat_count += 1
+        else:
+            out.append(
+                Text(
+                    x,
+                    top,
+                    width,
+                    bottom - top,
+                    texts[i] or "",
+                    "center",
+                    "value",
+                    fill=i,
+                    key=LabelKey("value", c, i),
+                )
+            )
     if segments >= 2:  # a single segment's total would just repeat its own label
         out.append(
             Text(
                 x,
-                y(fold(positive + negative)) - LABEL_HEIGHT,
+                column_top - LABEL_HEIGHT * (flat_count + 1),
                 width,
                 LABEL_HEIGHT,
                 format_value(positive + negative, fmt),
@@ -1005,6 +1023,7 @@ def _percent_column(
     out: list[Primitive] = []
     level = 0.0
     percentages = consistent_shares([series.values[c] for series in data.series], total, fmt)
+    flat_count = 0
     for i, series in enumerate(data.series):
         value = series.values[c]
         percentage = percentages[i]
@@ -1014,25 +1033,41 @@ def _percent_column(
         top, bottom = y(level + height), y(level)
         level += height
         out.append(Rect(x, top, width, bottom - top, i))
-        # Always emit the label (hidden if flat): the structure must not depend on the size.
-        out.append(
-            Text(
-                x,
-                top,
-                width,
-                bottom - top,
-                percentage,
-                "center",
-                "value",
-                fill=i,
-                key=LabelKey("value", c, i),
-                hidden=bottom - top < MIN_SEGMENT_FOR_LABEL,
+        # Always emit the label: the structure must not depend on the size. A segment too flat to
+        # hold its label gets it outside the column instead, in a slot of the lane above the
+        # column (M16 decluttering), as plain text without a segment fill.
+        if bottom - top < MIN_SEGMENT_FOR_LABEL:
+            out.append(
+                Text(
+                    x,
+                    y(100.0) - LABEL_HEIGHT * (flat_count + 1),
+                    width,
+                    LABEL_HEIGHT,
+                    percentage,
+                    "center",
+                    "value",
+                    key=LabelKey("value", c, i),
+                )
             )
-        )
+            flat_count += 1
+        else:
+            out.append(
+                Text(
+                    x,
+                    top,
+                    width,
+                    bottom - top,
+                    percentage,
+                    "center",
+                    "value",
+                    fill=i,
+                    key=LabelKey("value", c, i),
+                )
+            )
     out.append(
         Text(
             x,
-            y(100.0) - LABEL_HEIGHT,
+            y(100.0) - LABEL_HEIGHT * (flat_count + 1),
             width,
             LABEL_HEIGHT,
             format_value(total, fmt),

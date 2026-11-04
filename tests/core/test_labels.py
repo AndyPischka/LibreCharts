@@ -145,7 +145,7 @@ def test_a_moved_label_keeps_its_distance_from_its_place() -> None:
     assert after.text == before.text
 
 
-def test_a_moved_label_is_revealed_and_at_least_label_height_high() -> None:
+def test_a_moved_label_is_shown_and_at_least_label_height_high() -> None:
     state = changed(sample_state(), "line=0&on=false")
     state = replace(
         state,
@@ -153,14 +153,14 @@ def test_a_moved_label_is_revealed_and_at_least_label_height_high() -> None:
         values=((None, None), (None, 1.0), (None, 1000.0)),
     )
     flat = LabelKey("value", 0, 0)
-    hidden = named(state, flat)
-    assert hidden.hidden
-    assert hidden.height < LABEL_HEIGHT
+    placed = named(state, flat)
+    assert not placed.hidden  # M16: the layout moves a flat label out of its segment
+    assert placed.height == LABEL_HEIGHT
     moved = named(replace(state, labels=(LabelOffset(flat, 0.0, -2000.0),)), flat)
     assert not moved.hidden
     assert moved.shown == "1"
     assert moved.height == LABEL_HEIGHT
-    assert moved.y + moved.height / 2 == pytest.approx(hidden.y + hidden.height / 2 - 2000)
+    assert moved.y + moved.height / 2 == pytest.approx(placed.y + placed.height / 2 - 2000)
 
 
 def test_a_label_moved_out_of_its_segment_loses_the_contrast_fill() -> None:

@@ -72,15 +72,24 @@ def test_single_segment_has_no_total_label() -> None:
     assert {t.role for t in texts} == {"value", "category"}
 
 
-def test_narrow_segments_hide_their_inside_label() -> None:
+def test_narrow_segments_move_their_label_out_of_the_bar() -> None:
     chart = data(("A", (1.0,)), ("B", (1000.0,)), categories=("X",))
     values = [
         p
         for p in layout_bar(chart, "stacked", 8200, 2000)
         if isinstance(p, Text) and p.role == "value"
     ]
-    assert [p.shown for p in values] == ["", "1000"]
-    assert [p.text for p in values] == ["1", "1000"]
+    assert [p.shown for p in values] == ["1", "1000"]
+    flat, inside = values
+    assert flat.width == LABEL_WIDTH - LABEL_GAP  # the label of the narrow segment leaves it
+    assert flat.fill is None  # outside its segment it is plain text
+    assert flat.x > inside.x  # right of the narrow segment, in the lane of the total
+    total = next(
+        p
+        for p in layout_bar(chart, "stacked", 8200, 2000)
+        if isinstance(p, Text) and p.role == "total"
+    )
+    assert total.x == pytest.approx(flat.x + LABEL_WIDTH - LABEL_GAP)
 
 
 def test_clustered_negative_label_clears_the_category_names() -> None:

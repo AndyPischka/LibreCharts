@@ -621,6 +621,8 @@ def _stacked_bar(
     )
     positive = negative = 0.0
     segments = 0
+    flat_count = 0  # labels moved out of a segment too narrow to hold them
+    bar_end = x(column_total(data, c))
     for i, series in enumerate(data.series):
         value = series.values[c]
         if value is None or value == 0:
@@ -633,26 +635,42 @@ def _stacked_bar(
             left, right = x(negative + value), x(negative)
             negative += value
         out.append(Rect(left, y, right - left, thickness, i))
-        # Always emit the label (hidden if the segment is too narrow): the structure must not depend
-        # on the size, so a resized chart can be re-laid out in place (lo/render.py).
-        out.append(
-            Text(
-                left,
-                y,
-                right - left,
-                thickness,
-                texts[i] or "",
-                "center",
-                "value",
-                fill=i,
-                key=LabelKey("value", c, i),
-                hidden=right - left < MIN_SEGMENT_FOR_LABEL,
+        # Always emit the label right after its segment: the structure must not depend on the
+        # size, so a resized chart can be re-laid out in place (lo/render.py). A segment too
+        # narrow to hold its label gets it right of the bar end instead, in a slot of the lane
+        # of the total (M16 decluttering), as plain text without a segment fill.
+        if right - left < MIN_SEGMENT_FOR_LABEL:
+            out.append(
+                Text(
+                    bar_end + LABEL_GAP + flat_count * (LABEL_WIDTH - LABEL_GAP),
+                    y + (thickness - LABEL_HEIGHT) / 2,
+                    LABEL_WIDTH - LABEL_GAP,
+                    LABEL_HEIGHT,
+                    texts[i] or "",
+                    "left",
+                    "value",
+                    key=LabelKey("value", c, i),
+                )
             )
-        )
+            flat_count += 1
+        else:
+            out.append(
+                Text(
+                    left,
+                    y,
+                    right - left,
+                    thickness,
+                    texts[i] or "",
+                    "center",
+                    "value",
+                    fill=i,
+                    key=LabelKey("value", c, i),
+                )
+            )
     if segments >= 2:  # a single segment's total would just repeat its own label
         out.append(
             Text(
-                x(positive) + LABEL_GAP,
+                bar_end + LABEL_GAP + flat_count * (LABEL_WIDTH - LABEL_GAP),
                 y + (thickness - LABEL_HEIGHT) / 2,
                 LABEL_WIDTH - LABEL_GAP,
                 LABEL_HEIGHT,
@@ -677,6 +695,7 @@ def _percent_bar(
     out: list[Primitive] = []
     level = 0.0
     percentages = consistent_shares([series.values[c] for series in data.series], total, fmt)
+    flat_count = 0
     for i, series in enumerate(data.series):
         value = series.values[c]
         percentage = percentages[i]
@@ -686,24 +705,40 @@ def _percent_bar(
         left, right = x(level), x(level + length)
         level += length
         out.append(Rect(left, y, right - left, thickness, i))
-        # Always emit the label (hidden if narrow): the structure must not depend on the size.
-        out.append(
-            Text(
-                left,
-                y,
-                right - left,
-                thickness,
-                percentage,
-                "center",
-                "value",
-                fill=i,
-                key=LabelKey("value", c, i),
-                hidden=right - left < MIN_SEGMENT_FOR_LABEL,
+        # Always emit the label right after its segment: the structure must not depend on the
+        # size. A segment too narrow to hold its label gets it right of the bar end instead, in
+        # a slot of the lane of the total (M16 decluttering), as plain text without a fill.
+        if right - left < MIN_SEGMENT_FOR_LABEL:
+            out.append(
+                Text(
+                    x(100.0) + LABEL_GAP + flat_count * (LABEL_WIDTH - LABEL_GAP),
+                    y + (thickness - LABEL_HEIGHT) / 2,
+                    LABEL_WIDTH - LABEL_GAP,
+                    LABEL_HEIGHT,
+                    percentage,
+                    "left",
+                    "value",
+                    key=LabelKey("value", c, i),
+                )
             )
-        )
+            flat_count += 1
+        else:
+            out.append(
+                Text(
+                    left,
+                    y,
+                    right - left,
+                    thickness,
+                    percentage,
+                    "center",
+                    "value",
+                    fill=i,
+                    key=LabelKey("value", c, i),
+                )
+            )
     out.append(
         Text(
-            x(100.0) + LABEL_GAP,
+            x(100.0) + LABEL_GAP + flat_count * (LABEL_WIDTH - LABEL_GAP),
             y + (thickness - LABEL_HEIGHT) / 2,
             LABEL_WIDTH - LABEL_GAP,
             LABEL_HEIGHT,
