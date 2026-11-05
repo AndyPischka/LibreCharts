@@ -11,6 +11,8 @@ from dataclasses import replace
 
 import uno
 from helpers import (
+    close_datasheets,
+    datasheets,
     dispatch,
     first_page,
     new_impress,
@@ -27,6 +29,7 @@ from librecharts.core.primitives import Text
 from librecharts.lo import labels, render, store
 
 INSERT = "org.librecharts:InsertColumnChart"
+EDIT = "org.librecharts:EditData"
 MOVE = "org.librecharts:MoveLabels"
 RESET = "org.librecharts:ResetLabels"
 TOTAL = LabelKey("total", 0)
@@ -232,16 +235,19 @@ def test_a_value_edit_redraws_in_place_so_older_undo_steps_keep_working(ctx):
         _wait_for(lambda: TOTAL in _offsets(doc, chart_id))
         uno_command(ctx, doc, ".uno:LeaveGroup")
         shapes = [group.getByIndex(i) for i in range(group.getCount())]
-        state = _state(doc, chart_id)
-        edited = _edited(state)
         doc.getCurrentController().select(group)
-        set_chart_state(ctx, doc, chart_id, edited)
+        dispatch(ctx, doc, EDIT)
+        (calc,) = datasheets(ctx)
+        calc.getSheets().getByIndex(0).getCellRangeByName("B2").setValue(30)  # Product A, 2023
+        _wait_for(lambda: _state(doc, chart_id).values[1][1] == 30.0)
         assert [group.getByIndex(i) for i in range(group.getCount())] == shapes
+        calc.close(True)
         uno_command(ctx, doc, ".uno:Undo")  # the edit
         uno_command(ctx, doc, ".uno:Undo")  # the move
         _wait_for(lambda: not _offsets(doc, chart_id))
         assert _consistent(doc, group, chart_id)
     finally:
+        close_datasheets(ctx)
         doc.close(True)
 
 
