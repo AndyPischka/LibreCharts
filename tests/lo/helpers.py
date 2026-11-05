@@ -121,6 +121,10 @@ def set_chart_state(ctx, doc, chart_id, state):
     then redraws from it inside LibreOffice. A redraw over the bridge (``chart.redraw`` called
     from here) is suspected of aborting LibreOffice 25.8 in headless Linux CI while the
     extension's resize watcher is active.
+
+    The redraw's undo action cannot restore the state from before this call: the new state is
+    already stored when the command reads it. Tests of undo must edit through the data sheet (or
+    another command that reads the old state itself).
     """
     from librecharts.lo import store
 
