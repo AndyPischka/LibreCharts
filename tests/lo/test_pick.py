@@ -172,9 +172,9 @@ def test_picking_two_segments_of_one_column_adds_a_level_difference(ctx):
         set_chart_state(ctx, doc, chart_id, without_format(store.read_state(doc, chart_id)))
         controller = doc.getCurrentController()
         dispatch(ctx, doc, PICK + "difference")
-        # Product A (50 %) and Product B (31.2 %) of Europe: no side-by-side bars -> level arrow
+        # Product A (50 %) and Product B (31.3 %) of Europe: no side-by-side bars -> level arrow
         controller.select(_child_with_text(group, "50%"))
-        controller.select(_child_with_text(group, "31.2%"))
+        controller.select(_child_with_text(group, "31.3%"))
         _wait_for(
             lambda: (
                 _annotations(doc, chart_id)
