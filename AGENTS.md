@@ -91,10 +91,10 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 - Commands dispatched from `tests/lo` run on a UNO bridge thread, beside the resize watcher on the
   main thread. Store chart states before redrawing (`lo/samescale.py`), or the watcher lays out a
   chart from its stale state.
-- A chart redraw sets every property of every new shape and fires thousands of document modify
-  events. A `doc.addModifyListener` must not do real work in `modified`: coalesce into one
-  `AsyncCallback` (`lo/resize.py`, `lo/sidebar.py`). A synchronous sidebar refresh made a Gantt
-  date edit take 20 s+.
+- A chart redraw writes only changed properties, batched per shape (`lo/render.py`); new shapes
+  still get every property. Every write fires a document modify event, so a `doc.addModifyListener`
+  must not do real work in `modified`: coalesce into one `AsyncCallback` (`lo/resize.py`,
+  `lo/sidebar.py`). A synchronous sidebar refresh made a Gantt date edit take 20 s+.
 - Layout output must have the same primitive structure for every size (resize re-layout, ADR 0007).
 - In `tests/lo`, read a shape's geometry in one pass (`child = group.getByIndex(i)`, read, move
   on). Proxies collected in a list and read later intermittently returned default geometry

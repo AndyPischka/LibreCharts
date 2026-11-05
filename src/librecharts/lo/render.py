@@ -130,7 +130,7 @@ def rerender(
     old = [group.getByIndex(i) for i in range(group.getCount())]
     if _same_structure(old, specs):
         for shape, spec in zip(old[1:], specs[1:], strict=True):  # the frame stays as it is
-            _style(shape, spec, look)
+            _style(shape, spec, look, update=True)
         return
     # Add first, then remove: an emptied group may be dissolved by LibreOffice.
     for spec in specs:
@@ -313,30 +313,116 @@ def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
     _style(shape, spec, look)
 
 
-def _style(shape: Any, spec: _Spec, look: Look) -> None:
-    """Set geometry, text and every property the renderer sets: for new and existing shapes."""
+class _Style:
+    """Collects the operations for one shape and applies them in order.
+
+    Consecutive property writes become one ``setPropertyValues`` call, which is much cheaper
+    than one write per property; with ``update`` unchanged properties are left out entirely.
+    Geometry and text are methods on a drawing shape, not properties, so they stay separate
+    operations. Every write fires a document modify event.
+    """
+
+    __slots__ = ("ops", "shape", "update")
+
+    def __init__(self, shape: Any, update: bool) -> None:
+        self.shape = shape
+        self.update = update
+        self.ops: list[tuple[str, Any]] = []
+
+    def set(self, name: str, value: Any) -> None:
+        """Add a property unless it already has ``value``."""
+        if self.update and getattr(self.shape, name) == value:
+            return
+        self.put(name, value)
+
+    def set_float(self, name: str, value: float) -> None:
+        """Add a float property unless it already has ``value`` within rounding."""
+        if self.update and abs(float(getattr(self.shape, name)) - value) <= 0.01:
+            return
+        self.put(name, value)
+
+    def put(self, name: str, value: Any) -> None:
+        if self.ops and self.ops[-1][0] == "props":
+            names, values = self.ops[-1][1]
+            names.append(name)
+            values.append(value)
+        else:
+            self.ops.append(("props", ([name], [value])))
+
+    def geometry(self, spec: _Spec) -> None:
+        """Move and resize the shape unless it already has that geometry."""
+        if self.update:
+            position, size = self.shape.Position, self.shape.Size
+            if (
+                abs(position.X - spec.x) <= _TOLERANCE
+                and abs(position.Y - spec.y) <= _TOLERANCE
+                and abs(size.Width - spec.width) <= _TOLERANCE
+                and abs(size.Height - spec.height) <= _TOLERANCE
+            ):
+                return
+        self.ops.append(("geometry", (Point(spec.x, spec.y), Size(spec.width, spec.height))))
+
+    def polygon(self, points: tuple[tuple[Point, ...], ...]) -> None:
+        self.ops.append(("polygon", points))
+
+    def text(self, value: str) -> None:
+        self.ops.append(("text", value))
+
+    def apply(self) -> None:
+        for kind, payload in self.ops:
+            if kind == "props":
+                names, values = payload
+                self.shape.setPropertyValues(tuple(names), tuple(values))
+            elif kind == "geometry":
+                position, size = payload
+                self.shape.Position = position
+                self.shape.Size = size
+            elif kind == "polygon":
+                self.shape.PolyPolygon = payload
+            elif kind == "text":
+                self.shape.String = payload
+            else:
+                raise ValueError(f"unknown style operation: {kind}")
+
+
+def _style(shape: Any, spec: _Spec, look: Look, *, update: bool = False) -> None:
+    """Set geometry, text and every property the renderer sets: for new and existing shapes.
+
+    With ``update`` (a redraw onto the same shapes) a property is only written when it differs.
+    Every write fires a document modify event and costs milliseconds, so a redraw that changes
+    little stays fast.
+    """
+    style = _Style(shape, update)
     p = spec.primitive
     if spec.points is not None:  # polyline or polygon: its points define the geometry
-        shape.PolyPolygon = spec.points
+        if not update or not _same_points(shape.PolyPolygon, spec.points):
+            style.polygon(spec.points)
         if isinstance(p, Polygon) and p.outline:
-            shape.FillStyle, shape.FillColor = _FILL_SOLID, look.scheme.background
-            shape.LineStyle, shape.LineColor = _LINE_SOLID, look.color(p.series)
-            shape.LineWidth = LINE_WIDTH
+            style.set("FillStyle", _FILL_SOLID)
+            style.set("FillColor", look.scheme.background)
+            style.set("LineStyle", _LINE_SOLID)
+            style.set("LineColor", look.color(p.series))
+            style.set("LineWidth", LINE_WIDTH)
         elif isinstance(p, Polygon):
-            shape.FillStyle, shape.FillColor = _FILL_SOLID, look.color(p.series)
-            shape.LineStyle = _LINE_NONE
+            style.set("FillStyle", _FILL_SOLID)
+            style.set("FillColor", look.color(p.series))
+            style.set("LineStyle", _LINE_NONE)
         elif isinstance(p, Polyline) and p.series in (POSITIVE, NEGATIVE):
-            shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_SOLID
-            shape.LineColor = TICK_COLOR if p.series == POSITIVE else CROSS_COLOR
-            shape.LineWidth = ELEMENT_LINE_WIDTH
+            style.set("FillStyle", _FILL_NONE)
+            style.set("LineStyle", _LINE_SOLID)
+            style.set("LineColor", TICK_COLOR if p.series == POSITIVE else CROSS_COLOR)
+            style.set("LineWidth", ELEMENT_LINE_WIDTH)
         elif isinstance(p, Polyline):
-            shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_SOLID
-            shape.LineColor, shape.LineWidth = look.color(p.series), LINE_WIDTH
+            style.set("FillStyle", _FILL_NONE)
+            style.set("LineStyle", _LINE_SOLID)
+            style.set("LineColor", look.color(p.series))
+            style.set("LineWidth", LINE_WIDTH)
+        style.apply()
         return
-    shape.Position = Point(spec.x, spec.y)
-    shape.Size = Size(spec.width, spec.height)
+    style.geometry(spec)
     if p is None:  # the invisible frame
-        shape.FillStyle, shape.LineStyle = _FILL_NONE, _LINE_NONE
+        style.set("FillStyle", _FILL_NONE)
+        style.set("LineStyle", _LINE_NONE)
     elif isinstance(p, Rect):
         if p.series == BACKGROUND:
             color = look.scheme.background
@@ -344,42 +430,51 @@ def _style(shape: Any, spec: _Spec, look: Look) -> None:
             color = look.scheme.shade()
         else:
             color = look.color(p.series)
-        shape.FillStyle, shape.FillColor = _FILL_SOLID, color
-        shape.LineStyle = _LINE_NONE
+        style.set("FillStyle", _FILL_SOLID)
+        style.set("FillColor", color)
+        style.set("LineStyle", _LINE_NONE)
     elif isinstance(p, (Marker, Bubble)):
-        shape.FillStyle, shape.FillColor = _FILL_SOLID, look.color(p.series)
-        shape.LineStyle = _LINE_NONE
-        shape.FillTransparence = BUBBLE_TRANSPARENCY if isinstance(p, Bubble) else 0
+        style.set("FillStyle", _FILL_SOLID)
+        style.set("FillColor", look.color(p.series))
+        style.set("LineStyle", _LINE_NONE)
+        style.set("FillTransparence", BUBBLE_TRANSPARENCY if isinstance(p, Bubble) else 0)
     elif isinstance(p, Line):
-        shape.LineStyle, shape.LineColor, shape.LineWidth = (
-            _LINE_SOLID,
-            look.scheme.line,
-            LINE_WIDTH,
-        )
-        if p.role == "helper":
-            shape.LineStyle, shape.LineDash = _LINE_DASH, _dash()
-        elif p.role == "grid":
-            shape.LineColor, shape.LineWidth = look.scheme.grid(), GRID_WIDTH
+        line_style = _LINE_DASH if p.role == "helper" else _LINE_SOLID
+        if p.role == "grid":
+            color, width = look.scheme.grid(), GRID_WIDTH
         elif p.role == "axis":
-            shape.LineWidth = AXIS_WIDTH
+            color, width = look.scheme.line, AXIS_WIDTH
+        else:
+            color, width = look.scheme.line, LINE_WIDTH
+        style.set("LineStyle", line_style)
+        style.set("LineColor", color)
+        style.set("LineWidth", width)
+        if p.role == "helper":
+            style.put("LineDash", _dash())
         if _drawn_reversed(p):
-            shape.LineStartName, shape.LineStartWidth = ARROW_NAME, ARROW_WIDTH
+            style.set("LineStartName", ARROW_NAME)
+            style.set("LineStartWidth", ARROW_WIDTH)
         elif p.arrow:
-            shape.LineEndName, shape.LineEndWidth = ARROW_NAME, ARROW_WIDTH
+            style.set("LineEndName", ARROW_NAME)
+            style.set("LineEndWidth", ARROW_WIDTH)
     else:
         label = cast("Text", p)  # poly shapes return above; what is left is a label
-        shape.TextAutoGrowHeight = False
-        shape.TextAutoGrowWidth = False
-        shape.TextVerticalAdjust = _V_CENTER
-        shape.TextHorizontalAdjust = _H_BLOCK
-        shape.TextLeftDistance = shape.TextRightDistance = 0
-        shape.TextUpperDistance = shape.TextLowerDistance = 0
+        style.set("TextAutoGrowHeight", False)
+        style.set("TextAutoGrowWidth", False)
+        style.set("TextVerticalAdjust", _V_CENTER)
+        style.set("TextHorizontalAdjust", _H_BLOCK)
+        style.set("TextLeftDistance", 0)
+        style.set("TextRightDistance", 0)
+        style.set("TextUpperDistance", 0)
+        style.set("TextLowerDistance", 0)
         # Text and character properties only stick once the shape is in a group or on a page.
-        shape.String = label.shown
-        shape.CharFontName = look.scheme.font_name
-        shape.CharHeight = (
-            max(look.font_size * 0.8, 4.0) if label.role == "axis" else look.font_size
+        style.text(label.shown)
+        style.set("CharFontName", look.scheme.font_name)
+        style.set_float(
+            "CharHeight",
+            max(look.font_size * 0.8, 4.0) if label.role == "axis" else look.font_size,
         )
-        shape.CharColor = _text_color(label, look)
-        shape.ParaAdjust = _PARA_ADJUST[label.align]
-        shape.CharWeight = BOLD if label.role == "heading" else NORMAL
+        style.set("CharColor", _text_color(label, look))
+        style.set("ParaAdjust", _PARA_ADJUST[label.align])
+        style.set_float("CharWeight", BOLD if label.role == "heading" else NORMAL)
+    style.apply()
