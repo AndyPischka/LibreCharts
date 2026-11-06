@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       # setup-uv publishes no moving major tag (no "v10"), so pin the full version.
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@v10.3.3
       - run: uv run --locked --python ${{ matrix.python }} poe check
 
   # The UNO integration tests against the oldest supported LibreOffice (see README: 25.8).
@@ -28,7 +28,7 @@ jobs:
       LO_SHA256: "7f4d7b2e36921eec5122c655249a24cc88935ee357e8261fd3bccd15aa1f7b9f"
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@v10.3.3
       - name: Install LibreOffice ${{ env.LO_VERSION }} (extracted, not installed system-wide)
         run: |
           path="libreoffice/stable/${LO_VERSION}/deb/x86_64"
