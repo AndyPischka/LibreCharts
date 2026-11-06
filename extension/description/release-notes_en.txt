@@ -1,0 +1,6 @@
+LibreCharts 3.0 - first public release.
+
+Charts for LibreOffice Impress in the style of think-cell: column, bar, waterfall,
+Marimekko, line, area, pie, scatter, butterfly and Gantt charts, drawn as native shapes
+and fed from a Calc data sheet. Annotations, data links, slide elements (Harvey balls,
+check marks, agenda) and label placement are included.

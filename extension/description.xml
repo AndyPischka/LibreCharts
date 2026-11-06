@@ -9,10 +9,20 @@
          The real minimum (LibreOffice 25.8) is documented in README.md and ADR 0001. -->
     <OpenOffice.org-minimal-version value="4.1" d:name="OpenOffice.org 4.1"/>
   </dependencies>
+  <publisher>
+    <name xlink:href="https://github.com/AndyPischka/LibreCharts">Andy Pischka</name>
+  </publisher>
+  <release-notes>
+    <src lang="en" xlink:href="description/release-notes_en.txt"/>
+    <src lang="de" xlink:href="description/release-notes_de.txt"/>
+  </release-notes>
   <display-name>
     <name lang="en">LibreCharts</name>
     <name lang="de">LibreCharts</name>
   </display-name>
+  <icon>
+    <default xlink:href="images/icon.png"/>
+  </icon>
   <extension-description>
     <src lang="en" xlink:href="description/desc_en.txt"/>
     <src lang="de" xlink:href="description/desc_de.txt"/>
