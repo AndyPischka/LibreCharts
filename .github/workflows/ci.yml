@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_call:
+    inputs:
+      integration:
+        description: "Run the UNO integration tests (flaky on headless Linux)"
+        type: boolean
+        default: true
 
 jobs:
   check:
@@ -22,6 +27,7 @@ jobs:
 
   # The UNO integration tests against the oldest supported LibreOffice (see README: 25.8).
   integration:
+    if: ${{ github.event_name != 'workflow_call' || inputs.integration }}
     runs-on: ubuntu-latest
     env:
       LO_VERSION: "25.8.7"

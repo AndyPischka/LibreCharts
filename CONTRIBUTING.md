@@ -36,23 +36,28 @@ This installs Python 3.11 and the dev tools into `.venv` and activates the git h
   (official packages, extracted, checksum pinned in the workflow). On failure the first error is
   shown as an annotation on the run page. Clipboard tests and tests needing visible documents are
   skipped on headless Linux (they abort LibreOffice there) and run on Windows only.
-- Known issue: on headless Linux, LibreOffice sometimes aborts during a test (most often
-  `test_resize::test_too_small_chart_is_left_stretched_and_recovers`); the cause is not found yet.
-  When that happens, the job prints the Python stack of the extension code that was running
-  (`PYTHONFAULTHANDLER`) and, from the core dump, a `gdb` backtrace of every LibreOffice thread;
-  the crashing thread also appears as an annotation on the run page.
+- Known issue: on headless Linux, LibreOffice often aborts during a test that opens a data sheet
+  and closes it again (for example
+  `test_annotations::test_editing_data_keeps_an_arrow_added_while_the_data_sheet_is_open`); the
+  cause is not found yet. When that happens, the job prints the Python stack of the extension code
+  that was running (`PYTHONFAULTHANDLER`) and, from the core dump, a `gdb` backtrace of every
+  LibreOffice thread; the crashing thread also appears as an annotation on the run page. Because of
+  this, the release workflow runs `check` only; `test-lo` is run locally before a tag.
 
 ## Releases
 
-Tags and releases are created by the maintainer only. There is no release workflow yet; the
-package is built locally.
+Tags and releases are created by the maintainer only. A `v*` tag starts the release workflow; it
+runs `check`, builds the package and creates the GitHub release. It does not run `test-lo` (see the
+known issue above), so run it locally before tagging.
 
 1. Set the version in `pyproject.toml`, turn `## [Unreleased]` in
    [CHANGELOG.md](CHANGELOG.md) into `## [<version>] - <date>`, and update
    `extension/description/release-notes_{en,de}.txt`.
-2. `uv run poe check` and `uv run poe test-lo` must pass.
-3. `uv run poe build` writes `dist/LibreCharts-<version>.oxt`.
+2. `uv run poe check` and `uv run poe test-lo` must pass locally.
+3. `uv run poe build` writes `dist/LibreCharts-<version>.oxt`; check it by hand if the release is
+   important.
 4. Commit, tag `v<version>` and push the tag.
-5. Create a GitHub release, attach the `.oxt`, and paste the changelog section into its notes.
+5. The release workflow creates the GitHub release with the `.oxt`, its SHA256 and the changelog
+   section. Check the run and the release.
 6. Upload the same `.oxt` to [extensions.libreoffice.org](https://extensions.libreoffice.org/)
    with the maintainer account. The site takes the version from `description.xml`.
