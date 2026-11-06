@@ -184,7 +184,7 @@ wheels = [
 
 [[package]]
 name = "librecharts"
-version = "0.0.0"
+version = "3.0.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]

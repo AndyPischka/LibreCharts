@@ -3,7 +3,7 @@
 All notable user-visible changes are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [3.0.0] - 2026-11-06
 
 ### Changed
 - The sample data of a new area chart shows *Product A* and *Product B* instead of revenue and

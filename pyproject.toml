@@ -1,6 +1,6 @@
 [project]
 name = "librecharts"
-version = "0.0.0"
+version = "3.0.0"
 description = "think-cell-style chart extension for LibreOffice Impress"
 readme = "README.md"
 license = "MPL-2.0"
