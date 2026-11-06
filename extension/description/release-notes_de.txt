@@ -1,4 +1,4 @@
-LibreCharts 3.0 - erste öffentliche Version.
+LibreCharts 4.0 - erste öffentliche Version.
 
 Diagramme für LibreOffice Impress im Stil von think-cell: Säulen-, Balken-, Wasserfall-,
 Marimekko-, Linien-, Flächen-, Kreis-, Streu-, Schmetterlings- und Gantt-Diagramme,

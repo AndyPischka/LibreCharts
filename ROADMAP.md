@@ -14,7 +14,7 @@ Single tasks live in the issue tracker, not here.
 | M4 | Annotations | Difference arrows (bracket and level), CAGR arrows, axis break, placed by clicking columns, on column, bar and waterfall charts (ADR 0010); total labels came with M1 | done |
 
 Order is deliberate: M1 builds the shared foundation (layout, data sheet, persistence) that M2-M4 reuse.
-The first release (3.0) comes at the end of the 3.0 block, after M13.
+The first release (4.0) comes after M17.
 
 ## Later versions
 
@@ -42,7 +42,6 @@ that the later milestones use; M6 then gives every chart type the same axis and 
 | M11 | Data links | Link a chart to a range in an external Calc or Excel file (or CSV) and update it on demand; relative paths, read-only data sheet, info bar when sources changed (ADR 0020) | done |
 | M12 | Slide elements | Harvey balls, check marks, same size and arranging shapes into a grid (ADR 0021); an agenda with a divider slide before every chapter (ADR 0022) | done |
 | M13 | Label placement | Moving single labels by hand; the offsets survive data edits, sorting and resizing (deferred from M6, ADR 0023) | done |
-| 3.0 | First release | `SECURITY.md`, packaging for extensions.libreoffice.org | open |
 
 M9 comes first: its sector geometry is reused by the Harvey balls in M12, and its scatter data
 sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 follows.
@@ -55,6 +54,7 @@ sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 f
 | M15 | Range and waterfall variants | Floating (from/to) bars, error bars and intervals, stacked and horizontal waterfalls, sorting pie segments by size (deferred from M9) | done |
 | M16 | Consistent rounding and decluttering | Rounded labels that add up to the rounded total; labels that overlap move apart automatically (builds on M13) | done |
 | M17 | Gantt extensions | Several bars per row, working-day calendars and holidays, import from CSV and ProjectLibre (deferred from M10) | done |
+| 4.0 | First release | `SECURITY.md`, packaging for extensions.libreoffice.org | open |
 
 ### 5.0: workflow and ecosystem
 

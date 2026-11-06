@@ -3,7 +3,7 @@
 All notable user-visible changes are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
-## [3.0.0] - 2026-11-06
+## [4.0.0] - 2026-11-06
 
 ### Changed
 - The sample data of a new area chart shows *Product A* and *Product B* instead of revenue and
@@ -14,7 +14,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   source file* / *Quelldatei öffnen*, *Show percentage* is *Show percentage difference* /
   *Prozentuale Differenz zeigen*, and menu, toolbar and sidebar agree on *Same scale*, *Own scale*
   and *Arrange in grid*. The built-in colour schemes are translated (*Standard*, *Grau*, *Hoher
-  Kontrast*). The extension description lists the chart types and features of 3.0.
+  Kontrast*). The extension description lists the chart types and features of the release.
 
 ### Fixed
 - An area chart's first and last value labels sat half on the background, where their white text

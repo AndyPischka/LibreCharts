@@ -26,7 +26,7 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 > ProjectLibre**.
 > Beyond charts: **Harvey balls**, **check marks**, **arranging shapes** (same size, grid, swap)
 > and an **agenda** with a highlighted divider slide before every chapter.
-> This is the first release (3.0); further work is listed in [ROADMAP.md](ROADMAP.md).
+> This is the first release (4.0); further work is listed in [ROADMAP.md](ROADMAP.md).
 > LibreCharts is inspired by think-cell and empower charts but is not affiliated with them and
 > does not read or write their files.
 
