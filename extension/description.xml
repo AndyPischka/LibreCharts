@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <description xmlns="http://openoffice.org/extensions/description/2006"
              xmlns:d="http://openoffice.org/extensions/description/2006"
-             xmlns:xlink="http://www.w3.org/1999/xlink">
+             xmlns:xlink="http://www.w3.org/1999/xlink"
+             xmlns:lo="http://libreoffice.org/extensions/description/2011">
   <identifier value="org.librecharts.extension"/>
   <version value="@VERSION@"/>
   <dependencies>
-    <!-- Baseline only: LibreOffice-minimal-version was rejected by LO 26.8 ("unsatisfied dependencies").
-         The real minimum (LibreOffice 25.8) is documented in README.md and ADR 0001. -->
-    <OpenOffice.org-minimal-version value="4.1" d:name="OpenOffice.org 4.1"/>
+    <!-- The lo: namespace is required; without it LibreOffice rejects the package with
+         "unsatisfied dependencies" (AGENTS.md). -->
+    <lo:LibreOffice-minimal-version value="25.8" d:name="LibreOffice 25.8"/>
   </dependencies>
   <publisher>
     <name xlink:href="https://github.com/AndyPischka/LibreCharts">Andy Pischka</name>

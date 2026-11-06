@@ -125,8 +125,9 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
   both abort LibreOffice in headless Linux (CI). They run locally on Windows.
 - `tests/lo/` holds plain `test_*(ctx)` functions run by `tests/lo/runner.py`, not pytest; pytest
   ignores that directory. Shared helpers live in `tests/lo/helpers.py`.
-- Do not use `LibreOffice-minimal-version` in `extension/description.xml`: LibreOffice 26.8 rejected
-  it ("unsatisfied dependencies"). The minimum, LibreOffice 25.8, is documented, not enforced.
+- Use `<lo:LibreOffice-minimal-version>` in `extension/description.xml`, with
+  `xmlns:lo="http://libreoffice.org/extensions/description/2011"`. Without the `lo:` namespace
+  LibreOffice rejects the package with "unsatisfied dependencies".
 - Never kill `soffice` processes by name; the user may have documents open. Use a throwaway
   profile (`-env:UserInstallation=file:///.../tmp_profile`) for experiments and let the script
   call `desktop.terminate()` itself.

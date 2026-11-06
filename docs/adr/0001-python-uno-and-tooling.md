@@ -11,8 +11,9 @@ Linux and macOS. LibreOffice 26.8 on the dev machine bundles Python 3.13 and shi
 ## Decision
 
 - **Language:** Python via PyUNO. Runs on the Python bundled with LibreOffice, needs no compiler or JRE.
-- **Minimum:** LibreOffice 25.8 and Python >= 3.11. Documented, not enforced via `description.xml`
-  (LibreOffice 26.8 rejected `LibreOffice-minimal-version`; `OpenOffice.org-minimal-version 4.1` is used as baseline).
+- **Minimum:** LibreOffice 25.8 and Python >= 3.11. Enforced via `description.xml` with
+  `lo:LibreOffice-minimal-version` (the `lo:` namespace is required; without it LibreOffice 26.8
+  rejects the package with "unsatisfied dependencies").
 - **No runtime dependencies**; the pure `core/` is bundled into the `.oxt` as plain source.
 - **Tooling:** uv (Python versions, venv, lockfile), poethepoet (tasks in `pyproject.toml`), ruff
   (lint and format), pyright (strict for `core/`), pytest + coverage, pre-commit, GitHub Actions,

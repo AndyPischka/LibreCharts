@@ -32,7 +32,7 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 
 ## Requirements
 
-- LibreOffice **25.8 or newer** (Windows and Linux tested; macOS untested). The minimum is documented, not enforced by the package.
+- LibreOffice **25.8 or newer** (Windows and Linux tested; macOS untested). The minimum is enforced by the package.
 
 ## Install
 
