@@ -599,6 +599,49 @@ def test_the_secondary_axis_keeps_the_columns_on_their_own_scale() -> None:
     assert max(p.height for p in tall) > 4 * max(p.height for p in short)
 
 
+def test_series_names_sit_behind_the_secondary_axis() -> None:
+    # plot 0..3800, the secondary axis's band 3800..5400, the series names from 5550 on
+    chart = data(("A", (10.0, 20.0)), ("B", (100.0, 200.0)), categories=("X", "Y"))
+    primitives = layout_column(
+        chart,
+        "clustered",
+        8000,
+        10000,
+        lines=(1,),
+        secondary=(1,),
+        fmt=Format(series_names="labels"),
+    )
+    names = [p for p in primitives if isinstance(p, Text) and p.role == "series"]
+    assert [(p.text, p.x) for p in names] == [("A", 5550.0), ("B", 5550.0)]
+    ticks = [p for p in primitives if isinstance(p, Text) and p.role == "axis"]
+    assert [p.text for p in ticks] == ["0", "50", "100", "150", "200"]
+    assert all(p.x + p.width <= 5400 for p in ticks)  # the numbers keep their own band
+    assert all(p.x >= 5550 for p in names)  # no name runs into the numbers
+
+
+def test_level_lanes_sit_behind_the_secondary_axis() -> None:
+    # plot 0..1800, axis band 1800..3400, the level lane 3400..5400, the series names from 5550 on
+    chart = data(("A", (10.0, 20.0)), ("B", (100.0, 200.0)), categories=("X", "Y"))
+    arrow = Annotation("difference", 0, 1, series=1, style="level")
+    primitives = layout_column(
+        chart,
+        "clustered",
+        8000,
+        10000,
+        (arrow,),
+        lines=(1,),
+        secondary=(1,),
+        fmt=Format(series_names="labels"),
+    )
+    assert any(
+        isinstance(p, Line) and p.arrow and p.x1 == p.x2 == 3700 for p in primitives
+    )  # the arrow runs in its lane, not on the axis numbers
+    label = next(p for p in primitives if isinstance(p, Text) and p.role == "annotation")
+    assert label.x == 3850.0
+    names = [p for p in primitives if isinstance(p, Text) and p.role == "series"]
+    assert all(p.x >= 5550 for p in names)
+
+
 def test_a_primary_line_widens_the_column_axis() -> None:
     chart = data(("A", (10.0, 20.0)), ("B", (50.0, 80.0)), categories=("X", "Y"))
     primitives = layout_column(chart, "clustered", 2000, 10000, lines=(1,))

@@ -186,6 +186,9 @@ def layout_column(
     span = axis.maximum - axis.minimum
     fold = cut.fold if cut else _same
     secondary = geo.secondary_series
+    # Everything right of the plot starts behind the secondary axis's band, like the level
+    # lanes of a bar chart start below its axis band: the axis numbers stay next to the plot.
+    secondary_band = AXIS_BAND if geo.secondary_axis is not None else 0.0
 
     def y(value: float) -> float:
         """The y of a value already on the (folded) axis scale."""
@@ -343,7 +346,13 @@ def layout_column(
             )
         )
     for lane, arrow in enumerate(geo.levels):
-        arrow_x = geo.plot_left + geo.plot_width + lane * LEVEL_LANE_WIDTH + LEVEL_ARROW_INSET
+        arrow_x = (
+            geo.plot_left
+            + geo.plot_width
+            + secondary_band
+            + lane * LEVEL_LANE_WIDTH
+            + LEVEL_ARROW_INSET
+        )
         out.extend(
             level_arrow(
                 level(arrow.start, arrow.series),
@@ -363,6 +372,7 @@ def layout_column(
                 y_data,
                 geo.plot_left,
                 geo.plot_width,
+                secondary_band,
                 len(geo.levels),
                 lane,
                 fmt,
@@ -372,6 +382,7 @@ def layout_column(
         band_x = (
             geo.plot_left
             + geo.plot_width
+            + secondary_band
             + (len(geo.levels) + len(geo.value_lines)) * LEVEL_LANE_WIDTH
         )
         line_names = _line_name_tops(data, geo.line_series, secondary, slot, y_data, y_secondary)
@@ -661,6 +672,7 @@ def _value_line(
     y: _YScale,
     plot_left: float,
     plot_width: float,
+    secondary_band: float,
     lanes: int,
     lane: int,
     fmt: Format,
@@ -669,7 +681,13 @@ def _value_line(
     if level is None:
         return []
     line_y = y(level)
-    label_x = plot_left + plot_width + (lanes + lane) * LEVEL_LANE_WIDTH + LEVEL_ARROW_INSET
+    label_x = (
+        plot_left
+        + plot_width
+        + secondary_band
+        + (lanes + lane) * LEVEL_LANE_WIDTH
+        + LEVEL_ARROW_INSET
+    )
     return [
         Line(plot_left, line_y, plot_left + plot_width, line_y, "helper"),
         Text(

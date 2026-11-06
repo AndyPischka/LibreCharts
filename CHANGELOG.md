@@ -15,6 +15,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Kontrast*). The extension description lists the chart types and features of 3.0.
 
 ### Fixed
+- The series names of a combination chart with a secondary axis sit in their own band again;
+  before, they were drawn over the axis numbers at the chart's right edge, so names and numbers
+  ran into each other and the right edge looked misplaced. Level arrows and value lines also
+  start behind the axis band now, like the level lanes of a bar chart start below its axis.
 - The German prompt for selecting a Harvey ball used the wrong article (*eine* instead of *einen*),
   and the status line of a butterfly chart with more than two series ran its two sentences together.
 - *Start chapter here* is pressable right after inserting an agenda: before, it stayed grey on a
