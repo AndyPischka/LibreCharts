@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Changed
+- The sample data of a new area chart shows *Product A* and *Product B* instead of revenue and
+  costs: areas stack, so revenue and costs added up to a total nobody reads.
 - Chart redraws write only the properties that changed, batched into one call per shape, instead
   of rewriting every property of every shape. Editing the data of a large chart is much faster.
 - German and English UI strings reviewed and aligned: the ambiguous *Open source* is now *Open

@@ -275,12 +275,16 @@ def sample_state() -> ChartState:
 
 def sample_line_state() -> ChartState:
     """Revenue and costs over six years: what a new line chart shows."""
-    return _sample_years("line")
+    return _sample_years("line", "Revenue", "Costs")
 
 
 def sample_area_state() -> ChartState:
-    """Revenue and costs over six years: what a new area chart shows."""
-    return _sample_years("area")
+    """Two products over six years: what a new area chart shows.
+
+    Areas stack, so the series must be parts of a whole; revenue and costs would sum to a number
+    nobody reads.
+    """
+    return _sample_years("area", "Product A", "Product B")
 
 
 def sample_pie_state() -> ChartState:
@@ -358,14 +362,14 @@ def sample_gantt_state() -> ChartState:
     )
 
 
-def _sample_years(kind: ChartKind) -> ChartState:
+def _sample_years(kind: ChartKind, first: str, second: str) -> ChartState:
     return state_from_table(
         kind,
         "stacked",
         [
             [None, "2020", "2021", "2022", "2023", "2024", "2025"],
-            ["Revenue", 12, 15, 18, 22, 27, 33],
-            ["Costs", 9, 10, 12, 14, 16, 19],
+            [first, 12, 15, 18, 22, 27, 33],
+            [second, 9, 10, 12, 14, 16, 19],
         ],
     )
 

@@ -38,10 +38,10 @@ def test_an_area_chart_draws_one_filled_area_per_series(ctx):
         group, chart_id = store.find_charts(first_page(doc))[0]
         assert _state(doc, chart_id).kind == "area"
         children = _children(group)
-        assert len(_of_type(children, "PolyPolygonShape")) == 2  # Revenue and Costs
+        assert len(_of_type(children, "PolyPolygonShape")) == 2  # Product A and Product B
         texts = [text for _, text in children if text]
-        assert "Revenue" in texts
-        assert "Costs" in texts
+        assert "Product A" in texts
+        assert "Product B" in texts
         assert "12" in texts
         assert "33" in texts
     finally:
@@ -61,7 +61,7 @@ def test_the_100_percent_variant_shows_shares_and_can_be_undone(ctx):
         assert state.percent
         assert state.grouping == "stacked"
         assert len(manager.getAllUndoActionTitles()) == depth + 1
-        share = format_share(12 / 21 * 100, state.format)  # Revenue in 2020: 12 of 21
+        share = format_share(12 / 21 * 100, state.format)  # Product A in 2020: 12 of 21
         texts = [text for _, text in _children(group)]
         assert share in texts, (share, texts)
         assert len(_of_type(_children(group), "PolyPolygonShape")) == 2
@@ -110,7 +110,7 @@ def test_an_area_chart_survives_reload_in_both_variants(ctx):
                     assert restored.kind == "area", fmt
                     assert restored.percent is percent, fmt
                     texts = [text for _, text in _children(reloaded_group) if text]
-                    assert "Revenue" in texts, (fmt, texts)
+                    assert "Product A" in texts, (fmt, texts)
                 finally:
                     reloaded.close(True)
         finally:
