@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"
+     role="img" aria-label="LibreCharts">
+  <title>LibreCharts</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E3F68"/>
+      <stop offset="1" stop-color="#12253F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- app tile -->
+  <rect width="512" height="512" rx="112" fill="url(#tile)"/>
+
+  <!-- three ascending columns -->
+  <rect x="118" y="308" width="76" height="112" rx="6" fill="#C9D8EE"/>
+  <rect x="218" y="236" width="76" height="184" rx="6" fill="#8FB4E3"/>
+  <rect x="318" y="164" width="76" height="256" rx="6" fill="#5E8AC7"/>
+
+  <!-- difference arrow above the columns -->
+  <path d="M124 281 L327.7 126.2" fill="none" stroke="#F4B183" stroke-width="20"
+        stroke-linecap="round"/>
+  <path d="M372 92 L341.1 143.6 L314.3 108.8 Z" fill="#F4B183" stroke="#F4B183"
+        stroke-width="8" stroke-linejoin="round"/>
+</svg>
