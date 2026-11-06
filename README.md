@@ -1,9 +1,13 @@
+<p align="center">
+  <img src="docs/branding/logo-560x200.png" alt="LibreCharts" width="420">
+</p>
+
 # LibreCharts
 
 think-cell-style charts for **LibreOffice Impress**, as an open-source extension.
 Charts are drawn as native shapes and fed from a Calc data sheet.
 
-> **Status: M1 to M13 done.** Stacked, clustered and 100 % **column and bar charts**,
+> **Status: M1 to M17 done.** Stacked, clustered and 100 % **column and bar charts**,
 > **line, stacked and 100 % area charts**, **pie, doughnut, scatter, bubble and butterfly
 > charts**, **waterfall**, **Marimekko** and **Gantt charts** work: edit the
 > data in a Calc window (formulas included), resize charts freely, undo everything, save as ODP or
@@ -15,19 +19,25 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 > can share a **same scale** across slides, and a **chart format** can be copied to other charts.
 > A chart can take its data from a **linked Calc or Excel file** and be updated in one step.
 > Value labels and totals can be **moved by hand** and stay where you put them.
+> Annotations work on every chart type, including **category gaps and group brackets**; column,
+> bar and waterfall charts also take **floating bars**, **error bars** and **stacked or horizontal
+> waterfalls**. Labels are **rounded so they add up** and **move apart when they overlap**.
+> Gantt charts support **several bars per row**, **working-day calendars** and **import from CSV or
+> ProjectLibre**.
 > Beyond charts: **Harvey balls**, **check marks**, **arranging shapes** (same size, grid, swap)
 > and an **agenda** with a highlighted divider slide before every chapter.
-> Next: the 3.0 release, see [ROADMAP.md](ROADMAP.md).
+> This is the first release (3.0); further work is listed in [ROADMAP.md](ROADMAP.md).
 > LibreCharts is inspired by think-cell and empower charts but is not affiliated with them and
 > does not read or write their files.
 
 ## Requirements
 
-- LibreOffice **25.8 or newer** (Windows, Linux, macOS). The minimum is documented, not enforced by the package.
+- LibreOffice **25.8 or newer** (Windows and Linux tested; macOS untested). The minimum is documented, not enforced by the package.
 
 ## Install
 
-1. Build the package (see below) or take `LibreCharts-<version>.oxt` from a release.
+1. Build the package (see below) or take `LibreCharts-<version>.oxt` from a
+   [release](https://github.com/AndyPischka/LibreCharts/releases).
 2. In LibreOffice: *Tools → Extension Manager → Add…* and pick the `.oxt`; restart LibreOffice.
 3. In Impress, use the **LibreCharts** menu or toolbar to insert a column, bar, line, area,
    pie, scatter, butterfly, waterfall, Marimekko or Gantt chart; double-click a chart (or select it and choose *Edit chart data*)

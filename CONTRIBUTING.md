@@ -44,4 +44,14 @@ This installs Python 3.11 and the dev tools into `.venv` and activates the git h
 
 ## Releases
 
-Not set up yet (release 3.0). Tags and releases are created by the maintainer only.
+Tags and releases are created by the maintainer only. There is no release workflow yet; the
+package is built locally.
+
+1. Set the version in `pyproject.toml` and turn `## [Unreleased]` in
+   [CHANGELOG.md](CHANGELOG.md) into `## [<version>] - <date>`.
+2. `uv run poe check` and `uv run poe test-lo` must pass.
+3. `uv run poe build` writes `dist/LibreCharts-<version>.oxt`.
+4. Commit, tag `v<version>` and push the tag.
+5. Create a GitHub release, attach the `.oxt`, and paste the changelog section into its notes.
+6. Upload the same `.oxt` to [extensions.libreoffice.org](https://extensions.libreoffice.org/)
+   with the maintainer account. The site takes the version from `description.xml`.
