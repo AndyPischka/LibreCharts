@@ -21,12 +21,13 @@ def data(*series: tuple[str, tuple[float | None, ...]], categories: tuple[str, .
 
 
 def test_area_golden_geometry() -> None:
-    # axis 0..40 over 8200 from y=800; one slot of 1000 with the areas' edges at its centre
+    # axis 0..40 over 8200 from y=800; the areas span the whole plot width and their labels sit
+    # in the middle of the single slot
     chart = data(("A", (10.0,)), ("B", (30.0,)), categories=("X",))
     assert layout_area(chart, "stacked", 1000, 10000) == (
         Line(0, 9000, 1000, 9000, "baseline"),
         Text(0, 9000, 1000, CATEGORY_BAND, "X", "center", "category"),
-        Polygon(((500, 6950), (500, 9000)), 0),
+        Polygon(((0, 6950), (500, 6950), (1000, 6950), (1000, 9000), (500, 9000), (0, 9000)), 0),
         Text(
             0,
             7675,
@@ -38,7 +39,7 @@ def test_area_golden_geometry() -> None:
             fill=0,
             key=LabelKey("value", 0, 0),
         ),
-        Polygon(((500, 800), (500, 6950)), 1),
+        Polygon(((0, 800), (500, 800), (1000, 800), (1000, 6950), (500, 6950), (0, 6950)), 1),
         Text(
             0,
             3575,
@@ -51,6 +52,24 @@ def test_area_golden_geometry() -> None:
             key=LabelKey("value", 0, 1),
         ),
     )
+
+
+def test_the_areas_reach_the_plot_edges_so_edge_labels_stay_readable() -> None:
+    """The first and last value labels are centred on their slot, half a slot inside the area.
+
+    When the areas stopped at the slot centres, half of each edge label sat on the background,
+    where its white text was invisible.
+    """
+    chart = parse(sample_area_state())
+    primitives = layout_area(chart, "stacked", 24000, 12000)
+    polygons = [p for p in primitives if isinstance(p, Polygon)]
+    left = min(x for p in polygons for x, _ in p.points)
+    right = max(x for p in polygons for x, _ in p.points)
+    slot = 24000 / len(chart.categories)
+    assert (left, right) == (0.0, 24000.0)
+    labels = [p for p in primitives if isinstance(p, Text) and p.role == "value"]
+    assert min(p.x + p.width / 2 for p in labels) == left + slot / 2
+    assert max(p.x + p.width / 2 for p in labels) == right - slot / 2
 
 
 def test_percent_areas_are_full_and_show_their_shares() -> None:

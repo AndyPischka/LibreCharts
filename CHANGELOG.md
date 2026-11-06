@@ -17,6 +17,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Kontrast*). The extension description lists the chart types and features of 3.0.
 
 ### Fixed
+- An area chart's first and last value labels sat half on the background, where their white text
+  was invisible: the areas stopped at the first and last category's centre. They now reach the
+  plot's edges, so every label sits on its area.
 - The series names of a combination chart with a secondary axis sit in their own band again;
   before, they were drawn over the axis numbers at the chart's right edge, so names and numbers
   ran into each other and the right edge looked misplaced. Level arrows and value lines also

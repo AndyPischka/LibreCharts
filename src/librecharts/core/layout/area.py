@@ -108,14 +108,28 @@ def layout_area(
         )
 
     totals = [column_total(data, c) for c in range(len(data.categories))]
+    centres = [plot_left + (c + 0.5) * slot for c in range(len(totals))]
+    right = plot_left + plot_width
     lower = [0.0] * len(data.categories)
     for index, series in enumerate(data.series):
         upper = [
             lower[c] + _height(series.values[c], totals[c], percent) for c in range(len(totals))
         ]
         if any(not _same(upper[c], lower[c]) for c in range(len(totals))):
-            points = [(plot_left + (c + 0.5) * slot, y(upper[c])) for c in range(len(totals))] + [
-                (plot_left + (c + 0.5) * slot, y(lower[c])) for c in reversed(range(len(totals)))
+            # The area covers every category's slot, so it starts and ends at the plot edges. The
+            # first and last value labels are centred on those slots; on a shorter area half of each
+            # label would sit on the background, where white text is unreadable.
+            upper_edge = [(x, y(value)) for x, value in zip(centres, upper, strict=True)]
+            lower_edge = [
+                (x, y(value)) for x, value in zip(reversed(centres), reversed(lower), strict=True)
+            ]
+            points = [
+                (plot_left, y(upper[0])),
+                *upper_edge,
+                (right, y(upper[-1])),
+                (right, y(lower[-1])),
+                *lower_edge,
+                (plot_left, y(lower[0])),
             ]
             out.append(Polygon(tuple(points), index))
             for c in range(len(totals)):
