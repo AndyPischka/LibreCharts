@@ -14,7 +14,7 @@ Single tasks live in the issue tracker, not here.
 | M4 | Annotations | Difference arrows (bracket and level), CAGR arrows, axis break, placed by clicking columns, on column, bar and waterfall charts (ADR 0010); total labels came with M1 | done |
 
 Order is deliberate: M1 builds the shared foundation (layout, data sheet, persistence) that M2-M4 reuse.
-The first release (4.0) comes after M17.
+The first release (4.0) shipped after M17.
 
 ## Later versions
 
@@ -54,7 +54,7 @@ sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 f
 | M15 | Range and waterfall variants | Floating (from/to) bars, error bars and intervals, stacked and horizontal waterfalls, sorting pie segments by size (deferred from M9) | done |
 | M16 | Consistent rounding and decluttering | Rounded labels that add up to the rounded total; labels that overlap move apart automatically (builds on M13) | done |
 | M17 | Gantt extensions | Several bars per row, working-day calendars and holidays, import from CSV and ProjectLibre (deferred from M10) | done |
-| 4.0 | First release | `SECURITY.md`, packaging for extensions.libreoffice.org | open |
+| 4.0 | First release | `SECURITY.md`, packaging for extensions.libreoffice.org | done |
 
 ### 5.0: workflow and ecosystem
 
@@ -65,7 +65,7 @@ sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 f
 | M20 | Accessibility and export | Alternative text generated from the chart data, patterns as well as colours for colour-blind readers, exporting chart data as CSV | open |
 | M21 | Languages and platforms | Further UI languages through a translation platform (Weblate); macOS tested and supported | open |
 
-Both versions are sketches. Priorities are set after the first release from user feedback in the issue tracker.
+Both versions are sketches. Priorities are set from user feedback in the issue tracker.
 M18 is cheap because `core/` is plain Python. M21 changes the convention that every UI string is
 German and English (AGENTS.md).
 
