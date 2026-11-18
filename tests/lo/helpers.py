@@ -1,6 +1,7 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
 """Shared helpers for UNO integration tests (run under LibreOffice's Python)."""
 
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -151,3 +152,46 @@ def click(ctx, doc, x, y, clicks=1):
     for _ in range(clicks):
         robot.mousePress(event)
         robot.mouseRelease(event)
+
+
+# Deck specification and templates (M18, ADR 0028).
+
+
+def url_of(path):
+    """``path`` as a file URL."""
+    return uno.systemPathToFileUrl(str(path))
+
+
+def placeholder_rect(doc, page, key, x=1000, y=1000, width=9000, height=5000):
+    """A rectangle named after the deck placeholder ``key`` on ``page``."""
+    from librecharts.core.deck import placeholder_name
+
+    shape = doc.createInstance("com.sun.star.drawing.RectangleShape")
+    shape.Position = uno.createUnoStruct("com.sun.star.awt.Point", x, y)
+    shape.Size = uno.createUnoStruct("com.sun.star.awt.Size", width, height)
+    page.add(shape)
+    shape.Name = placeholder_name(key)
+    return shape
+
+
+def deck_template(ctx, keys, pages=1):
+    """A presentation with one placeholder rectangle per key on its last slide, saved as .odp."""
+    doc = new_impress(ctx)
+    try:
+        while doc.getDrawPages().getCount() < pages:
+            doc.getDrawPages().insertNewByIndex(doc.getDrawPages().getCount() - 1)
+        page = doc.getDrawPages().getByIndex(pages - 1)
+        for index, key in enumerate(keys):
+            placeholder_rect(doc, page, key, y=1000 + index * 6000)
+        path = Path(tempfile.mkdtemp(prefix="librecharts_")) / "template.odp"
+        doc.storeToURL(url_of(path), (prop("FilterName", FILTERS["odp"]),))
+    finally:
+        doc.close(True)
+    return path
+
+
+def deck_spec(charts):
+    """A deck specification file (JSON) with ``charts``."""
+    path = Path(tempfile.mkdtemp(prefix="librecharts_")) / "charts.json"
+    path.write_text(json.dumps({"version": 1, "charts": charts}), encoding="utf-8")
+    return path

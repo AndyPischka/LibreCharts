@@ -12,6 +12,7 @@ from urllib.parse import parse_qs
 
 import uno
 
+from librecharts import api
 from librecharts.core import annotations, elements, gantt, gantt_import, options, style
 from librecharts.core import arrange as core_arrange
 from librecharts.core import calendar as working_calendar
@@ -19,6 +20,7 @@ from librecharts.core import format as formats
 from librecharts.core import labels as core_labels
 from librecharts.core import links as core_links
 from librecharts.core import samescale as core_samescale
+from librecharts.core.deck import DeckError
 from librecharts.core.messages import text
 from librecharts.core.model import Annotation, AnnotationKind, ChartState
 from librecharts.core.picking import PickSession, annotation_kind, supports
@@ -268,31 +270,40 @@ def update_link(ctx: Any, frame: Any) -> None:
     if not ids:
         ui.show_info(ctx, frame, text("link_not_linked", locale))
         return
-    _update_links(ctx, frame, doc, links.targets(doc, ids), single=len(ids) == 1)
+    _update_links(ctx, frame, doc, ids)
 
 
 def update_all_links(ctx: Any, frame: Any) -> None:
     """Update every linked chart of the presentation; one undo step, each source opened once."""
     doc = frame.getController().getModel()
     links.withdraw_offer(doc)
-    _update_links(ctx, frame, doc, links.targets(doc), single=False)
+    _update_links(ctx, frame, doc, None)
 
 
-def _update_links(ctx: Any, frame: Any, doc: Any, targets: list[Any], *, single: bool) -> None:
-    outcome = links.update(ctx, doc, targets)
-    chart.apply_changes(doc, dict(outcome.changed.values()))
-    # Same data: only the link's times are new. Not worth an undo step; nothing is redrawn.
-    for chart_id, state in outcome.unchanged.items():
-        store.write_state(doc, chart_id, state)
-    for chart_id in (*outcome.changed, *outcome.unchanged):
-        datasheet.refresh(doc, chart_id)
-    count = len(outcome.changed) + len(outcome.unchanged)
-    locale = ui.ui_locale(ctx)
-    message = core_links.report(
-        count, len(outcome.changed), outcome.problems, locale, single=single
-    )
+def _update_links(ctx: Any, frame: Any, doc: Any, ids: set[str] | None) -> None:
+    """Update the linked charts with ids in ``ids`` (or all) and tell the user about problems."""
+    message = api.update_links(ctx, doc, ids, ui.ui_locale(ctx))
     if message:
         ui.show_info(ctx, frame, message)
+
+
+def build_deck(ctx: Any, frame: Any, query: str) -> None:
+    """Build a deck from a template and a specification (M18, ADR 0028); the macro API's build.
+
+    ``org.librecharts:BuildDeck?template=<url>&data=<url>&out=<url>`` (percent-encoded file URLs or
+    system paths). The report, or the reason nothing was built, goes to a message box; without a
+    window (headless, hidden documents) it is printed.
+    """
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    locale = ui.ui_locale(ctx)
+    try:
+        report = api.build_deck(
+            ctx, args.get("template", ""), args.get("data", ""), args.get("out", ""), locale
+        )
+    except DeckError as exc:
+        ui.tell(ctx, frame, exc.message(locale))
+        return
+    ui.tell(ctx, frame, report)
 
 
 def open_source(ctx: Any, frame: Any) -> None:

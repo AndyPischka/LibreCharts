@@ -36,59 +36,89 @@ def insert_column_chart(
 
     ``locale`` (e.g. ``de-DE``) sets the decimal separator and the language of magnitude suffixes.
     """
-    return _insert(doc, page, state or sample_state(), locale)
+    return _insert(doc, page, _with_default_format(state or sample_state(), locale))
 
 
 def insert_bar_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a horizontal bar chart with sample data centred on ``page``."""
-    return _insert(doc, page, replace(sample_state(), kind="bar"), locale)
+    return _insert(doc, page, _with_default_format(replace(sample_state(), kind="bar"), locale))
 
 
 def insert_line_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a line chart with sample data centred on ``page``."""
-    return _insert(doc, page, sample_line_state(), locale)
+    return _insert(doc, page, _with_default_format(sample_line_state(), locale))
 
 
 def insert_area_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a stacked area chart with sample data centred on ``page``."""
-    return _insert(doc, page, sample_area_state(), locale)
+    return _insert(doc, page, _with_default_format(sample_area_state(), locale))
 
 
 def insert_waterfall_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a waterfall chart with sample data centred on ``page``."""
-    return _insert(doc, page, sample_waterfall_state(), locale)
+    return _insert(doc, page, _with_default_format(sample_waterfall_state(), locale))
 
 
 def insert_mekko_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a percent Marimekko chart with sample data centred on ``page``."""
-    return _insert(doc, page, sample_mekko_state(), locale)
+    return _insert(doc, page, _with_default_format(sample_mekko_state(), locale))
 
 
 def insert_pie_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a pie chart with sample data centred on ``page``."""
-    return _insert(doc, page, sample_pie_state(), locale)
+    return _insert(doc, page, _with_default_format(sample_pie_state(), locale))
 
 
 def insert_scatter_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a scatter chart with sample data centred on ``page``."""
-    return _insert(doc, page, sample_scatter_state(), locale)
+    return _insert(doc, page, _with_default_format(sample_scatter_state(), locale))
 
 
 def insert_butterfly_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a butterfly chart with sample data centred on ``page``."""
-    return _insert(doc, page, sample_butterfly_state(), locale)
+    return _insert(doc, page, _with_default_format(sample_butterfly_state(), locale))
 
 
 def insert_gantt_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a Gantt chart with a sample project centred on ``page``."""
-    return _insert(doc, page, sample_gantt_state(), locale)
+    return _insert(doc, page, _with_default_format(sample_gantt_state(), locale))
 
 
-def _insert(doc: Any, page: Any, state: ChartState, locale: str = "") -> Any:
-    state = replace(state, format=default_format(state.kind, state.grouping, locale))
-    width = round(page.Width * NEW_CHART_SHARE)
-    height = round(page.Height * NEW_CHART_SHARE)
-    x, y = (page.Width - width) // 2, (page.Height - height) // 2
+def insert_at(
+    doc: Any,
+    page: Any,
+    state: ChartState,
+    box: tuple[int, int, int, int] | None = None,
+    *,
+    undo_action: bool = True,
+) -> Any:
+    """Insert ``state`` on ``page`` at ``box`` (x, y, width, height), centred if ``None``.
+
+    Unlike the ``insert_*_chart`` helpers this keeps the state's own format: the deck builder and
+    the macro API bring a format from their specification (M18, ADR 0028). ``undo_action`` is off
+    for a template that is built and saved without anyone looking at its undo list.
+    """
+    return _insert(doc, page, state, box, undo_action)
+
+
+def _with_default_format(state: ChartState, locale: str) -> ChartState:
+    """``state`` with the format a chart inserted from the menu starts with."""
+    return replace(state, format=default_format(state.kind, state.grouping, locale))
+
+
+def _insert(
+    doc: Any,
+    page: Any,
+    state: ChartState,
+    box: tuple[int, int, int, int] | None = None,
+    undo_action: bool = True,
+) -> Any:
+    if box is None:
+        width = round(page.Width * NEW_CHART_SHARE)
+        height = round(page.Height * NEW_CHART_SHARE)
+        x, y = (page.Width - width) // 2, (page.Height - height) // 2
+    else:
+        x, y, width, height = box
     primitives = layout_chart(state, width, height)
     look = scheme.look(doc, state)
 
@@ -98,12 +128,13 @@ def _insert(doc: Any, page: Any, state: ChartState, locale: str = "") -> Any:
         group.Name = store.anchor_name(chart_id)
     # The state stays in the document after an undo; unused states are cleaned up separately.
     store.write_state(doc, chart_id, state)
-    undo.add_action(
-        doc,
-        "Insert LibreCharts chart",
-        undo=lambda: page.remove(group),
-        redo=lambda: page.add(group),
-    )
+    if undo_action:
+        undo.add_action(
+            doc,
+            "Insert LibreCharts chart",
+            undo=lambda: page.remove(group),
+            redo=lambda: page.add(group),
+        )
     return group
 
 

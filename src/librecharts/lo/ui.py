@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 import uno
@@ -44,3 +45,14 @@ def show_info(ctx: Any, frame: Any, message: str) -> None:
     )
     box.execute()
     box.dispose()
+
+
+def tell(ctx: Any, frame: Any, message: str) -> None:
+    """Show ``message`` in a box, or print it where there is no window (headless, hidden docs)."""
+    window = None
+    with contextlib.suppress(Exception):
+        window = frame.getContainerWindow()
+    if window is None or not window.isVisible():
+        print(message)
+        return
+    show_info(ctx, frame, message)

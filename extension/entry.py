@@ -100,6 +100,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.update_link(self.ctx, self.frame)
             elif url.Path == "UpdateAllLinks":
                 commands.update_all_links(self.ctx, self.frame)
+            elif url.Path.startswith("BuildDeck"):
+                commands.build_deck(self.ctx, self.frame, _query(url))
             elif url.Path == "OpenSource":
                 commands.open_source(self.ctx, self.frame)
             elif url.Path == "RemoveLink":
