@@ -59,6 +59,10 @@ Use these terms consistently in code, UI strings and docs.
 | **Data link** | A chart's tie to a range of an external spreadsheet (`ChartState.link`); the chart stores the fetched values and is updated on demand (ADR 0020). |
 | **Source** | The spreadsheet file (`.ods`, `.xlsx`, `.xls`, `.csv`) a linked chart takes its data from. |
 | **Update (a link)** | Read the linked range of the source again and redraw the chart if its data changed; *Update all links* does it for every linked chart of the presentation in one undo step. |
+| **Deck specification** | One JSON file that describes a deck's charts by placeholder: kind, data grid and every chart option ("Deck-Beschreibung", ADR 0028). |
+| **Placeholder** | A shape named `librecharts-placeholder:<key>` on a template slide; a build puts the chart of that key at its position and size and removes the placeholder ("Platzhalter", ADR 0028). |
+| **Deck build** | Filling a template from a deck specification and saving it as an `.odp` or `.pptx`; one chart per placeholder, no undo actions (ADR 0028). |
+| **Automation API** | `librecharts.api` for Python scripts, the `BuildDeck` dispatch command for macros, and the command line `uv run poe deck` (ADR 0028). |
 | **Combination chart** | A column chart with single series drawn as lines (`ChartState.lines`), optionally on a secondary axis (`secondary`); line series are left out of stacking, clustering and picking (ADR 0015). |
 | **Secondary axis** | The right-hand value axis of a combination chart, scaled to its line series only. It is always drawn, even when the chart's value axis is off (ADR 0015). |
 | **Marker** | The fixed-size dot on a line point; switched on or off per chart in the format (ADR 0015). |

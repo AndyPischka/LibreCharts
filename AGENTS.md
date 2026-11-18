@@ -16,6 +16,7 @@ Run everything through `uv run poe <task>` (uv installs Python 3.11 and the dev 
 | `uv run poe lint` / `format` | ruff check / ruff format (in place) |
 | `uv run poe typecheck` | pyright (strict for `core/`, basic elsewhere) |
 | `uv run poe build` | build `dist/LibreCharts-<version>.oxt` |
+| `uv run poe deck` | build a deck from a template and a JSON specification, or update its data links (M18) |
 | `uv run poe test-lo` | UNO integration tests against a real LibreOffice (not in `check`; CI job `integration`) |
 
 `test-lo` needs LibreOffice installed (override discovery with `LIBREOFFICE_PROGRAM`). It uses a
@@ -30,6 +31,7 @@ src/librecharts/core/   Pure Python: geometry, scaling, chart models. NO uno imp
 src/librecharts/lo/     UNO adapters: turn core models into shapes, Calc sync. Only place for uno.
 extension/              Static .oxt files (manifest, menus, entry.py). entry.py stays thin.
 scripts/build_oxt.py    Packs extension/ + src/librecharts + LICENSE into the .oxt
+scripts/deck.py         Command line (M18): finds LibreOffice, starts it headless, runs the worker
 tests/                  Mirrors src/; no LibreOffice required
 tests/lo/               UNO integration tests (`test_*(ctx)`), run under LibreOffice's Python
 docs/adr/               Architecture decision records     docs/plans/   Plans for large features
@@ -79,6 +81,15 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
   LibreOffice 26.8 but raises on 25.8 ("use uno.invoke instead"); CI tests on 25.8.
 - Never let an exception escape a dispatch or a UNO listener: LibreOffice may abort. `entry.py`
   and the listeners in `lo/` catch and print them.
+- In a protocol handler, `url.Path` of an `org.librecharts:` URL keeps the query
+  (`BuildDeck?template=...`). Match commands with `startswith` and read the arguments with
+  `_query(url)`.
+- A Python UNO object only shows interface methods to other UNO clients (Basic, a bridge), never its
+  plain methods; a service with a single `XJob.execute` could not even be called through the bridge.
+  New macro API therefore goes into a dispatch command (`org.librecharts:BuildDeck?...`, ADR 0028).
+- A deck build (`lo/deck.py`) runs on a hidden template and adds no undo actions
+  (`chart.insert_at(..., undo_action=False)`): nobody undoes a build, and the explicit undo actions
+  of `lo/undo.py` would hold proxies of a document that is closed right after saving.
 - On documents, `addEventListener` is ambiguous in PyUNO and picks the wrong interface. Use
   `addDocumentEventListener` for document lifetime events.
 - In headless mode LibreOffice 26.8 intermittently aborts when a *visible* Calc window is closed.

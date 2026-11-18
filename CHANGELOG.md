@@ -3,6 +3,18 @@
 All notable user-visible changes are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Automation** (M18): a presentation can be built from a template and a JSON deck specification.
+  A template marks the place of each chart with a shape named `librecharts-placeholder:<key>`; the
+  specification names the placeholder, the chart type, the data and any chart option, and the build
+  puts the chart at the placeholder's position and size. Slides, master slides and the colour scheme
+  of the template stay. On the command line, `uv run poe deck build --template t.odp --data d.json
+  --out deck.odp` does it headless, and `uv run poe deck update deck.odp` refreshes every data link
+  of a deck in place. Python scripts inside LibreOffice use `librecharts.api`; a Basic macro calls
+  the command `org.librecharts:BuildDeck?template=...&data=...&out=...`.
+
 ## [4.0.0] - 2026-11-06
 
 ### Changed

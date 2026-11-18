@@ -74,6 +74,53 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
    the chart switches arrows between percent and absolute, or bracket and level, changes the axis
    break and removes annotations.
 
+## Automate
+
+A deck can be built from a **template** and a **deck specification**: one JSON file with a chart per
+placeholder. A placeholder is any shape named `librecharts-placeholder:<key>`; the chart lands at its
+position and size and the placeholder is removed. The template keeps its slides, master slides and
+colour scheme.
+
+```
+uv run poe deck build --template template.odp --data charts.json --out deck.odp
+uv run poe deck update deck.odp            # refresh every data link, save in place
+```
+
+`poe deck` finds LibreOffice itself and runs headless; `--locale de` switches the messages, `--out`
+lets `update` write another file.
+
+```json
+{
+  "version": 1,
+  "charts": [
+    {
+      "placeholder": "revenue",
+      "kind": "column",
+      "data": [[null, "2023", "2024"], ["Product A", 10, 12], ["Product B", 20, 22]],
+      "format": { "axis": true, "decimals": 0 }
+    }
+  ]
+}
+```
+
+Every chart option works as a field: `grouping`, `percent`, `sort`, `doughnut`, `range`, `errors`,
+`horizontal`, `stacked`, `lines`, `secondary`, `colors`, `format`, `calendar`. A chart without a
+placeholder stops the build before anything is written; a placeholder without a chart stays and is
+reported.
+
+From a Python script inside LibreOffice, `librecharts.api` offers `build_deck(...)`,
+`update_links(ctx, doc)` and `insert_chart(ctx, doc, slide, spec_json)`. A Basic macro dispatches
+the command:
+
+```basic
+oDispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
+oDispatcher.executeDispatch(ThisComponent.getCurrentController().getFrame(), _
+  "org.librecharts:BuildDeck?template=file:///…/template.odp&data=file:///…/charts.json" & _
+  "&out=file:///…/deck.odp", "", 0, Array())
+```
+
+*Update all links* is the command `org.librecharts:UpdateAllLinks`.
+
 ## Develop
 
 Requires [uv](https://docs.astral.sh/uv/).
@@ -82,6 +129,7 @@ Requires [uv](https://docs.astral.sh/uv/).
 uv run poe setup    # dependencies + git hooks
 uv run poe check    # lint, format, types, tests (what CI runs)
 uv run poe build    # dist/LibreCharts-<version>.oxt
+uv run poe deck     # build a deck from a template and a spec, or update its links
 uv run poe test-lo  # integration tests against an installed LibreOffice
 ```
 

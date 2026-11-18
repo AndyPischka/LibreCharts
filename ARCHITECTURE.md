@@ -21,6 +21,10 @@ src/librecharts/core/       Pure Python. Chart models, layout, axis scaling. Inp
 
 Dependencies point downward only: `core` knows nothing about `lo` or `extension`.
 
+`src/librecharts/api.py` is the automation surface (build a deck, update links, insert a chart): it
+only names the functions and delegates to `lo/`. `cli.py` and `lo/worker.py` are the command line of
+[ADR 0028](docs/adr/0028-automation.md); `scripts/deck.py` starts LibreOffice for them.
+
 ## Modules in `core/`
 
 | Module | Role |
@@ -41,6 +45,8 @@ Dependencies point downward only: `core` knows nothing about `lo` or `extension`
 | `menu.py` | Contents of the chart's context menu as plain data |
 | `panel.py` | Contents of the sidebar panel (buttons, status, annotation list) as plain data |
 | `state_io.py` | `ChartState` <-> JSON with schema migrations; malformed input raises `StateError` |
+| `deck.py` | Deck specification: one JSON file describing a chart per placeholder (kind, data grid, options, format), placeholder shape names, validation with message keys (ADR 0028) |
+| `cli.py` | The command line's arguments (`argparse`, localized): `build` and `update`, so `--help` needs no LibreOffice (ADR 0028) |
 | `messages.py` | All user-visible strings in English and German (a test enforces both) |
 | `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series), row-paired grids for floating bars and error bars (`ranged`/`errored`); sample data |
 | `scale.py` | "Nice" value axis ranges |
@@ -102,8 +108,10 @@ so every released schema version must stay readable (`state_io.py`).
 | `chart.py` | Insert (with the UI locale for number formats), `redraw`, `add_annotation`, `apply_changes`, `set_scheme`, `fit_to_size`: chart operations on a presentation |
 | `datasheet.py` | Calc window as a transient view: write stored cells (Gantt date columns in a date format), sync every committed edit back; a protected read-only view for linked charts |
 | `links.py` | Data links: find, open (hidden, read-only, no macros) and read the sources of linked charts, each once per update; the info bar when sources changed (ADR 0020) |
+| `deck.py` | A deck from a template: find the placeholder shapes, insert the charts of a specification at their boxes (without undo actions), save as `.odp` or `.pptx` (ADR 0028) |
+| `worker.py` | The command line's UNO side: connect to a headless LibreOffice on a pipe, build or update, save, shut down (ADR 0028) |
 | `linkdialog.py` | The link dialog (modal, built in code): file, sheet, range or name; reads the range before it links |
-| `commands.py` | Menu commands (selection handling, messages, same scale, copy format, scheme files, data links, Gantt import); called by `extension/entry.py` |
+| `commands.py` | Menu commands (selection handling, messages, same scale, copy format, scheme files, data links, Gantt import, `BuildDeck`); called by `extension/entry.py` |
 | `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place, including their scale group (ADRs 0007, 0017); looks for moved labels where one can have moved (ADR 0023) |
 | `labels.py` | Moved labels: reads the shapes' boxes, stores the offsets `core/labels.moved` finds (no undo action) and puts other dragged shapes back; the *Move labels* session (ADR 0023) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
