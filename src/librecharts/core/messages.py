@@ -1198,6 +1198,158 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Drag values and totals to move them. Esc ends.",
         "de": "Werte und Summen ziehen, um sie zu verschieben. Esc beendet.",
     },
+    "deck_bad_json": {
+        "en": "The deck specification is not valid JSON: {detail}",
+        "de": "Die Deck-Beschreibung ist kein gültiges JSON: {detail}",
+    },
+    "deck_bad_spec": {
+        "en": "The deck specification must be a JSON object.",
+        "de": "Die Deck-Beschreibung muss ein JSON-Objekt sein.",
+    },
+    "deck_bad_version": {
+        "en": "This deck specification has version {detail}; this LibreCharts reads version 1.",
+        "de": "Diese Deck-Beschreibung hat Version {detail}; dieses LibreCharts liest Version 1.",
+    },
+    "deck_no_charts": {
+        "en": "The deck specification contains no charts.",
+        "de": "Die Deck-Beschreibung enthält keine Diagramme.",
+    },
+    "deck_bad_chart": {
+        "en": "An entry of the deck specification is not a JSON object.",
+        "de": "Ein Eintrag der Deck-Beschreibung ist kein JSON-Objekt.",
+    },
+    "deck_unknown_key": {
+        "en": "Unknown entry {detail} in the deck specification.",
+        "de": "Unbekannter Eintrag {detail} in der Deck-Beschreibung.",
+    },
+    "deck_no_placeholder": {
+        "en": "A chart of the deck specification names no placeholder.",
+        "de": "Ein Diagramm der Deck-Beschreibung nennt keinen Platzhalter.",
+    },
+    "deck_duplicate_placeholder": {
+        "en": "The placeholder {detail} is used by more than one chart.",
+        "de": "Der Platzhalter {detail} wird von mehr als einem Diagramm verwendet.",
+    },
+    "deck_bad_kind": {
+        "en": "Unknown chart type {detail} in the deck specification.",
+        "de": "Unbekannter Diagrammtyp {detail} in der Deck-Beschreibung.",
+    },
+    "deck_bad_data": {
+        "en": (
+            "The data of the chart for placeholder {placeholder} must be a grid of at least "
+            "2 x 2 cells holding numbers, text or null."
+        ),
+        "de": (
+            "Die Daten des Diagramms für den Platzhalter {placeholder} müssen ein Raster von "
+            "mindestens 2 x 2 Zellen mit Zahlen, Text oder null sein."
+        ),
+    },
+    "deck_too_large": {
+        "en": "The data of the chart for placeholder {placeholder} has more than {detail} cells.",
+        "de": (
+            "Die Daten des Diagramms für den Platzhalter {placeholder} haben mehr als "
+            "{detail} Zellen."
+        ),
+    },
+    "deck_invalid_chart": {
+        "en": "The chart for placeholder {placeholder} is invalid: {detail}",
+        "de": "Das Diagramm für den Platzhalter {placeholder} ist ungültig: {detail}",
+    },
+    "deck_bad_calendar": {
+        "en": (
+            "The working calendar of the chart for placeholder {placeholder} is invalid: {detail}"
+        ),
+        "de": (
+            "Der Arbeitskalender des Diagramms für den Platzhalter {placeholder} ist ungültig: "
+            "{detail}"
+        ),
+    },
+    "deck_missing_placeholders": {
+        "en": "The template has no placeholder for: {detail}",
+        "de": "Das Template hat keinen Platzhalter für: {detail}",
+    },
+    "deck_duplicate_placeholders": {
+        "en": "The template uses these placeholders more than once: {detail}",
+        "de": "Das Template verwendet diese Platzhalter mehr als einmal: {detail}",
+    },
+    "deck_unused_placeholders": {
+        "en": "These placeholders stayed empty: {detail}",
+        "de": "Diese Platzhalter blieben leer: {detail}",
+    },
+    "deck_built": {
+        "en": "{count} charts written to {file}.",
+        "de": "{count} Diagramme in {file} geschrieben.",
+    },
+    "deck_built_one": {
+        "en": "1 chart written to {file}.",
+        "de": "1 Diagramm in {file} geschrieben.",
+    },
+    "deck_open_failed": {
+        "en": "The template {detail} cannot be opened.",
+        "de": "Das Template {detail} lässt sich nicht öffnen.",
+    },
+    "deck_save_failed": {
+        "en": "The presentation cannot be saved as {detail}.",
+        "de": "Die Präsentation lässt sich nicht als {detail} speichern.",
+    },
+    "deck_spec_unreadable": {
+        "en": "The deck specification cannot be read: {detail}",
+        "de": "Die Deck-Beschreibung lässt sich nicht lesen: {detail}",
+    },
+    "deck_placeholder_too_small": {
+        "en": "The placeholder {detail} is too small for a chart.",
+        "de": "Der Platzhalter {detail} ist zu klein für ein Diagramm.",
+    },
+    "deck_bad_slide": {
+        "en": "The presentation has no slide {detail}.",
+        "de": "Die Präsentation hat keine Folie {detail}.",
+    },
+    "deck_no_document": {
+        "en": "No presentation was passed.",
+        "de": "Es wurde keine Präsentation übergeben.",
+    },
+    "cli_description": {
+        "en": "Build a presentation from a template and a deck specification, or update its links.",
+        "de": (
+            "Eine Präsentation aus Template und Deck-Beschreibung bauen oder ihre Datenlinks "
+            "aktualisieren."
+        ),
+    },
+    "cli_build": {
+        "en": "fill a template with the charts of a deck specification",
+        "de": "ein Template mit den Diagrammen einer Deck-Beschreibung füllen",
+    },
+    "cli_update": {
+        "en": "update every linked chart of a presentation",
+        "de": "jedes verknüpfte Diagramm einer Präsentation aktualisieren",
+    },
+    "cli_template": {
+        "en": "template presentation with librecharts-placeholder shapes",
+        "de": "Template-Präsentation mit librecharts-placeholder-Formen",
+    },
+    "cli_data": {
+        "en": "deck specification (JSON)",
+        "de": "Deck-Beschreibung (JSON)",
+    },
+    "cli_deck": {
+        "en": "presentation whose data links are updated",
+        "de": "Präsentation, deren Datenlinks aktualisiert werden",
+    },
+    "cli_out": {
+        "en": "output file (default: save over the deck)",
+        "de": "Zieldatei (Vorgabe: die Präsentation wird überschrieben)",
+    },
+    "cli_locale": {
+        "en": "language of messages, e.g. de or en-GB (default: LibreOffice's UI locale)",
+        "de": "Sprache der Meldungen, z. B. de oder en-GB (Vorgabe: UI-Sprache von LibreOffice)",
+    },
+    "cli_no_libreoffice": {
+        "en": "LibreOffice was not found; set LIBREOFFICE_PROGRAM to its program directory.",
+        "de": (
+            "LibreOffice wurde nicht gefunden; LIBREOFFICE_PROGRAM auf das "
+            "program-Verzeichnis setzen."
+        ),
+    },
 }
 
 

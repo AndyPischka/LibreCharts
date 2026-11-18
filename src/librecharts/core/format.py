@@ -6,8 +6,9 @@ validated here, so the adapter only moves values around. Pure Python, no UNO.
 
 from __future__ import annotations
 
-from dataclasses import replace
-from typing import cast
+from collections.abc import Mapping
+from dataclasses import fields, replace
+from typing import Any, cast
 from urllib.parse import parse_qs
 
 from librecharts.core.model import (
@@ -107,6 +108,21 @@ def supports(state: ChartState, option: str) -> bool:
     if option == "number_format":  # a Gantt chart shows dates, no numbers
         return state.kind != "gantt"
     return False
+
+
+FORMAT_FIELDS = frozenset(field.name for field in fields(Format))
+
+
+def from_mapping(mapping: Mapping[str, object], base: Format) -> Format:
+    """``base`` with the fields in ``mapping`` applied, as the deck specification writes them.
+
+    The keys are the dataclass field names, so a new ``Format`` field needs no change here. Raises
+    ``ValueError`` for unknown fields and for values ``Format`` rejects.
+    """
+    unknown = sorted(set(mapping) - FORMAT_FIELDS)
+    if unknown:
+        raise ValueError(f"unknown format field(s): {', '.join(unknown)}")
+    return replace(base, **cast("dict[str, Any]", dict(mapping)))
 
 
 def changed(current: Format, query: str) -> Format:

@@ -51,8 +51,12 @@ class Format:
     def __post_init__(self) -> None:
         if self.series_names not in get_args(SeriesNames):
             raise ValueError(f"unknown series name mode: {self.series_names!r}")
-        if not isinstance(self.markers, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if not isinstance(self.markers, bool):  # pyright: ignore
             raise ValueError("markers must be true or false")
+        if not isinstance(self.axis, bool):  # pyright: ignore
+            raise ValueError("axis must be true or false")
+        if not isinstance(self.gridlines, bool):  # pyright: ignore
+            raise ValueError("gridlines must be true or false")
         if self.decimals is not None and not 0 <= self.decimals <= 4:
             raise ValueError("decimals must be None or between 0 and 4")
         if self.magnitude not in (0, 3, 6, 9):
