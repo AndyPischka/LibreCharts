@@ -19,6 +19,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   its next change.
 - **Patterns** (M20): *Format → Show patterns* hatches series fills and dashes line series beside
   their colours, so charts stay readable for colour-blind readers and in black-and-white print.
+- **French, Spanish and Italian** (M21): menus, toolbar, context menu, sidebar, dialogs and
+  messages follow LibreOffice's UI language; numbers use the language's magnitude suffixes and
+  dates its day-first format. Other UI languages show English. Translations are maintained as
+  JSON files for Weblate (`docs/translating.md`).
+- **macOS** (M21): supported and tested in CI; the scripts find LibreOffice in `/Applications`
+  and its bundled Python.
 - **CSV export** (M20): *Export chart data as CSV...* writes a chart's data sheet to a CSV file; a
   chart with a decimal comma writes semicolons between the fields, as spreadsheets expect.
 - **Automation** (M18): a presentation can be built from a template and a JSON deck specification.

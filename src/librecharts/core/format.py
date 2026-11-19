@@ -24,6 +24,9 @@ from librecharts.core.options import Switch
 MAGNITUDE_SUFFIXES: dict[str, dict[int, str]] = {
     "en": {3: "k", 6: "M", 9: "bn"},
     "de": {3: "Tsd.", 6: "Mio.", 9: "Mrd."},
+    "fr": {3: "k", 6: "M", 9: "Md"},
+    "es": {3: "mil", 6: "M", 9: "mil M"},
+    "it": {3: "k", 6: "Mln", 9: "Mrd"},
 }
 _COMMA_LANGUAGES = frozenset(
     {

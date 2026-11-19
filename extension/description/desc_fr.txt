@@ -1,0 +1,1 @@
+Graphiques dans le style de think-cell pour LibreOffice Impress : histogrammes, graphiques à barres, en cascade, Marimekko, en courbes, en aires, en secteurs, nuages de points, graphiques papillon et diagrammes de Gantt, annotations, liens de données, éléments de diapositive et agenda.

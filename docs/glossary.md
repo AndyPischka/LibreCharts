@@ -5,6 +5,7 @@ Use these terms consistently in code, UI strings and docs.
 | Term | Meaning |
 |---|---|
 | **Chart** | One LibreCharts object on a slide: a group of shapes plus its data. |
+| **Translation source** | English and German in `core/messages.py`; `locales/en.json` and `de.json` are generated from them for the translation platform. Every other language is a *translation* in `locales/<lang>.json` that falls back to English (ADR 0031). |
 | **Corporate design file** | A colour-scheme file (ADR 0016) with optional check rules: further allowed colours and fonts and the slide margins every shape keeps (ADR 0029). |
 | **Corporate design check** | Comparing every shape of a presentation, and its colour scheme, with a corporate design file; each mismatch is a *deviation*, and *fixing* corrects all of them in one undo step (ADR 0029). |
 | **Alternative text** | The title (chart type) and description (data as sentences) a chart group carries for screen readers and exports; generated from the data on every redraw (ADR 0030). |

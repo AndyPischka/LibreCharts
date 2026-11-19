@@ -1,8 +1,23 @@
-"""User-visible strings. Every message must exist in English and German (AGENTS.md)."""
+"""User-visible strings: English and German here, further languages in ``locales/`` (ADR 0031).
+
+Every message exists in English and German in ``MESSAGES`` (AGENTS.md); they are the source of the
+translations. Further languages are flat JSON files ``locales/<language>.json`` (key -> text), the
+format the translation platform (Weblate) edits. ``locales/en.json`` and ``locales/de.json`` are
+generated from ``MESSAGES`` by ``uv run poe locales`` as the platform's source and reference. A
+message missing from a language falls back to English.
+"""
 
 from __future__ import annotations
 
+import json
+import re
+from functools import cache
+from pathlib import Path
+from typing import cast
+
 FALLBACK_LANGUAGE = "en"
+SOURCE_LANGUAGES = ("en", "de")  # kept in MESSAGES, never read from locales/
+LOCALES = Path(__file__).resolve().parent / "locales"
 
 MESSAGES: dict[str, dict[str, str]] = {
     "datasheet_title": {
@@ -1494,11 +1509,171 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "{kind} without data.",
         "de": "{kind} ohne Daten.",
     },
+    "addon_insert_column": {
+        "en": "Insert column chart",
+        "de": "Säulendiagramm einfügen",
+    },
+    "addon_insert_bar": {
+        "en": "Insert bar chart",
+        "de": "Balkendiagramm einfügen",
+    },
+    "addon_insert_waterfall": {
+        "en": "Insert waterfall chart",
+        "de": "Wasserfalldiagramm einfügen",
+    },
+    "addon_insert_mekko": {
+        "en": "Insert Marimekko chart",
+        "de": "Marimekko-Diagramm einfügen",
+    },
+    "addon_insert_line": {
+        "en": "Insert line chart",
+        "de": "Liniendiagramm einfügen",
+    },
+    "addon_insert_area": {
+        "en": "Insert area chart",
+        "de": "Flächendiagramm einfügen",
+    },
+    "addon_insert_pie": {
+        "en": "Insert pie chart",
+        "de": "Kreisdiagramm einfügen",
+    },
+    "addon_insert_scatter": {
+        "en": "Insert scatter chart",
+        "de": "Streudiagramm einfügen",
+    },
+    "addon_insert_butterfly": {
+        "en": "Insert butterfly chart",
+        "de": "Schmetterlingsdiagramm einfügen",
+    },
+    "addon_insert_gantt": {
+        "en": "Insert Gantt chart",
+        "de": "Gantt-Diagramm einfügen",
+    },
+    "addon_working_days": {
+        "en": "Working days...",
+        "de": "Arbeitstage...",
+    },
+    "addon_import_csv": {
+        "en": "Import from CSV...",
+        "de": "Aus CSV importieren...",
+    },
+    "addon_import_project": {
+        "en": "Import from ProjectLibre...",
+        "de": "Aus ProjectLibre importieren...",
+    },
+    "addon_insert_harvey": {
+        "en": "Insert Harvey ball",
+        "de": "Harvey Ball einfügen",
+    },
+    "addon_insert_check": {
+        "en": "Insert check mark",
+        "de": "Häkchen einfügen",
+    },
+    "addon_element_next": {
+        "en": "Next state of Harvey ball or check mark",
+        "de": "Nächster Zustand von Harvey Ball oder Häkchen",
+    },
 }
+
+# The message of every add-on menu and toolbar entry (extension/Addons.xcu), by its command.
+# The build writes their translations into the package (scripts/build_oxt.py, ADR 0031).
+ADDON_KEYS: dict[str, str] = {
+    "EditData": "menu_edit_data",
+    "LinkData": "menu_link_data",
+    "UpdateAllLinks": "menu_update_all_links",
+    "SameScale": "menu_same_scale",
+    "RemoveSameScale": "menu_remove_same_scale",
+    "CopyChartFormat": "menu_copy_format",
+    "ApplyChartFormat": "menu_apply_format",
+    "MoveLabels": "menu_move_labels",
+    "ResetLabels": "menu_reset_labels",
+    "PickAnnotation?kind=difference": "menu_add_difference",
+    "PickAnnotation?kind=difference&style=level": "menu_add_level",
+    "PickAnnotation?kind=cagr": "menu_add_cagr",
+    "AxisBreak": "menu_add_break",
+    "Arrange?op=width": "menu_arrange_width",
+    "Arrange?op=height": "menu_arrange_height",
+    "Arrange?op=size": "menu_arrange_size",
+    "Arrange?op=swap": "menu_arrange_swap",
+    "InsertAgenda": "menu_insert_agenda",
+    "StartChapter": "menu_start_chapter",
+    "UpdateAgenda": "menu_update_agenda",
+    "ExportCsv": "menu_export_csv",
+    "CheckDesign": "menu_check_design",
+    "InsertColumnChart": "addon_insert_column",
+    "InsertBarChart": "addon_insert_bar",
+    "InsertWaterfallChart": "addon_insert_waterfall",
+    "InsertMekkoChart": "addon_insert_mekko",
+    "InsertLineChart": "addon_insert_line",
+    "InsertAreaChart": "addon_insert_area",
+    "InsertPieChart": "addon_insert_pie",
+    "InsertScatterChart": "addon_insert_scatter",
+    "InsertButterflyChart": "addon_insert_butterfly",
+    "InsertGanttChart": "addon_insert_gantt",
+    "WorkingDays": "addon_working_days",
+    "ImportGanttCsv": "addon_import_csv",
+    "ImportGanttProject": "addon_import_project",
+    "InsertElement?harvey=50": "addon_insert_harvey",
+    "InsertElement?check=tick": "addon_insert_check",
+    "SetElement?next=1": "addon_element_next",
+}
+ADDON_GRID = "Arrange?op=grid&columns="  # + the number of columns: menu_arrange_grid
+
+
+def language(locale: str) -> str:
+    """The language of a LibreOffice locale like ``de-DE`` or ``pt_BR``: ``de``, ``pt``."""
+    return re.split(r"[-_]", locale.strip(), maxsplit=1)[0].lower()
 
 
 def text(key: str, locale: str, **fields: str) -> str:
     """The message ``key`` for a LibreOffice locale like ``de-DE``; English if unsupported."""
-    language = locale.split("-")[0].lower()
+    wanted = language(locale)
     table = MESSAGES[key]
-    return table.get(language, table[FALLBACK_LANGUAGE]).format(**fields)
+    message = table.get(wanted) or translations(wanted).get(key) or table[FALLBACK_LANGUAGE]
+    return message.format(**fields)
+
+
+@cache
+def translations(code: str) -> dict[str, str]:
+    """The messages of ``locales/<code>.json``; empty for English, German and unknown languages.
+
+    A file that cannot be read or holds anything but strings counts as missing, so a broken
+    translation falls back to English instead of breaking the extension.
+    """
+    if code in SOURCE_LANGUAGES or not code.isalpha():
+        return {}
+    try:
+        raw: object = json.loads((LOCALES / f"{code}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    entries = cast("dict[object, object]", raw)
+    return {
+        key: value
+        for key, value in entries.items()
+        if isinstance(key, str) and isinstance(value, str) and value and key in MESSAGES
+    }
+
+
+def languages() -> tuple[str, ...]:
+    """Every language with messages: English, German and each file in ``locales/``."""
+    found = sorted(
+        path.stem for path in LOCALES.glob("*.json") if path.stem not in SOURCE_LANGUAGES
+    )
+    return (*SOURCE_LANGUAGES, *found)
+
+
+def source(code: str) -> dict[str, str]:
+    """English or German as a flat key -> text mapping, the content of ``locales/<code>.json``."""
+    return {key: table[code] for key, table in sorted(MESSAGES.items())}
+
+
+def addon_title(command: str, locale: str) -> str | None:
+    """The title of the add-on entry dispatching ``command`` (without ``org.librecharts:``)."""
+    key = ADDON_KEYS.get(command)
+    if key is not None:
+        return text(key, locale)
+    if command.startswith(ADDON_GRID):
+        return text("menu_arrange_grid", locale, columns=command.removeprefix(ADDON_GRID))
+    return None

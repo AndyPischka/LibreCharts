@@ -1,7 +1,9 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 
+from librecharts.core.gantt import to_date
+from librecharts.core.locale_format import numeric_date, numeric_datetime
 from librecharts.core.model import Calendar
 from librecharts.core.timescale import (
     MAX_UNITS,
@@ -12,6 +14,7 @@ from librecharts.core.timescale import (
     label,
     time_scale,
 )
+from librecharts.core.value_line import check_date
 
 WEEKDAYS = Calendar((0, 1, 2, 3, 4))
 
@@ -110,7 +113,9 @@ def test_dates_are_formatted_per_language() -> None:
     assert format_date(day, "de", with_year=False) == "30.06."
     assert format_date(day, "en") == "30 Jun 2026"
     assert format_date(day, "en", with_year=False) == "30 Jun"
-    assert format_date(day, "fr") == "30 Jun 2026"  # unknown languages fall back to English
+    assert format_date(day, "fr") == "30 juin 2026"
+    assert format_date(day, "it", with_year=False) == "30 giu"
+    assert format_date(day, "pt") == "30 Jun 2026"  # languages without a translation: English
 
 
 def test_a_working_calendar_gives_weekends_no_width() -> None:
@@ -152,3 +157,22 @@ def test_a_label_needs_half_of_the_units_working_days() -> None:
     assert scale.labelled(scale.periods("month")[0], "month")
     week = Period(date(2026, 3, 9), date(2026, 3, 10))
     assert not scale.labelled(week, "week")
+
+
+def test_numeric_dates_follow_the_language() -> None:
+    day = date(2026, 6, 30)
+    assert numeric_date(day, "de") == "30.06.2026"
+    assert numeric_date(day, "de", with_year=False) == "30.06."
+    assert numeric_date(day, "fr") == "30/06/2026"
+    assert numeric_date(day, "es", with_year=False) == "30/06"
+    assert numeric_date(day, "en") == "2026-06-30"
+    assert numeric_date(day, "en", with_year=False) == "06-30"
+    assert numeric_datetime(datetime(2026, 6, 30, 14, 3), "it") == "30/06/2026 14:03"
+
+
+def test_a_numeric_date_reads_back_in_every_language() -> None:
+    day = date(2026, 6, 30)
+    for language in ("de", "fr", "es", "it", "en"):
+        value = check_date(numeric_date(day, language), language)
+        assert isinstance(value, float)
+        assert to_date(value) == day

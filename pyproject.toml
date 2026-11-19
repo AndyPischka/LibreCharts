@@ -39,6 +39,7 @@ format-check = { cmd = "ruff format --check .", help = "Verify formatting" }
 typecheck = { cmd = "pyright", help = "Type-check" }
 build = { cmd = "python scripts/build_oxt.py", help = "Build dist/LibreCharts-<version>.oxt" }
 test-lo = { cmd = "python scripts/test_lo.py", help = "UNO integration tests against a real LibreOffice (not part of check)" }
+locales = { cmd = "python scripts/locales.py", help = "Write the translation sources core/locales/en.json and de.json from core/messages.py (M21)" }
 deck = { cmd = "python scripts/deck.py", help = "Build a deck from a template and a specification, or update its links (M18)" }
 check = { sequence = ["lint", "format-check", "typecheck", "test"], help = "Everything CI runs" }
 

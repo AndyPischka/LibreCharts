@@ -7,7 +7,7 @@
 think-cell-style charts for **LibreOffice Impress**, as an open-source extension.
 Charts are drawn as native shapes and fed from a Calc data sheet.
 
-> **Status: M1 to M17 done.** Stacked, clustered and 100 % **column and bar charts**,
+> **Status: M1 to M21 done.** Stacked, clustered and 100 % **column and bar charts**,
 > **line, stacked and 100 % area charts**, **pie, doughnut, scatter, bubble and butterfly
 > charts**, **waterfall**, **Marimekko** and **Gantt charts** work: edit the
 > data in a Calc window (formulas included), resize charts freely, undo everything, save as ODP or
@@ -26,13 +26,18 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 > ProjectLibre**.
 > Beyond charts: **Harvey balls**, **check marks**, **arranging shapes** (same size, grid, swap)
 > and an **agenda** with a highlighted divider slide before every chapter.
-> This is the first release (4.0); further work is listed in [ROADMAP.md](ROADMAP.md).
+> Decks can be **built from templates**, **checked against a corporate design** and fixed in one
+> step; charts carry **alternative text**, can show **patterns** beside their colours and export
+> their data as **CSV**. The UI speaks English, German, French, Spanish and Italian.
+> Further work is listed in [ROADMAP.md](ROADMAP.md).
 > LibreCharts is inspired by think-cell and empower charts but is not affiliated with them and
 > does not read or write their files.
 
 ## Requirements
 
-- LibreOffice **25.8 or newer** (Windows and Linux tested; macOS untested). The minimum is enforced by the package.
+- LibreOffice **25.8 or newer** on Windows, Linux or macOS. The minimum is enforced by the package.
+- UI languages: English, German, French, Spanish and Italian; any other UI language shows English.
+  Translations are welcome: [docs/translating.md](docs/translating.md).
 
 ## Install
 
@@ -145,7 +150,8 @@ Requires [uv](https://docs.astral.sh/uv/).
 uv run poe setup    # dependencies + git hooks
 uv run poe check    # lint, format, types, tests (what CI runs)
 uv run poe build    # dist/LibreCharts-<version>.oxt
-uv run poe deck     # build a deck from a template and a spec, or update its links
+uv run poe deck     # build a deck from a template and a spec, update its links, check a design
+uv run poe locales  # write the translation sources after changing a UI string
 uv run poe test-lo  # integration tests against an installed LibreOffice
 ```
 

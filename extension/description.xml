@@ -20,6 +20,9 @@
   <display-name>
     <name lang="en">LibreCharts</name>
     <name lang="de">LibreCharts</name>
+    <name lang="fr">LibreCharts</name>
+    <name lang="es">LibreCharts</name>
+    <name lang="it">LibreCharts</name>
   </display-name>
   <icon>
     <default xlink:href="images/icon.png"/>
@@ -27,5 +30,8 @@
   <extension-description>
     <src lang="en" xlink:href="description/desc_en.txt"/>
     <src lang="de" xlink:href="description/desc_de.txt"/>
+    <src lang="fr" xlink:href="description/desc_fr.txt"/>
+    <src lang="es" xlink:href="description/desc_es.txt"/>
+    <src lang="it" xlink:href="description/desc_it.txt"/>
   </extension-description>
 </description>

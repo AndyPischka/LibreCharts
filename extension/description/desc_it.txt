@@ -1,0 +1,1 @@
+Grafici in stile think-cell per LibreOffice Impress: istogrammi, grafici a barre, a cascata, Marimekko, a linee, ad aree, a torta, a dispersione, a farfalla e diagrammi di Gantt, annotazioni, collegamenti ai dati, elementi delle diapositive e un'agenda.

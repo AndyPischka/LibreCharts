@@ -14,6 +14,7 @@ from datetime import date
 
 from librecharts.core.datasheet import ChartData, parse
 from librecharts.core.gantt import serial, to_date
+from librecharts.core.locale_format import numeric_date
 from librecharts.core.model import Annotation, ChartState
 from librecharts.core.scatter import levels as scatter_levels
 from librecharts.core.scatter import parse_scatter
@@ -95,8 +96,9 @@ def check_date(text: str, language: str) -> float | str:
 
 
 def date_input(value: float, language: str) -> str:
-    """A date line's value as the dialog shows it: ``30.06.2026`` in German, else ISO."""
+    """A date line's value as the dialog shows it: ``30.06.2026`` in German, ``30/06/2026`` in
+    French, Spanish and Italian, else ISO."""
     day = to_date(value)
     if day is None:
         return ""
-    return f"{day.day:02d}.{day.month:02d}.{day.year}" if language == "de" else day.isoformat()
+    return numeric_date(day, language)

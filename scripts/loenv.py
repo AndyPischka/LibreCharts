@@ -27,6 +27,7 @@ def find_program_dir() -> Path:
         "/opt/libreoffice/program",
         *sorted(glob.glob("/opt/libreoffice*/program"), reverse=True),
         "/Applications/LibreOffice.app/Contents/MacOS",
+        str(Path.home() / "Applications/LibreOffice.app/Contents/MacOS"),
     ]
     for candidate in candidates:
         if candidate and (Path(candidate) / exe("soffice")).exists():
@@ -35,11 +36,16 @@ def find_program_dir() -> Path:
 
 
 def find_python(program: Path) -> Path:
-    """LibreOffice's bundled Python, or the system Python that carries ``uno``."""
-    for name in ("python", "python3"):
-        path = program / exe(name)
-        if path.exists():
-            return path
+    """LibreOffice's bundled Python, or the system Python that carries ``uno``.
+
+    Windows and the archives of Linux have it next to ``soffice``; macOS keeps it in the app's
+    ``Contents/Resources`` beside ``Contents/MacOS``.
+    """
+    for folder in (program, program.parent / "Resources"):
+        for name in ("python", "python3"):
+            path = folder / exe(name)
+            if path.exists():
+                return path
     # Distribution packages use the system Python, which has the uno module installed.
     return Path(sys.executable) if sys.platform != "win32" else program / "python.exe"
 

@@ -2,7 +2,7 @@
 
 LibreCharts is a think-cell-style chart extension (`.oxt`) for **LibreOffice Impress**, written in
 Python-UNO. Charts are drawn as native Draw shapes; chart data is edited in a Calc window.
-Status: M1-M4 done (column/bar, waterfall, Marimekko, annotations). See [ROADMAP.md](ROADMAP.md) for milestones and non-goals.
+Status: M1-M21 done (charts, annotations, automation, corporate design check, accessibility, five UI languages). See [ROADMAP.md](ROADMAP.md) for milestones and non-goals.
 
 ## Commands
 
@@ -17,12 +17,13 @@ Run everything through `uv run poe <task>` (uv installs Python 3.11 and the dev 
 | `uv run poe typecheck` | pyright (strict for `core/`, basic elsewhere) |
 | `uv run poe build` | build `dist/LibreCharts-<version>.oxt` |
 | `uv run poe deck` | build a deck from a template and a JSON specification, update its data links (M18), or check it against a corporate design (M19) |
+| `uv run poe locales` | write `core/locales/en.json` and `de.json` from `core/messages.py` (the translation sources, M21) |
 | `uv run poe test-lo` | UNO integration tests against a real LibreOffice (not in `check`; CI job `integration`) |
 
 `test-lo` needs LibreOffice installed (override discovery with `LIBREOFFICE_PROGRAM`). It uses a
 throwaway profile and LibreOffice's own Python, one LibreOffice per `tests/lo` module, see
 [CONTRIBUTING.md](CONTRIBUTING.md#testing). Runs on Windows and in CI on Linux against the minimum
-version 25.8.7; macOS is untested.
+version 25.8.7; CI also runs `check` and `test-lo` on macOS.
 
 ## Project map
 
@@ -42,7 +43,10 @@ Domain terms: [docs/glossary.md](docs/glossary.md). Use them consistently in cod
 
 ## Conventions
 
-- Code, comments, docs: **English**. UI strings: German + English (both required for every string).
+- Code, comments, docs: **English**. UI strings: German + English in `core/messages.py` (both
+  required for every string); further languages are `core/locales/<lang>.json`, maintained through
+  Weblate and falling back to English ([docs/translating.md](docs/translating.md), ADR 0031). After
+  adding or changing a message, run `uv run poe locales`.
 - Python >= 3.11 (the minimum is set by the supported LibreOffice versions). No runtime
   dependencies: the extension runs inside LibreOffice's bundled Python (ADR 0001).
 - Commits: Conventional Commits (`feat(core): ...`), enforced by a commit-msg hook. Trunk-based:
@@ -163,6 +167,11 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 - `XUndoManagerListener` methods are `undoActionAdded`, `actionUndone`, `actionRedone`, ...; a
   missing method makes `addUndoAction` raise an `AttributeError` through the bridge.
 - Windows is the primary dev OS; use forward slashes in scripts and avoid shell-specific syntax in poe tasks.
+- `core/locales/*.json` ship inside the `.oxt` (`scripts/build_oxt.py` packs `*.py` and these
+  files only). Data a module reads at run time must be added there too, or it is missing in
+  LibreOffice although every unit test passes.
+- Menu and toolbar titles in `extension/Addons.xcu` stay English + German; give a new entry a
+  message key in `ADDON_KEYS` (`core/messages.py`), the build adds the other languages.
 
 ## Definition of done
 
@@ -179,6 +188,7 @@ The rules above are mirrored as permissions in `.claude/settings.json` and `open
 | New module or changed module boundaries | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | New or changed command | this file + [README.md](README.md) |
 | New domain term | [docs/glossary.md](docs/glossary.md) |
+| New or changed UI string | `core/messages.py` (English + German), then `uv run poe locales` |
 | Milestone reached or moved | [ROADMAP.md](ROADMAP.md) |
 | User-visible change | [CHANGELOG.md](CHANGELOG.md) |
 

@@ -37,7 +37,7 @@ def test_locale_selects_language(locale: str, expected: str) -> None:
     assert text("datasheet_title", locale) == expected
 
 
-@pytest.mark.parametrize("locale", ["fr-FR", "", "zz"])
+@pytest.mark.parametrize("locale", ["pt-BR", "", "zz"])
 def test_unsupported_locale_falls_back_to_english(locale: str) -> None:
     assert text("datasheet_title", locale) == "LibreCharts data"
 

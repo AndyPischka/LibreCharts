@@ -14,7 +14,10 @@ This installs Python 3.11 and the dev tools into `.venv` and activates the git h
 - [Conventional Commits](https://www.conventionalcommits.org/): `feat(core): add waterfall layout`.
   Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.
   A commit-msg hook checks this.
-- `uv run poe check` must pass; CI runs exactly that on Ubuntu and Windows with Python 3.11 and 3.13.
+- `uv run poe check` must pass; CI runs exactly that on Ubuntu, Windows and macOS with Python 3.11
+  and 3.13.
+- UI strings: English and German in `src/librecharts/core/messages.py`, then `uv run poe locales`.
+  Other languages are translated through Weblate or by hand: [docs/translating.md](docs/translating.md).
 - Which docs a change must touch is listed in [AGENTS.md](AGENTS.md#keep-the-docs-in-sync).
 
 ## Testing
@@ -23,6 +26,7 @@ This installs Python 3.11 and the dev tools into `.venv` and activates the git h
 |---|---|---|---|
 | Unit tests for `core/` (layout, scaling, models) | `tests/core/` | no | yes |
 | Packaging tests (`.oxt` contents) | `tests/test_build_oxt.py` | no | yes |
+| Translations (complete, placeholders, packaged menu titles) | `tests/test_locales.py` | no | yes |
 | `lo/store.py` with fake UNO objects | `tests/test_lo_store.py` | no | yes |
 | UNO integration (menu, shapes, undo, ODP/PPTX round trip) | `tests/lo/` | yes | no (`uv run poe test-lo`) |
 
@@ -33,7 +37,8 @@ This installs Python 3.11 and the dev tools into `.venv` and activates the git h
   LibreOffice's own Python (plain `test_*(ctx)` functions, no pytest there). A crash of LibreOffice
   only fails its own module. Set `LIBREOFFICE_PROGRAM` if LibreOffice is not found.
 - CI job `integration` runs `test-lo` on Ubuntu against LibreOffice **25.8.7**, the minimum version
-  (official packages, extracted, checksum pinned in the workflow). On failure the first error is
+  (official packages, extracted, checksum pinned in the workflow); `integration-macos` runs it on
+  macOS against the same version (the official disk image, checksum pinned). On failure the first error is
   shown as an annotation on the run page. Clipboard tests and tests needing visible documents are
   skipped on headless Linux (they abort LibreOffice there) and run on Windows only.
 - Known issue: on headless Linux, LibreOffice often aborts during a test that opens a data sheet
@@ -52,7 +57,7 @@ known issue above), so run it locally before tagging.
 
 1. Set the version in `pyproject.toml`, turn `## [Unreleased]` in
    [CHANGELOG.md](CHANGELOG.md) into `## [<version>] - <date>`, and update
-   `extension/description/release-notes_{en,de}.txt`.
+   `extension/description/release-notes_{en,de}.txt` (and the translated release notes, if any).
 2. `uv run poe check` and `uv run poe test-lo` must pass locally.
 3. `uv run poe build` writes `dist/LibreCharts-<version>.oxt`; check it by hand if the release is
    important.

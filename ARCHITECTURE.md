@@ -21,6 +21,10 @@ src/librecharts/core/       Pure Python. Chart models, layout, axis scaling. Inp
 
 Dependencies point downward only: `core` knows nothing about `lo` or `extension`.
 
+`scripts/build_oxt.py` packs `extension/`, the package with its `core/locales/*.json` and adds the
+translated menu titles to `Addons.xcu`; `scripts/locales.py` writes the translation sources;
+`scripts/loenv.py` finds LibreOffice and its Python on Windows, Linux and macOS.
+
 `src/librecharts/api.py` is the automation surface (build a deck, update links, insert a chart,
 check a corporate design): it
 only names the functions and delegates to `lo/`. `cli.py` and `lo/worker.py` are the command line of
@@ -51,7 +55,9 @@ only names the functions and delegates to `lo/`. `cli.py` and `lo/worker.py` are
 | `designcheck.py` | Corporate design check: the check rules of a scheme file (allowed colours and fonts, margins), the deviations of a presentation's shapes and its scheme, their fixes (closest allowed colour, the scheme's font, a box inside the margins) and the report (ADR 0029) |
 | `alttext.py` | Alternative text of a chart: its type as the title and its data as sentences, in the chart's language and number format (ADR 0030) |
 | `csvexport.py` | A chart's data sheet as CSV: evaluated values, the dialect of the chart's decimal separator, ISO dates for Gantt date columns (ADR 0030) |
-| `messages.py` | All user-visible strings in English and German (a test enforces both) |
+| `messages.py` | All user-visible strings in English and German (a test enforces both); further languages from `locales/<lang>.json` with English as fallback; the message of every add-on menu entry (`ADDON_KEYS`) (ADR 0031) |
+| `locales/*.json` | Translations, one flat key -> text object per language; `en.json` and `de.json` are generated from `messages.py` as the sources of the translation platform (ADR 0031) |
+| `locale_format.py` | Numeric dates per language: `30.06.2026`, `30/06/2026` or ISO (ADR 0031) |
 | `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series), row-paired grids for floating bars and error bars (`ranged`/`errored`); sample data |
 | `scale.py` | "Nice" value axis ranges |
 | `primitives.py` | `Rect`, `Line`, `Polyline`, `Polygon`, `Marker`, `Bubble`, `Text`: layout output in 1/100 mm, styling left to the renderer (`BACKGROUND` and `SHADE` fills, bold `heading` text) |

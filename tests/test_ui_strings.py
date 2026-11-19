@@ -1,7 +1,8 @@
 """The UI strings outside ``core/messages.py``: the add-on menu and toolbar titles.
 
-They live in ``extension/Addons.xcu`` as static XML, so they can drift from the context menu and
-the sidebar. These tests keep the three copies in step.
+They live in ``extension/Addons.xcu`` as static XML in English and German; the build adds the other
+languages from ``core/locales/`` (ADR 0031). These tests keep the XML in step with
+``core/messages.py``, so menu, toolbar, context menu and sidebar agree.
 """
 
 from __future__ import annotations
@@ -11,40 +12,12 @@ from pathlib import Path
 
 import pytest
 
-from librecharts.core.messages import MESSAGES, text
+from librecharts.core.messages import ADDON_KEYS, MESSAGES, addon_title
 
 ROOT = Path(__file__).parents[1]
 ADDONS = ROOT / "extension" / "Addons.xcu"
 OOR = "{http://openoffice.org/2001/registry}"
 XML_LANG = "{http://www.w3.org/XML/1998/namespace}lang"
-
-# Commands the add-on menu and toolbar share with the context menu and the sidebar. Their titles
-# must be the same string, so a rename cannot leave one of the three behind.
-SHARED = {
-    "EditData": "menu_edit_data",
-    "LinkData": "menu_link_data",
-    "UpdateAllLinks": "menu_update_all_links",
-    "SameScale": "menu_same_scale",
-    "RemoveSameScale": "menu_remove_same_scale",
-    "CopyChartFormat": "menu_copy_format",
-    "ApplyChartFormat": "menu_apply_format",
-    "MoveLabels": "menu_move_labels",
-    "ResetLabels": "menu_reset_labels",
-    "PickAnnotation?kind=difference": "menu_add_difference",
-    "PickAnnotation?kind=difference&style=level": "menu_add_level",
-    "PickAnnotation?kind=cagr": "menu_add_cagr",
-    "AxisBreak": "menu_add_break",
-    "Arrange?op=width": "menu_arrange_width",
-    "Arrange?op=height": "menu_arrange_height",
-    "Arrange?op=size": "menu_arrange_size",
-    "Arrange?op=swap": "menu_arrange_swap",
-    "InsertAgenda": "menu_insert_agenda",
-    "StartChapter": "menu_start_chapter",
-    "UpdateAgenda": "menu_update_agenda",
-    "ExportCsv": "menu_export_csv",
-    "CheckDesign": "menu_check_design",
-}
-GRID = {f"Arrange?op=grid&columns={columns}": columns for columns in (2, 3, 4)}
 
 
 def entries() -> list[tuple[str, dict[str, str]]]:
@@ -85,15 +58,13 @@ def test_every_add_on_title_exists_in_english_and_german(command: str) -> None:
     assert all(title.values())
 
 
-@pytest.mark.parametrize(("command", "key"), sorted(SHARED.items()))
-def test_add_on_titles_match_the_menu(command: str, key: str) -> None:
+@pytest.mark.parametrize("command", sorted(TITLES))
+def test_add_on_titles_match_the_messages(command: str) -> None:
     title = TITLES[command]
-    assert title["en-US"] == MESSAGES[key]["en"]
-    assert title["de"] == MESSAGES[key]["de"]
+    assert title["en-US"] == addon_title(command, "en")
+    assert title["de"] == addon_title(command, "de")
 
 
-@pytest.mark.parametrize(("command", "columns"), sorted(GRID.items()))
-def test_grid_titles_match_the_menu(command: str, columns: int) -> None:
-    title = TITLES[command]
-    assert title["en-US"] == text("menu_arrange_grid", "en", columns=str(columns))
-    assert title["de"] == text("menu_arrange_grid", "de", columns=str(columns))
+def test_every_add_on_key_names_an_entry() -> None:
+    assert set(ADDON_KEYS) <= set(TITLES)
+    assert set(MESSAGES) >= set(ADDON_KEYS.values())

@@ -20,6 +20,7 @@ from datetime import datetime
 from urllib.parse import unquote
 
 from librecharts.core.datasheet import as_number, number_text
+from librecharts.core.locale_format import numeric_datetime
 from librecharts.core.messages import text
 from librecharts.core.model import ChartState, Link
 
@@ -274,7 +275,7 @@ def updated_text(updated: str, language: str) -> str:
         moment = datetime.fromisoformat(updated)
     except ValueError:
         return updated
-    return moment.strftime("%d.%m.%Y %H:%M" if language == "de" else "%Y-%m-%d %H:%M")
+    return numeric_datetime(moment, language)
 
 
 def status(link: Link, locale: str) -> str:

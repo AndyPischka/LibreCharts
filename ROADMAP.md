@@ -63,10 +63,11 @@ sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 f
 | M18 | Automation | Python and macro API and a command line: build a deck from data and a template, update all data links of a presentation | done |
 | M19 | Corporate design check | Check a presentation against the corporate design file of M8 (colours, fonts, positions) and fix deviations in one step (ADR 0029) | done |
 | M20 | Accessibility and export | Alternative text generated from the chart data, patterns as well as colours for colour-blind readers, exporting chart data as CSV (ADR 0030) | done |
-| M21 | Languages and platforms | Further UI languages through a translation platform (Weblate); macOS tested and supported | open |
+| M21 | Languages and platforms | Further UI languages through a translation platform (Weblate); macOS tested and supported (ADR 0031) | done |
 
 Both versions are sketches. Priorities are set from user feedback in the issue tracker.
-M21 changes the convention that every UI string is German and English (AGENTS.md).
+M21 changed the convention that every UI string is German and English (AGENTS.md): those two
+stay required, further languages come through Weblate (ADR 0031).
 
 Candidates without a milestone, feasibility open: map (choropleth) charts, which need bundled
 geodata of a suitable licence and size; chart templates or favourites.
