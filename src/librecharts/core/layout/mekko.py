@@ -27,7 +27,6 @@ from librecharts.core import annotations as notes
 from librecharts.core.layout.column import LANE_HEIGHT, LANE_LINE_GAP
 from librecharts.core.layout.common import (
     AXIS_BAND,
-    LEGEND_HEIGHT,
     LEVEL_ARROW_INSET,
     LEVEL_LANE_WIDTH,
     TICK_GAP,
@@ -35,6 +34,7 @@ from librecharts.core.layout.common import (
     bracket,
     format_value,
     legend,
+    legend_insets,
     level_arrow,
     visible_ticks,
 )
@@ -43,7 +43,7 @@ from librecharts.core.mekko import levels as segment_values
 from librecharts.core.model import Annotation, Format, LabelKey
 from librecharts.core.primitives import Line, Primitive, Rect, Text, TextRole
 from librecharts.core.rounding import consistent_shares
-from librecharts.core.scale import Axis, nice_axis
+from librecharts.core.scale import Axis, manual_axis, nice_axis
 
 TOP_BAND = 800.0  # room above the plot for the width labels
 LABEL_HEIGHT = 600.0
@@ -81,19 +81,22 @@ def layout_mekko(
     arrow_data = segment_values(data, percent)
     brackets, level_arrows = notes.arrows(annotations, arrow_data, "mekko")
     gaps = COLUMN_GAP * max(len(categories) - 1, 0)
-    legend_band = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    inset_left, legend_band, inset_right, inset_bottom = legend_insets(fmt)
     bracket_lanes = len(brackets) * LANE_HEIGHT
     top_band = TOP_BAND + legend_band + bracket_lanes
     labels = fmt.series_names == "labels"
-    plot_left = AXIS_BAND if fmt.axis and not percent else 0.0
+    plot_left = inset_left + (AXIS_BAND if fmt.axis and not percent else 0.0)
     plot_width = (
         width
         - plot_left
+        - inset_right
         - (RIGHT_BAND if labels else 0.0)
         - len(level_arrows) * LEVEL_LANE_WIDTH
         - gaps
     )
-    plot_height = height - top_band - CATEGORY_BAND - (0.0 if percent else WIDTH_BAND)
+    plot_height = (
+        height - top_band - inset_bottom - CATEGORY_BAND - (0.0 if percent else WIDTH_BAND)
+    )
     if plot_width <= 0 or plot_height <= 0:
         raise ValueError("chart area too small")
     if not categories or not series:
@@ -104,11 +107,11 @@ def layout_mekko(
         sum(v for s in series if (v := s.values[c]) is not None) for c in range(len(categories))
     ]
     # Units: the "nice" scale from zero up to the tallest column; percent: no scale needed.
-    axis = Axis(0.0, 1.0, 1.0) if percent else nice_axis(0.0, max(sums))
+    axis = Axis(0.0, 1.0, 1.0) if percent else _mekko_axis(fmt, max(sums))
     plot_bottom = top_band + plot_height
     out: list[Primitive] = []
     if fmt.series_names == "legend":
-        out.extend(legend([s.name for s in series], width))
+        out.extend(legend([s.name for s in series], width, fmt.legend, height))
     if fmt.axis and not percent:
         if fmt.gridlines:
             out.extend(
@@ -144,7 +147,7 @@ def layout_mekko(
             share = value / column_sum if column_sum > 0 else 0.0
             segment_height = column_height * share
             top = level - segment_height
-            out.append(Rect(column_x, top, column_width, segment_height, i))
+            out.append(Rect(column_x, top, column_width, segment_height, i, category=c))
             fits = segment_height >= MIN_SEGMENT_HEIGHT and column_width >= MIN_LABEL_WIDTH
             shown = texts[i] or ""
             out.append(
@@ -273,6 +276,14 @@ def layout_mekko(
     return tuple(out)
 
 
+def _mekko_axis(fmt: Format, high: float) -> Axis:
+    """The units scale of a Mekko: automatic, or the format's manual limits (M23)."""
+    fallback = nice_axis(0.0, high)
+    if fmt.axis_min is None and fmt.axis_max is None:
+        return fallback
+    return manual_axis(fmt.axis_min, fmt.axis_max, fmt.axis_step, fallback=fallback)
+
+
 def _axis(
     axis: Axis,
     plot_bottom: float,
@@ -341,24 +352,25 @@ def natural_length_per_unit(
     arrow_data = segment_values(data, False)
     brackets, level_arrows = notes.arrows(annotations, arrow_data, "mekko")
     gaps = COLUMN_GAP * max(len(categories) - 1, 0)
-    legend_band = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    inset_left, legend_band, inset_right, inset_bottom = legend_insets(fmt)
     top_band = TOP_BAND + legend_band + len(brackets) * LANE_HEIGHT
     labels = fmt.series_names == "labels"
-    plot_left = AXIS_BAND if fmt.axis else 0.0
+    plot_left = inset_left + (AXIS_BAND if fmt.axis else 0.0)
     plot_width = (
         width
         - plot_left
+        - inset_right
         - (RIGHT_BAND if labels else 0.0)
         - len(level_arrows) * LEVEL_LANE_WIDTH
         - gaps
     )
-    plot_height = height - top_band - CATEGORY_BAND - WIDTH_BAND
+    plot_height = height - top_band - inset_bottom - CATEGORY_BAND - WIDTH_BAND
     if plot_width <= 0 or plot_height <= 0 or not categories or not series:
         return None
     sums = [
         sum(v for s in series if (v := s.values[c]) is not None) for c in range(len(categories))
     ]
-    axis = nice_axis(0.0, max(sums))
+    axis = _mekko_axis(fmt, max(sums))
     if axis.maximum <= 0:
         return None
     return plot_height / axis.maximum
@@ -386,18 +398,21 @@ def mekko_at(
     arrow_data = segment_values(data, percent)
     brackets, level_arrows = notes.arrows(annotations, arrow_data, "mekko")
     gaps = COLUMN_GAP * max(len(categories) - 1, 0)
-    legend_band = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    inset_left, legend_band, inset_right, inset_bottom = legend_insets(fmt)
     top_band = TOP_BAND + legend_band + len(brackets) * LANE_HEIGHT
     labels = fmt.series_names == "labels"
-    plot_left = AXIS_BAND if fmt.axis and not percent else 0.0
+    plot_left = inset_left + (AXIS_BAND if fmt.axis and not percent else 0.0)
     plot_width = (
         width
         - plot_left
+        - inset_right
         - (RIGHT_BAND if labels else 0.0)
         - len(level_arrows) * LEVEL_LANE_WIDTH
         - gaps
     )
-    plot_height = height - top_band - CATEGORY_BAND - (0.0 if percent else WIDTH_BAND)
+    plot_height = (
+        height - top_band - inset_bottom - CATEGORY_BAND - (0.0 if percent else WIDTH_BAND)
+    )
     if not categories or not series or plot_width <= 0 or plot_height <= 0:
         return None
     plot_bottom = top_band + plot_height
@@ -407,7 +422,7 @@ def mekko_at(
     sums = [
         sum(v for s in series if (v := s.values[c]) is not None) for c in range(len(categories))
     ]
-    axis = Axis(0.0, 1.0, 1.0) if percent else nice_axis(0.0, max(sums))
+    axis = Axis(0.0, 1.0, 1.0) if percent else _mekko_axis(fmt, max(sums))
     column_x = plot_left
     for c, _column in enumerate(categories):
         column_width = plot_width * data.widths[c] / total_width if total_width > 0 else 0.0

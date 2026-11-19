@@ -367,5 +367,8 @@ def describe(finding: Finding, locale: str) -> str:
     )
     if finding.slide is None:
         return detail
-    where = text("design_where", locale, slide=str(finding.slide + 1), shape=finding.label)
+    if finding.slide < 0:
+        where = text("design_where_master", locale, index=str(-finding.slide), shape=finding.label)
+    else:
+        where = text("design_where", locale, slide=str(finding.slide + 1), shape=finding.label)
     return f"{where}: {detail}"

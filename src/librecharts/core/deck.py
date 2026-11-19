@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import date
 from typing import Any, cast, get_args
@@ -48,6 +48,7 @@ _CHART_KEYS = frozenset(
         "kind",
         "grouping",
         "data",
+        "template",
         "percent",
         "sort",
         "doughnut",
@@ -62,7 +63,7 @@ _CHART_KEYS = frozenset(
         "calendar",
     }
 )
-_FLAGS = ("percent", "doughnut", "range", "errors", "horizontal", "stacked")
+_FLAGS = ("percent", "doughnut", "range", "errors", "horizontal", "stacked", "pareto")
 _INDICES = ("lines", "secondary")
 _CALENDAR_KEYS = frozenset({"working_days", "holidays"})
 
@@ -94,7 +95,7 @@ class Deck:
     charts: tuple[ChartSpec, ...]
 
 
-def parse(text_: str, locale: str = "") -> Deck:
+def parse(text_: str, locale: str = "", loader: Callable[[str], ChartState] | None = None) -> Deck:
     """Parse a deck specification; raises ``DeckError`` for anything unusable."""
     try:
         raw: object = json.loads(text_, parse_constant=_reject_constant)
@@ -115,7 +116,7 @@ def parse(text_: str, locale: str = "") -> Deck:
     for entry in cast("list[Any]", entries):
         if not isinstance(entry, dict):
             raise DeckError("deck_bad_chart")
-        chart = chart_spec(cast("dict[str, Any]", entry), locale)
+        chart = chart_spec(cast("dict[str, Any]", entry), locale, loader)
         if chart.placeholder in seen:
             raise DeckError("deck_duplicate_placeholder", chart.placeholder)
         seen.add(chart.placeholder)
@@ -123,7 +124,9 @@ def parse(text_: str, locale: str = "") -> Deck:
     return Deck(tuple(charts))
 
 
-def parse_chart(text_: str, locale: str = "") -> ChartSpec:
+def parse_chart(
+    text_: str, locale: str = "", loader: Callable[[str], ChartState] | None = None
+) -> ChartSpec:
     """One chart object of the specification, e.g. to insert a single chart into a slide.
 
     ``placeholder`` is optional here: it only matters when filling a template.
@@ -133,10 +136,14 @@ def parse_chart(text_: str, locale: str = "") -> ChartSpec:
     placeholder = raw.get("placeholder", "")
     if not isinstance(placeholder, str):
         raise DeckError("deck_no_placeholder")
-    return ChartSpec(placeholder.strip(), chart_state(raw, locale))
+    return ChartSpec(placeholder.strip(), chart_state(raw, locale, loader))
 
 
-def chart_spec(raw: Mapping[str, Any], locale: str = "") -> ChartSpec:
+def chart_spec(
+    raw: Mapping[str, Any],
+    locale: str = "",
+    loader: Callable[[str], ChartState] | None = None,
+) -> ChartSpec:
     """The chart ``raw`` describes: its placeholder and its state."""
     _unknown(raw, _CHART_KEYS)
     placeholder = raw.get("placeholder")
@@ -144,7 +151,7 @@ def chart_spec(raw: Mapping[str, Any], locale: str = "") -> ChartSpec:
         raise DeckError("deck_no_placeholder")
     placeholder = placeholder.strip()
     try:
-        state = chart_state(raw, locale)
+        state = chart_state(raw, locale, loader)
     except DeckError as exc:  # name the chart the problem belongs to
         raise DeckError(exc.key, exc.detail, placeholder) from exc
     return ChartSpec(placeholder, state)
@@ -161,21 +168,38 @@ def _json_object(text_: str) -> dict[str, Any]:
     return cast("dict[str, Any]", raw)
 
 
-def chart_state(raw: Mapping[str, Any], locale: str = "") -> ChartState:
+def chart_state(
+    raw: Mapping[str, Any],
+    locale: str = "",
+    loader: Callable[[str], ChartState] | None = None,
+) -> ChartState:
     """The ``ChartState`` of one chart of the specification.
 
-    ``locale`` fills in the defaults a chart inserted from the menu gets: the decimal separator
-    and the language of magnitude suffixes. Options the specification leaves out keep those
-    defaults; every ``ChartState`` field a user can set is allowed.
+    ``locale`` fills in the defaults a chart inserted from the menu gets. ``template`` names a
+    chart template; ``loader`` resolves it (the adapter knows the template folder). Every field of
+    the specification wins over the template.
     """
-    kind = raw.get("kind")
+    base: ChartState | None = None
+    if "template" in raw:
+        name = raw["template"]
+        if not isinstance(name, str) or loader is None:
+            raise DeckError("deck_template_missing", _shown(name))
+        try:
+            base = loader(name)
+        except (OSError, ValueError) as exc:
+            raise DeckError("deck_template_missing", name) from exc
+    kind = raw.get("kind", base.kind if base is not None else None)
     if not isinstance(kind, str) or kind not in get_args(ChartKind):
         raise DeckError("deck_bad_kind", _shown(kind))
-    grouping = raw.get("grouping", "stacked")
+    grouping = raw.get("grouping", base.grouping if base is not None else "stacked")
     if not isinstance(grouping, str):
         raise DeckError("deck_invalid_chart", _shown(grouping))
     kind_value, grouping_value = cast("ChartKind", kind), cast("Grouping", grouping)
-    options: dict[str, Any] = {"format": formats.default_format(kind, grouping_value, locale)}
+    options: dict[str, Any] = {
+        "format": base.format
+        if base is not None
+        else formats.default_format(kind, grouping_value, locale)
+    }
     if "format" in raw:
         options["format"] = _format(raw["format"], options["format"])
     for key in _FLAGS:
@@ -190,10 +214,16 @@ def chart_state(raw: Mapping[str, Any], locale: str = "") -> ChartState:
         options["colors"] = _colors(raw["colors"])
     if "calendar" in raw:
         options["calendar"] = _calendar(raw["calendar"])
-    table = _table(raw.get("data"))
+    table = None if base is not None and "data" not in raw else _table(raw.get("data"))
     try:
-        state = state_from_table(kind_value, grouping_value, table)
-        return replace(state, **options)
+        if base is not None and "data" not in raw:
+            state = replace(base, kind=kind_value, grouping=grouping_value, **options)
+        else:
+            if table is None:
+                raise DeckError("deck_bad_data")
+            state = state_from_table(kind_value, grouping_value, table)
+            state = replace(state, **options)
+        return state
     except (TypeError, ValueError) as exc:
         raise DeckError("deck_invalid_chart", str(exc)) from exc
 

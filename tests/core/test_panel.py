@@ -29,6 +29,12 @@ def test_insert_buttons_are_always_enabled() -> None:
             "InsertScatterChart",
             "InsertButterflyChart",
             "InsertGanttChart",
+            "InsertDumbbellChart",
+            "InsertBulletChart",
+            "InsertFunnelChart",
+            "InsertBoxplotChart",
+            "InsertTableChart",
+            "InsertMatrixChart",
         )
     ]
     assert all(b.enabled for b in panel.insert)
@@ -40,6 +46,7 @@ def test_a_column_chart_offers_its_variants_and_the_sort_cycle() -> None:
         PROTOCOL + "ChangeChart?grouping=stacked",
         PROTOCOL + "ChangeChart?grouping=clustered",
         PROTOCOL + "ChangeChart?percent=true",
+        PROTOCOL + "ChangeChart?pareto=true",
         PROTOCOL + "ChangeChart?range=true",
         PROTOCOL + "ChangeChart?range=false",
         PROTOCOL + "ChangeChart?errors=true",
@@ -49,6 +56,7 @@ def test_a_column_chart_offers_its_variants_and_the_sort_cycle() -> None:
     # the current variants are shown but disabled
     assert [b.enabled for b in panel.options] == [
         False,
+        True,
         True,
         True,
         True,
@@ -62,7 +70,7 @@ def test_a_column_chart_offers_its_variants_and_the_sort_cycle() -> None:
 def test_a_100_percent_chart_says_so_and_disables_the_100_percent_button() -> None:
     panel = content(replace(sample_state(), percent=True), True, "en-US")
     assert panel.status.startswith("Column chart (100 %), ")
-    assert [b.enabled for b in panel.options] == [True, True, False, True]
+    assert [b.enabled for b in panel.options] == [True, True, False, True, True]
 
 
 def test_a_gantt_chart_with_a_calendar_says_so_and_offers_working_days() -> None:
@@ -78,6 +86,10 @@ def test_a_gantt_chart_with_a_calendar_says_so_and_offers_working_days() -> None
         PROTOCOL + "ImportGanttCsv",
         PROTOCOL + "ImportGanttProject",
         PROTOCOL + "ExportCsv",
+        PROTOCOL + "SaveTemplate",
+        PROTOCOL + "InsertTemplate",
+        PROTOCOL + "ImportData",
+        PROTOCOL + "InsertFromClipboard",
     ]
     linked = content(
         replace(
@@ -87,7 +99,7 @@ def test_a_gantt_chart_with_a_calendar_says_so_and_offers_working_days() -> None
         True,
         "en-US",
     )
-    assert [b.enabled for b in linked.edit] == [True, False, False, True]
+    assert [b.enabled for b in linked.edit] == [True, False, False, True, True, True, False, True]
     working = content(
         replace(sample_gantt_state(), calendar=Calendar((0, 1, 2, 3, 4))), True, "en-US"
     )
@@ -97,14 +109,22 @@ def test_a_gantt_chart_with_a_calendar_says_so_and_offers_working_days() -> None
 def test_without_a_chart_everything_else_is_disabled() -> None:
     panel = content(None, False, "en-US")
     assert panel.status == "No chart selected."
-    assert not any(b.enabled for b in (*panel.edit, *panel.add, panel.remove_all))
+    assert not any(
+        b.enabled
+        for b in (*panel.edit, *panel.add, panel.remove_all)
+        if b.command not in (PROTOCOL + "InsertTemplate", PROTOCOL + "InsertFromClipboard")
+    )
     assert panel.rows == ()
 
 
 def test_orphaned_chart_says_so_and_cannot_be_edited() -> None:
     panel = content(None, True, "en-US")
     assert "not in this presentation" in panel.status
-    assert not any(b.enabled for b in (*panel.edit, *panel.add))
+    assert not any(
+        b.enabled
+        for b in (*panel.edit, *panel.add)
+        if b.command not in (PROTOCOL + "InsertTemplate", PROTOCOL + "InsertFromClipboard")
+    )
 
 
 def test_column_chart_enables_edit_and_annotations() -> None:
@@ -255,7 +275,7 @@ def test_update_all_links_is_always_offered() -> None:
 
 def test_element_and_arrange_buttons_follow_the_selection() -> None:
     none = content(None, False, "en-US")
-    assert [b.enabled for b in none.elements] == [True, True, False]
+    assert [b.enabled for b in none.elements] == [True, True, False, True, True, True]
     assert not any(b.enabled for b in none.arrange)
 
     two = content(None, False, "en-US", element_selected=True, shapes_selected=2)
@@ -271,7 +291,7 @@ def test_element_and_arrange_buttons_follow_the_selection() -> None:
 def test_element_and_arrange_buttons_have_icons() -> None:
     panel = content(None, False, "en-US")
     images = Path(__file__).parents[2] / "extension" / "images"
-    icons = [b.icon for b in (*panel.elements, *panel.arrange)]
+    icons = [b.icon for b in (*panel.elements, *panel.arrange) if b.icon]
     assert len(icons) == 3 + 7
     assert len(set(icons)) == len(icons)
     for icon in icons:
@@ -299,7 +319,10 @@ def test_agenda_buttons_follow_the_agenda() -> None:
 def test_the_document_section_checks_the_corporate_design_and_a_chart_exports_csv() -> None:
     panel = content(sample_state(), True, "en-US")
     assert [(b.title, b.command, b.enabled) for b in panel.design] == [
-        ("Check corporate design...", PROTOCOL + "CheckDesign", True)
+        ("Check corporate design...", PROTOCOL + "CheckDesign", True),
+        ("Audit presentation...", PROTOCOL + "AuditDeck", True),
+        ("Export deck specification...", PROTOCOL + "ExportDeckSpec", True),
+        ("Deuteranopia", PROTOCOL + "SimulateColorblind?kind=deuteranopia", True),
     ]
     export = next(b for b in panel.edit if b.command == PROTOCOL + "ExportCsv")
     assert export.enabled

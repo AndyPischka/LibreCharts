@@ -25,6 +25,8 @@ from com.sun.star.view import XSelectionChangeListener
 from librecharts.core import labels
 from librecharts.core.layout.chart import layout_chart
 from librecharts.core.messages import text
+from librecharts.core.model import ChartState
+from librecharts.core.primitives import Text
 from librecharts.core.state_io import StateError
 from librecharts.lo import render, samescale, scheme, store, ui
 
@@ -42,19 +44,62 @@ def read_boxes(group: Any) -> list[labels.Box]:
     (A proxy kept in a list and read later intermittently returned default geometry on
     LibreOffice 26.8: read each child as soon as it is fetched.)
     """
+    return [box for _, box in read_named_boxes(group)]
+
+
+def read_named_boxes(group: Any) -> list[tuple[str, labels.Box]]:
+    """The shape name and box of every child except the frame, in one pass (M22 notes)."""
     x, y, _, _ = render.layout_box(group)
-    boxes: list[labels.Box] = []
+    found: list[tuple[str, labels.Box]] = []
     for index in range(1, group.getCount()):
         child = group.getByIndex(index)
+        name = str(getattr(child, "Name", ""))
         if child.ShapeType in _POLY_SHAPES:  # the points carry the geometry, not Position/Size
             points = [(p.X, p.Y) for outer in child.PolyPolygon for p in outer]
             left, top = min(px for px, _ in points), min(py for _, py in points)
             right, bottom = max(px for px, _ in points), max(py for _, py in points)
-            boxes.append((left - x, top - y, right - left, bottom - top))
+            found.append((name, (left - x, top - y, right - left, bottom - top)))
             continue
         position, size = child.Position, child.Size
-        boxes.append((position.X - x, position.Y - y, size.Width, size.Height))
-    return boxes
+        found.append((name, (position.X - x, position.Y - y, size.Width, size.Height)))
+    return found
+
+
+NOTE_PREFIX = "librecharts-note:"
+
+
+def _dragged_notes(
+    primitives: tuple[Any, ...],
+    children: list[tuple[str, labels.Box]],
+    state: ChartState,
+    width: float,
+    height: float,
+) -> tuple[tuple[Any, ...], tuple[Any, ...]]:
+    """Move note primitives to where the user dragged them and return the new notes (M22)."""
+    notes = list(state.notes)
+    adjusted = list(primitives)
+    for index, (name, box) in enumerate(children):
+        if not name.startswith(NOTE_PREFIX) or index >= len(adjusted):
+            continue
+        try:
+            note_index = int(name[len(NOTE_PREFIX) :])
+        except ValueError:
+            continue
+        if not 0 <= note_index < len(notes) or width <= 0 or height <= 0:
+            continue
+        x = min(max(box[0] / width, 0.0), 1.0)
+        y = min(max(box[1] / height, 0.0), 1.0)
+        note = notes[note_index]
+        if (
+            abs(note.x * width - box[0]) <= labels.TOLERANCE
+            and abs(note.y * height - box[1]) <= labels.TOLERANCE
+        ):
+            continue
+        notes[note_index] = replace(note, x=x, y=y)
+        primitive = adjusted[index]
+        if isinstance(primitive, Text):
+            adjusted[index] = replace(primitive, x=box[0], y=box[1])
+    return tuple(adjusted), tuple(notes)
 
 
 def check(doc: Any, group: Any) -> bool:
@@ -74,14 +119,17 @@ def check(doc: Any, group: Any) -> bool:
         _, _, width, height = render.layout_box(group)
         length = samescale.group_length_per_unit(doc, chart_id, state)
         primitives = layout_chart(state, width, height, length)
-        found = labels.moved(primitives, read_boxes(group), state.labels)
+        children = read_named_boxes(group)
+        boxes = [box for _, box in children]
+        adjusted, notes = _dragged_notes(primitives, children, state, width, height)
+        found = labels.moved(adjusted, boxes, state.labels)
         look = scheme.look(doc, state)
         if found is None:
             render.sync_geometry(group, primitives, look)
             return False
-        if found == state.labels:
+        if found == state.labels and notes == state.notes:
             return False
-        moved = replace(state, labels=found)
+        moved = replace(state, labels=found, notes=notes)
         store.write_state(doc, chart_id, moved)
         render.sync_geometry(group, layout_chart(moved, width, height, length), look)
     except (StateError, ValueError):  # corrupt state, or the box is too small to lay out

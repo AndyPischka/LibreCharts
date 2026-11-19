@@ -121,6 +121,7 @@ def test_the_menu_sorts_by_start_date_and_formats_without_number_format() -> Non
     assert [c.title for c in submenu(state, "Format").children] == [
         "Show gridlines",
         "Show patterns",
+        "Font size",
     ]
 
 

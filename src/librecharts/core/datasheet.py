@@ -374,6 +374,88 @@ def _sample_years(kind: ChartKind, first: str, second: str) -> ChartState:
     )
 
 
+def sample_dumbbell_state() -> ChartState:
+    """Before and after values per category (M24); the pair rows are start and end."""
+    return state_from_table(
+        "dumbbell",
+        "stacked",
+        [
+            [None, "North", "South", "East", "West"],
+            ["2024", 40, 30, 25, 20],
+            ["2025", 52, 34, 22, 27],
+        ],
+    )
+
+
+def sample_bullet_state() -> ChartState:
+    """Three KPIs with actual, target and maximum values (M24)."""
+    return state_from_table(
+        "bullet",
+        "stacked",
+        [
+            ["KPI", "Actual", "Target", "Max"],
+            ["Revenue", 72, 80, 100],
+            ["Margin", 45, 40, 60],
+            ["Satisfaction", 88, 85, 100],
+        ],
+    )
+
+
+def sample_funnel_state() -> ChartState:
+    """A five-stage sales funnel (M24)."""
+    return state_from_table(
+        "funnel",
+        "stacked",
+        [
+            [None, "Leads", "Qualified", "Proposal", "Negotiation", "Won"],
+            ["Deals", 1000, 600, 300, 150, 80],
+        ],
+    )
+
+
+def sample_boxplot_state() -> ChartState:
+    """Three five-number summaries with one outlier each (M24)."""
+    return state_from_table(
+        "boxplot",
+        "stacked",
+        [
+            ["Group", "Min", "Q1", "Median", "Q3", "Max", "Outlier"],
+            ["A", 10, 20, 30, 40, 50, 75],
+            ["B", 5, 15, 25, 35, 45, None],
+            ["C", 20, 30, 45, 60, 70, 95],
+        ],
+    )
+
+
+def sample_table_state() -> ChartState:
+    """A 4x4 table with a header, numbers, text and one typed marker (M25)."""
+    return state_from_table(
+        "table",
+        "stacked",
+        [
+            ["", "2024", "2025", "Trend"],
+            ["Revenue", 120, 145, "{spark:120,130,145}"],
+            ["Margin", 45, 52, "{harvey:75}"],
+            ["Quality", "good", "better", "{check:tick}"],
+        ],
+    )
+
+
+def sample_matrix_state() -> ChartState:
+    """Four points in a 2x2 matrix (M25)."""
+    return state_from_table(
+        "matrix",
+        "stacked",
+        [
+            ["Item", "X", "Y", "Size", "Group"],
+            ["Alpha", 20, 80, 30, "A"],
+            ["Beta", 70, 60, 50, "A"],
+            ["Gamma", 35, 30, 20, "B"],
+            ["Delta", 80, 20, 40, "B"],
+        ],
+    )
+
+
 def _raw(cell: Cell) -> str:
     if cell is None:
         return ""

@@ -146,12 +146,21 @@ def update(ctx: Any, doc: Any, charts: list[Target]) -> Outcome:
     return outcome
 
 
-def link(ctx: Any, doc: Any, state: ChartState, url: str, sheet: str, reference: str) -> ChartState:
+def link(
+    ctx: Any,
+    doc: Any,
+    state: ChartState,
+    url: str,
+    sheet: str,
+    reference: str,
+    *,
+    auto: bool = False,
+) -> ChartState:
     """``state`` linked to ``reference`` on ``sheet`` (``""``: a named range) of the source at
     ``url``, with the source's data. Raises ``LinkError``."""
     if not url.strip():
         raise LinkError("link_no_file")
-    draft = Link(url=url, sheet=sheet, range=reference)
+    draft = Link(url=url, sheet=sheet, range=reference, auto=auto)
     outcome = update(ctx, doc, [Target(None, "", replace(state, link=draft), draft, 0)])
     if outcome.problems:
         raise LinkError(outcome.problems[0].key, draft)
@@ -338,6 +347,20 @@ def changed_sources(ctx: Any, doc: Any) -> list[str]:
 
 # Pending offers by presentation: a Python object passed to AsyncCallback must stay alive.
 _offers: dict[str, _Offer] = {}
+
+
+def has_auto(doc: Any) -> bool:
+    """Whether any linked chart asks to update itself when the presentation opens (M28)."""
+    from librecharts.core.state_io import StateError
+
+    for _, chart_id in store.all_charts(doc):
+        try:
+            state = store.read_state(doc, chart_id)
+        except StateError:
+            continue
+        if state is not None and state.link is not None and state.link.auto:
+            return True
+    return False
 
 
 def offer_update(ctx: Any, doc: Any) -> None:

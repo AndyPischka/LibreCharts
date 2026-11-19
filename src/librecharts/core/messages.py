@@ -578,6 +578,30 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Import from ProjectLibre",
         "de": "Aus ProjectLibre importieren",
     },
+    "import_data_title": {
+        "en": "Import data",
+        "de": "Daten importieren",
+    },
+    "import_data_filter": {
+        "en": "Data files",
+        "de": "Datendateien",
+    },
+    "import_data_failed": {
+        "en": "The data cannot be imported: {detail}",
+        "de": "Die Daten lassen sich nicht importieren: {detail}",
+    },
+    "clipboard_empty": {
+        "en": "The clipboard holds no table.",
+        "de": "Die Zwischenablage enthält keine Tabelle.",
+    },
+    "import_invalid": {
+        "en": "The table is not valid.",
+        "de": "Die Tabelle ist ungültig.",
+    },
+    "import_too_small": {
+        "en": "The table needs a header and at least one row and column.",
+        "de": "Die Tabelle braucht eine Kopfzeile und mindestens eine Zeile und Spalte.",
+    },
     "import_csv_filter": {
         "en": "CSV files",
         "de": "CSV-Dateien",
@@ -1181,6 +1205,106 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "This arrangement does not exist.",
         "de": "Diese Anordnung gibt es nicht.",
     },
+    "graphic_unsupported": {
+        "en": "That graphic cannot be inserted.",
+        "de": "Diese Grafik kann nicht eingefügt werden.",
+    },
+    "graphic_not_selected": {
+        "en": "Select a LibreCharts graphic first.",
+        "de": "Wählen Sie zuerst eine LibreCharts-Grafik aus.",
+    },
+    "menu_insert_graphic": {
+        "en": "Insert graphic",
+        "de": "Grafik einfügen",
+    },
+    "menu_insert_process": {
+        "en": "Process",
+        "de": "Prozess",
+    },
+    "menu_insert_chevron": {
+        "en": "Chevron",
+        "de": "Pfeilband",
+    },
+    "menu_insert_pyramid": {
+        "en": "Pyramid",
+        "de": "Pyramide",
+    },
+    "menu_arrange_distribute": {
+        "en": "Distribute",
+        "de": "Verteilen",
+    },
+    "menu_distribute_h_gaps": {
+        "en": "Equal gaps horizontally",
+        "de": "Gleiche Abstände horizontal",
+    },
+    "menu_distribute_h_centres": {
+        "en": "Equal centres horizontally",
+        "de": "Gleiche Mitten horizontal",
+    },
+    "menu_distribute_v_gaps": {
+        "en": "Equal gaps vertically",
+        "de": "Gleiche Abstände vertikal",
+    },
+    "menu_distribute_v_centres": {
+        "en": "Equal centres vertically",
+        "de": "Gleiche Mitten vertikal",
+    },
+    "menu_arrange_align": {
+        "en": "Align",
+        "de": "Ausrichten",
+    },
+    "menu_align_left": {
+        "en": "Left edges",
+        "de": "Linke Kanten",
+    },
+    "menu_align_right": {
+        "en": "Right edges",
+        "de": "Rechte Kanten",
+    },
+    "menu_align_top": {
+        "en": "Top edges",
+        "de": "Obere Kanten",
+    },
+    "menu_align_bottom": {
+        "en": "Bottom edges",
+        "de": "Untere Kanten",
+    },
+    "menu_align_hcenter": {
+        "en": "Horizontal centres",
+        "de": "Horizontale Mitten",
+    },
+    "menu_align_vcenter": {
+        "en": "Vertical centres",
+        "de": "Vertikale Mitten",
+    },
+    "menu_arrange_slide": {
+        "en": "Align to slide",
+        "de": "An der Folie ausrichten",
+    },
+    "menu_align_slide_left": {
+        "en": "Left",
+        "de": "Links",
+    },
+    "menu_align_slide_right": {
+        "en": "Right",
+        "de": "Rechts",
+    },
+    "menu_align_slide_top": {
+        "en": "Top",
+        "de": "Oben",
+    },
+    "menu_align_slide_bottom": {
+        "en": "Bottom",
+        "de": "Unten",
+    },
+    "menu_align_slide_hcenter": {
+        "en": "Horizontal centre",
+        "de": "Horizontal zentriert",
+    },
+    "menu_align_slide_vcenter": {
+        "en": "Vertical centre",
+        "de": "Vertikal zentriert",
+    },
     "menu_arrange_width": {
         "en": "Same width",
         "de": "Gleiche Breite",
@@ -1208,6 +1332,130 @@ MESSAGES: dict[str, dict[str, str]] = {
     "menu_reset_labels": {
         "en": "Reset label positions",
         "de": "Beschriftungen zurücksetzen",
+    },
+    "menu_labels": {
+        "en": "Labels",
+        "de": "Beschriftungen",
+    },
+    "menu_legend": {
+        "en": "Legend position",
+        "de": "Legendenposition",
+    },
+    "menu_font_size": {
+        "en": "Font size",
+        "de": "Schriftgröße",
+    },
+    "menu_font_auto": {
+        "en": "Automatic (scheme)",
+        "de": "Automatisch (Schema)",
+    },
+    "menu_font_value": {
+        "en": "{size} pt",
+        "de": "{size} pt",
+    },
+    "menu_hide_label": {
+        "en": "Hide label...",
+        "de": "Beschriftung ausblenden...",
+    },
+    "menu_edit_label": {
+        "en": "Change label text...",
+        "de": "Beschriftungstext ändern...",
+    },
+    "menu_reset_label": {
+        "en": "Reset label...",
+        "de": "Beschriftung zurücksetzen...",
+    },
+    "menu_focus": {
+        "en": "Focus",
+        "de": "Fokus",
+    },
+    "menu_focus_series": {
+        "en": "Series: {name}",
+        "de": "Datenreihe: {name}",
+    },
+    "menu_focus_category": {
+        "en": "Category: {name}",
+        "de": "Kategorie: {name}",
+    },
+    "menu_focus_clear": {
+        "en": "Clear focus",
+        "de": "Fokus aufheben",
+    },
+    "menu_source": {
+        "en": "Source...",
+        "de": "Quelle...",
+    },
+    "menu_add_note": {
+        "en": "Add note...",
+        "de": "Hinweis hinzufügen...",
+    },
+    "menu_notes": {
+        "en": "Notes",
+        "de": "Hinweise",
+    },
+    "menu_remove_note": {
+        "en": "Remove note",
+        "de": "Hinweis entfernen",
+    },
+    "label_title": {
+        "en": "Label",
+        "de": "Beschriftung",
+    },
+    "label_text": {
+        "en": "Text",
+        "de": "Text",
+    },
+    "label_pick_hint": {
+        "en": "Click the label to change",
+        "de": "Klicken Sie die zu ändernde Beschriftung an",
+    },
+    "label_unsupported": {
+        "en": "That label cannot be changed.",
+        "de": "Diese Beschriftung kann nicht geändert werden.",
+    },
+    "source_title": {
+        "en": "Source",
+        "de": "Quelle",
+    },
+    "source_label": {
+        "en": "Source line",
+        "de": "Quellenzeile",
+    },
+    "note_title": {
+        "en": "Note",
+        "de": "Hinweis",
+    },
+    "note_label": {
+        "en": "Text",
+        "de": "Text",
+    },
+    "note_unsupported": {
+        "en": "That note cannot be changed.",
+        "de": "Dieser Hinweis kann nicht geändert werden.",
+    },
+    "text_empty": {
+        "en": "The text must not be empty.",
+        "de": "Der Text darf nicht leer sein.",
+    },
+    "text_too_long": {
+        "en": "The text is too long (at most {limit} characters).",
+        "de": "Der Text ist zu lang (höchstens {limit} Zeichen).",
+    },
+    "menu_legend_top": {
+        "en": "Legend at the top",
+        "de": "Legende oben",
+    },
+    "menu_legend_right": {
+        "en": "Legend on the right",
+        "de": "Legende rechts",
+    },
+    "menu_legend_bottom": {
+        "en": "Legend at the bottom",
+        "de": "Legende unten",
+    },
+    "menu_legend_left": {
+        "en": "Legend on the left",
+        "de": "Legende links",
     },
     "move_labels_hint": {
         "en": "Drag values and totals to move them. Esc ends.",
@@ -1244,6 +1492,10 @@ MESSAGES: dict[str, dict[str, str]] = {
     "deck_duplicate_placeholder": {
         "en": "The placeholder {detail} is used by more than one chart.",
         "de": "Der Platzhalter {detail} wird von mehr als einem Diagramm verwendet.",
+    },
+    "deck_template_missing": {
+        "en": "The chart template {detail} cannot be found.",
+        "de": "Die Diagrammvorlage {detail} wurde nicht gefunden.",
     },
     "deck_bad_kind": {
         "en": "Unknown chart type {detail} in the deck specification.",
@@ -1393,6 +1645,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "... and {count} more.",
         "de": "... und {count} weitere.",
     },
+    "design_where_master": {
+        "en": 'Master {index}, "{shape}"',
+        "de": 'Master {index}, "{shape}"',
+    },
     "design_where": {
         "en": "Slide {slide}, {shape}",
         "de": "Folie {slide}, {shape}",
@@ -1444,6 +1700,130 @@ MESSAGES: dict[str, dict[str, str]] = {
     "cli_fix": {
         "en": "fix every deviation and save the presentation",
         "de": "alle Abweichungen korrigieren und die Präsentation speichern",
+    },
+    "audit_clean": {
+        "en": "No problems found.",
+        "de": "Keine Probleme gefunden.",
+    },
+    "audit_summary": {
+        "en": "{count} findings:",
+        "de": "{count} Befunde:",
+    },
+    "audit_line": {
+        "en": "Slide {slide}: {message}",
+        "de": "Folie {slide}: {message}",
+    },
+    "audit_corrupt_chart": {
+        "en": "The chart data are unreadable. {detail}",
+        "de": "Die Diagrammdaten sind unlesbar. {detail}",
+    },
+    "audit_linked": {
+        "en": "The chart is linked to an external source.",
+        "de": "Das Diagramm ist mit einer externen Quelle verknüpft.",
+    },
+    "audit_stale_link": {
+        "en": "The linked source {detail} changed since the last update.",
+        "de": "Die verknüpfte Quelle {detail} hat sich seit der letzten Aktualisierung geändert.",
+    },
+    "audit_design": {
+        "en": "Corporate design deviation: {detail}",
+        "de": "Abweichung vom Corporate Design: {detail}",
+    },
+    "alt_graphic": {
+        "en": "LibreCharts graphic: {kind} {name}",
+        "de": "LibreCharts-Grafik: {kind} {name}",
+    },
+    "alt_harvey": {
+        "en": "Harvey ball {level} %",
+        "de": "Harvey-Ball {level} %",
+    },
+    "alt_check_tick": {
+        "en": "Check mark: yes",
+        "de": "Häkchen: ja",
+    },
+    "alt_check_cross": {
+        "en": "Check mark: no",
+        "de": "Kreuz: nein",
+    },
+    "alt_check_empty": {
+        "en": "Check mark: empty",
+        "de": "Häkchen: leer",
+    },
+    "colorblind_unknown": {
+        "en": "That colour-blindness simulation is not known.",
+        "de": "Diese Farbsehschwäche-Simulation ist unbekannt.",
+    },
+    "menu_colorblind": {
+        "en": "Colour-blind simulation",
+        "de": "Farbsehschwäche-Simulation",
+    },
+    "menu_deuteranopia": {
+        "en": "Deuteranopia",
+        "de": "Deuteranopie",
+    },
+    "menu_protanopia": {
+        "en": "Protanopia",
+        "de": "Protanopie",
+    },
+    "menu_tritanopia": {
+        "en": "Tritanopia",
+        "de": "Tritanopie",
+    },
+    "menu_audit": {
+        "en": "Audit presentation...",
+        "de": "Präsentation prüfen...",
+    },
+    "spec_exported": {
+        "en": "{count} charts exported.",
+        "de": "{count} Diagramme exportiert.",
+    },
+    "spec_export_failed": {
+        "en": "The specification cannot be written: {detail}",
+        "de": "Die Spezifikation lässt sich nicht schreiben: {detail}",
+    },
+    "menu_export_spec": {
+        "en": "Export deck specification...",
+        "de": "Deck-Spezifikation exportieren...",
+    },
+    "menu_import_data": {
+        "en": "Import data...",
+        "de": "Daten importieren...",
+    },
+    "menu_insert_from_clipboard": {
+        "en": "Chart from clipboard",
+        "de": "Diagramm aus Zwischenablage",
+    },
+    "menu_save_template": {
+        "en": "Save chart as template...",
+        "de": "Diagramm als Vorlage speichern...",
+    },
+    "menu_insert_template": {
+        "en": "Insert from template",
+        "de": "Aus Vorlage einfügen",
+    },
+    "template_save_title": {
+        "en": "Save chart as template",
+        "de": "Diagramm als Vorlage speichern",
+    },
+    "template_name": {
+        "en": "Name",
+        "de": "Name",
+    },
+    "template_saved": {
+        "en": "Template saved to {path}.",
+        "de": "Vorlage nach {path} gespeichert.",
+    },
+    "template_save_failed": {
+        "en": "The template cannot be saved: {detail}",
+        "de": "Die Vorlage lässt sich nicht speichern: {detail}",
+    },
+    "template_missing": {
+        "en": "No template called {name}.",
+        "de": "Keine Vorlage namens {name}.",
+    },
+    "template_load_failed": {
+        "en": "The template cannot be read: {detail}",
+        "de": "Die Vorlage lässt sich nicht lesen: {detail}",
     },
     "menu_export_csv": {
         "en": "Export chart data as CSV...",
@@ -1509,6 +1889,215 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "{kind} without data.",
         "de": "{kind} ohne Daten.",
     },
+    "alt_source": {
+        "en": "Source: {source}.",
+        "de": "Quelle: {source}.",
+    },
+    "alt_axis": {
+        "en": "Axis title: {title}.",
+        "de": "Achsentitel: {title}.",
+    },
+    "alt_trend": {
+        "en": "Trendline for series {series} ({kind}).",
+        "de": "Trendlinie für Datenreihe {series} ({kind}).",
+    },
+    "kind_table": {
+        "en": "Table",
+        "de": "Tabelle",
+    },
+    "kind_matrix": {
+        "en": "2x2 matrix",
+        "de": "2x2-Matrix",
+    },
+    "insert_table": {
+        "en": "Table",
+        "de": "Tabelle",
+    },
+    "insert_matrix": {
+        "en": "2x2 matrix",
+        "de": "2x2-Matrix",
+    },
+    "kind_pareto": {
+        "en": "Pareto chart",
+        "de": "Pareto-Diagramm",
+    },
+    "kind_dumbbell": {
+        "en": "Dumbbell chart",
+        "de": "Hanteldiagramm",
+    },
+    "kind_bullet": {
+        "en": "Bullet chart",
+        "de": "Bullet-Diagramm",
+    },
+    "kind_funnel": {
+        "en": "Funnel chart",
+        "de": "Trichterdiagramm",
+    },
+    "kind_boxplot": {
+        "en": "Box plot",
+        "de": "Boxplot",
+    },
+    "insert_dumbbell": {
+        "en": "Dumbbell",
+        "de": "Hantel",
+    },
+    "insert_bullet": {
+        "en": "Bullet",
+        "de": "Bullet",
+    },
+    "insert_funnel": {
+        "en": "Funnel",
+        "de": "Trichter",
+    },
+    "insert_boxplot": {
+        "en": "Box plot",
+        "de": "Boxplot",
+    },
+    "menu_pareto": {
+        "en": "Show as Pareto chart",
+        "de": "Als Pareto-Diagramm zeigen",
+    },
+    "menu_pareto_off": {
+        "en": "Show as normal chart",
+        "de": "Als normales Diagramm zeigen",
+    },
+    "menu_dumbbell_horizontal": {
+        "en": "Horizontal",
+        "de": "Horizontal",
+    },
+    "menu_dumbbell_vertical": {
+        "en": "Vertical",
+        "de": "Vertikal",
+    },
+    "bullet_invalid": {
+        "en": "The bullet data sheet is invalid.",
+        "de": "Das Bullet-Datenblatt ist ungültig.",
+    },
+    "bullet_missing": {
+        "en": "A bullet row needs an actual value and a maximum.",
+        "de": "Eine Bullet-Zeile braucht einen Ist-Wert und ein Maximum.",
+    },
+    "bullet_negative": {
+        "en": "A bullet chart cannot show negative values or a maximum of zero.",
+        "de": "Ein Bullet-Diagramm kann keine negativen Werte oder ein Maximum von null zeigen.",
+    },
+    "bullet_empty": {
+        "en": "The bullet data sheet has no rows.",
+        "de": "Das Bullet-Datenblatt hat keine Zeilen.",
+    },
+    "boxplot_invalid": {
+        "en": "The box plot data sheet is invalid.",
+        "de": "Das Boxplot-Datenblatt ist ungültig.",
+    },
+    "boxplot_incomplete": {
+        "en": "A box plot row needs Min, Q1, Median, Q3 and Max.",
+        "de": "Eine Boxplot-Zeile braucht Min, Q1, Median, Q3 und Max.",
+    },
+    "boxplot_order": {
+        "en": "A box plot needs Min <= Q1 <= Median <= Q3 <= Max.",
+        "de": "Ein Boxplot braucht Min <= Q1 <= Median <= Q3 <= Max.",
+    },
+    "boxplot_empty": {
+        "en": "The box plot data sheet has no rows.",
+        "de": "Das Boxplot-Datenblatt hat keine Zeilen.",
+    },
+    "trend_linear": {
+        "en": "linear",
+        "de": "linear",
+    },
+    "trend_exponential": {
+        "en": "exponential",
+        "de": "exponentiell",
+    },
+    "menu_axis_dialog": {
+        "en": "Axes...",
+        "de": "Achsen...",
+    },
+    "menu_trendlines": {
+        "en": "Trendlines",
+        "de": "Trendlinien",
+    },
+    "menu_add_trendline": {
+        "en": "Add trendline...",
+        "de": "Trendlinie hinzufügen...",
+    },
+    "menu_remove_trendline": {
+        "en": "Remove trendline",
+        "de": "Trendlinie entfernen",
+    },
+    "axis_title": {
+        "en": "Value axis",
+        "de": "Werteachse",
+    },
+    "axis_min_label": {
+        "en": "Minimum",
+        "de": "Minimum",
+    },
+    "axis_max_label": {
+        "en": "Maximum",
+        "de": "Maximum",
+    },
+    "axis_step_label": {
+        "en": "Step",
+        "de": "Schritt",
+    },
+    "axis_scale_label": {
+        "en": "Scale",
+        "de": "Skala",
+    },
+    "axis_scale_linear": {
+        "en": "Linear",
+        "de": "Linear",
+    },
+    "axis_scale_log": {
+        "en": "Logarithmic",
+        "de": "Logarithmisch",
+    },
+    "category_axis_title": {
+        "en": "Category axis",
+        "de": "Kategorieachse",
+    },
+    "trend_title": {
+        "en": "Trendline",
+        "de": "Trendlinie",
+    },
+    "trend_series": {
+        "en": "Series",
+        "de": "Datenreihe",
+    },
+    "trend_kind": {
+        "en": "Kind",
+        "de": "Art",
+    },
+    "trend_forecast": {
+        "en": "Forecast (periods)",
+        "de": "Prognose (Perioden)",
+    },
+    "trend_show_r2": {
+        "en": "Show R²",
+        "de": "R² anzeigen",
+    },
+    "trend_show_equation": {
+        "en": "Show equation",
+        "de": "Gleichung anzeigen",
+    },
+    "trend_invalid": {
+        "en": "The trendline cannot be fitted to this data.",
+        "de": "Die Trendlinie kann nicht an diese Daten angepasst werden.",
+    },
+    "axis_invalid": {
+        "en": "The axis values are not valid.",
+        "de": "Die Achsenwerte sind ungültig.",
+    },
+    "axis_cut_warning": {
+        "en": "Bars will be cut: readers may misread the chart. Continue?",
+        "de": "Die Balken werden abgeschnitten: Leser könnten das Diagramm "
+        "falsch deuten. Fortfahren?",
+    },
+    "alt_note": {
+        "en": "Note: {text}.",
+        "de": "Hinweis: {text}.",
+    },
     "addon_insert_column": {
         "en": "Insert column chart",
         "de": "Säulendiagramm einfügen",
@@ -1548,6 +2137,30 @@ MESSAGES: dict[str, dict[str, str]] = {
     "addon_insert_gantt": {
         "en": "Insert Gantt chart",
         "de": "Gantt-Diagramm einfügen",
+    },
+    "addon_insert_dumbbell": {
+        "en": "Insert dumbbell chart",
+        "de": "Hanteldiagramm einfügen",
+    },
+    "addon_insert_bullet": {
+        "en": "Insert bullet chart",
+        "de": "Bullet-Diagramm einfügen",
+    },
+    "addon_insert_funnel": {
+        "en": "Insert funnel chart",
+        "de": "Trichterdiagramm einfügen",
+    },
+    "addon_insert_boxplot": {
+        "en": "Insert box plot",
+        "de": "Boxplot einfügen",
+    },
+    "addon_insert_table": {
+        "en": "Insert table",
+        "de": "Tabelle einfügen",
+    },
+    "addon_insert_matrix": {
+        "en": "Insert 2x2 matrix",
+        "de": "2x2-Matrix einfügen",
     },
     "addon_working_days": {
         "en": "Working days...",
@@ -1610,6 +2223,12 @@ ADDON_KEYS: dict[str, str] = {
     "InsertScatterChart": "addon_insert_scatter",
     "InsertButterflyChart": "addon_insert_butterfly",
     "InsertGanttChart": "addon_insert_gantt",
+    "InsertDumbbellChart": "addon_insert_dumbbell",
+    "InsertBulletChart": "addon_insert_bullet",
+    "InsertFunnelChart": "addon_insert_funnel",
+    "InsertBoxplotChart": "addon_insert_boxplot",
+    "InsertTableChart": "addon_insert_table",
+    "InsertMatrixChart": "addon_insert_matrix",
     "WorkingDays": "addon_working_days",
     "ImportGanttCsv": "addon_import_csv",
     "ImportGanttProject": "addon_import_project",

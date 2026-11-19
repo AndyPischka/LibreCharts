@@ -78,10 +78,19 @@ class Look:
     scheme: style.Scheme = style.DEFAULT
     colors: tuple[int | None, ...] = ()
     patterns: bool = False
+    size_override: float | None = None  # per-chart font size (M22)
 
     def color(self, series: int) -> int:
         """The fill colour of a series index."""
         return self.scheme.color(series, self.colors)
+
+    def muted(self, color: int) -> int:
+        """``color`` mixed far towards the background: the look of an unfocused element (M22)."""
+        return style.mix(color, self.scheme.background, 0.75)
+
+    def muted_text(self) -> int:
+        """A readable but quiet text colour for muted free text."""
+        return style.mix(self.scheme.text, self.scheme.background, 0.5)
 
     def text_on(self, fill: int) -> int:
         """A readable text colour on ``fill``."""
@@ -89,7 +98,7 @@ class Look:
 
     @property
     def font_size(self) -> float:
-        return self.scheme.font_size
+        return self.size_override if self.size_override is not None else self.scheme.font_size
 
 
 DEFAULT_LOOK = Look()
@@ -225,6 +234,9 @@ def sync_geometry(
                 changed = True
             if look is not None and child.CharColor != _text_color(label, look):
                 child.CharColor = _text_color(label, look)
+                changed = True
+            if label.key is not None and child.Name != label_name(label.key):
+                child.Name = label_name(label.key)
                 changed = True
     return "updated" if changed else "unchanged"
 
@@ -372,8 +384,23 @@ def _series_line(ops: _Style, series: int, look: Look) -> None:
     ops.set_struct("LineDash", _series_dash(pattern), _DASH_FIELDS)
 
 
+def label_name(key: Any) -> str:
+    """The name of a label shape: ``librecharts-label:<role>:<category>:<series>`` (M22)."""
+    series = "" if key.series is None else str(key.series)
+    return f"librecharts-label:{key.role}:{key.category}:{series}"
+
+
+def _muted_color(look: Look, series: int, muted: bool) -> int:
+    """The series colour, mixed towards the background when the element is outside the focus."""
+    color = look.color(series)
+    return look.muted(color) if muted else color
+
+
 def _text_color(label: Text, look: Look) -> int:
-    return look.text_on(look.color(label.fill)) if label.fill is not None else look.scheme.text
+    if label.fill is not None:
+        fill = _muted_color(look, label.fill, label.muted)
+        return look.text_on(fill)
+    return look.muted_text() if label.muted else look.scheme.text
 
 
 def _create(doc: Any, group: Any, spec: _Spec, look: Look) -> None:
@@ -476,10 +503,10 @@ def _style(shape: Any, spec: _Spec, look: Look, *, update: bool = False) -> None
             style.set("FillStyle", _FILL_SOLID)
             style.set("FillColor", look.scheme.background)
             style.set("LineStyle", _LINE_SOLID)
-            style.set("LineColor", look.color(p.series))
+            style.set("LineColor", _muted_color(look, p.series, p.muted))
             style.set("LineWidth", LINE_WIDTH)
         elif isinstance(p, Polygon):
-            _series_fill(style, p.series, look.color(p.series), look)
+            _series_fill(style, p.series, _muted_color(look, p.series, p.muted), look)
             style.set("LineStyle", _LINE_NONE)
         elif isinstance(p, Polyline) and p.series in (POSITIVE, NEGATIVE):
             style.set("FillStyle", _FILL_NONE)
@@ -489,8 +516,11 @@ def _style(shape: Any, spec: _Spec, look: Look, *, update: bool = False) -> None
         elif isinstance(p, Polyline):
             style.set("FillStyle", _FILL_NONE)
             _series_line(style, p.series, look)
-            style.set("LineColor", look.color(p.series))
+            style.set("LineColor", _muted_color(look, p.series, p.muted))
             style.set("LineWidth", LINE_WIDTH)
+            if p.dashed:
+                style.set("LineStyle", _LINE_DASH)
+                style.set_struct("LineDash", _dash(), _DASH_FIELDS)
         style.apply()
         return
     style.geometry(spec)
@@ -503,16 +533,16 @@ def _style(shape: Any, spec: _Spec, look: Look, *, update: bool = False) -> None
         elif p.series == SHADE:
             color = look.scheme.shade()
         else:
-            color = look.color(p.series)
+            color = _muted_color(look, p.series, p.muted)
         _series_fill(style, p.series, color, look)
         style.set("LineStyle", _LINE_NONE)
     elif isinstance(p, Bubble):
-        _series_fill(style, p.series, look.color(p.series), look)
+        _series_fill(style, p.series, _muted_color(look, p.series, p.muted), look)
         style.set("LineStyle", _LINE_NONE)
         style.set("FillTransparence", BUBBLE_TRANSPARENCY)
     elif isinstance(p, Marker):
         style.set("FillStyle", _FILL_SOLID)
-        style.set("FillColor", look.color(p.series))
+        style.set("FillColor", _muted_color(look, p.series, p.muted))
         style.set("LineStyle", _LINE_NONE)
         style.set("FillTransparence", 0)
     elif isinstance(p, Line):
@@ -523,6 +553,8 @@ def _style(shape: Any, spec: _Spec, look: Look, *, update: bool = False) -> None
             color, width = look.scheme.line, AXIS_WIDTH
         else:
             color, width = look.scheme.line, LINE_WIDTH
+        if p.muted:
+            color = look.muted(color)
         style.set("LineStyle", line_style)
         style.set("LineColor", color)
         style.set("LineWidth", width)
@@ -536,6 +568,10 @@ def _style(shape: Any, spec: _Spec, look: Look, *, update: bool = False) -> None
             style.set("LineEndWidth", ARROW_WIDTH)
     else:
         label = cast("Text", p)  # poly shapes return above; what is left is a label
+        if label.key is not None:
+            style.set("Name", label_name(label.key))
+        elif label.name:
+            style.set("Name", label.name)
         style.set("TextAutoGrowHeight", False)
         style.set("TextAutoGrowWidth", False)
         style.set("TextVerticalAdjust", _V_CENTER)
@@ -554,4 +590,5 @@ def _style(shape: Any, spec: _Spec, look: Look, *, update: bool = False) -> None
         style.set("CharColor", _text_color(label, look))
         style.set("ParaAdjust", _PARA_ADJUST[label.align])
         style.set_float("CharWeight", BOLD if label.role == "heading" else NORMAL)
+        style.set("TextRotation", label.rotation * 100)
     style.apply()

@@ -11,13 +11,19 @@ from typing import Any
 from librecharts.core import alttext, annotations, style
 from librecharts.core.datasheet import (
     sample_area_state,
+    sample_boxplot_state,
+    sample_bullet_state,
     sample_butterfly_state,
+    sample_dumbbell_state,
+    sample_funnel_state,
     sample_gantt_state,
     sample_line_state,
+    sample_matrix_state,
     sample_mekko_state,
     sample_pie_state,
     sample_scatter_state,
     sample_state,
+    sample_table_state,
     sample_waterfall_state,
 )
 from librecharts.core.format import default_format
@@ -82,6 +88,36 @@ def insert_butterfly_chart(doc: Any, page: Any, locale: str = "") -> Any:
 def insert_gantt_chart(doc: Any, page: Any, locale: str = "") -> Any:
     """Insert a Gantt chart with a sample project centred on ``page``."""
     return _insert(doc, page, _with_default_format(sample_gantt_state(), locale))
+
+
+def insert_dumbbell_chart(doc: Any, page: Any, locale: str = "") -> Any:
+    """Insert a dumbbell chart with sample data centred on ``page`` (M24)."""
+    return _insert(doc, page, _with_default_format(sample_dumbbell_state(), locale))
+
+
+def insert_bullet_chart(doc: Any, page: Any, locale: str = "") -> Any:
+    """Insert a bullet chart with sample data centred on ``page`` (M24)."""
+    return _insert(doc, page, _with_default_format(sample_bullet_state(), locale))
+
+
+def insert_funnel_chart(doc: Any, page: Any, locale: str = "") -> Any:
+    """Insert a funnel chart with sample data centred on ``page`` (M24)."""
+    return _insert(doc, page, _with_default_format(sample_funnel_state(), locale))
+
+
+def insert_boxplot_chart(doc: Any, page: Any, locale: str = "") -> Any:
+    """Insert a box plot with sample data centred on ``page`` (M24)."""
+    return _insert(doc, page, _with_default_format(sample_boxplot_state(), locale))
+
+
+def insert_table_chart(doc: Any, page: Any, locale: str = "") -> Any:
+    """Insert a table with sample cells centred on ``page`` (M25)."""
+    return _insert(doc, page, _with_default_format(sample_table_state(), locale))
+
+
+def insert_matrix_chart(doc: Any, page: Any, locale: str = "") -> Any:
+    """Insert a 2x2 matrix with sample points centred on ``page`` (M25)."""
+    return _insert(doc, page, _with_default_format(sample_matrix_state(), locale))
 
 
 def insert_at(

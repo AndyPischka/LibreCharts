@@ -5,6 +5,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+LibreCharts 6.0 adds the message on the slide: label overrides and focus, manual axes and
+trendlines, five comparison charts, tables and matrices, layout graphics and chart templates.
+The 7.0 work has started with data import, a deck audit and colour-blindness simulation.
+
+### Added
+- **Labels and emphasis** (M22): hide, retitle or reset single labels; a focus mode that mutes
+  everything outside the selected series and categories; a chart source line and free callouts;
+  per-chart font size and legend position.
+- **Axes and trends** (M23): manual minimum, maximum and step, axis titles, a logarithmic value
+  axis on line and scatter charts, and trendlines with forecasts, R² and an optional equation.
+- **Comparison charts** (M24): dumbbell, bullet, funnel and box plot charts, plus a Pareto switch on
+  column and bar charts.
+- **Table and matrix** (M25): a styled table chart with Harvey balls, check marks, sparklines and a
+  heatmap, and a 2x2 matrix with quadrant lines and labelled axes.
+- **Layout tools and graphics** (M26): distribute and align commands, process, chevron and pyramid
+  graphics and a small built-in icon set.
+- **Chart templates** (M27): save a chart as a named template, insert it again, share it as JSON and
+  use `"template"` in a deck specification.
+- **Data import** (M28): CSV, ODS and XLSX files into any data sheet, and a chart from clipboard
+  cells.
+- **Audit** (M29): report unreadable charts, links and stale sources by slide; export a deck
+  specification.
+- **Colour-blindness simulation** (M30): show a deck as deuteranopia, protanopia or tritanopia.
+
+Existing presentations open unchanged; the schema moved to version 20.
+
 ## [5.0.0] - 2026-11-19
 
 LibreCharts 5.0 adds workflow features on top of the 4.0 charts: build decks from data, check them

@@ -145,6 +145,12 @@ def content(
             _button("insert_scatter", "InsertScatterChart", "insert_scatter", locale),
             _button("insert_butterfly", "InsertButterflyChart", "insert_butterfly", locale),
             _button("insert_gantt", "InsertGanttChart", "insert_gantt", locale),
+            _button("insert_dumbbell", "InsertDumbbellChart", "insert_dumbbell", locale),
+            _button("insert_bullet", "InsertBulletChart", "insert_bullet", locale),
+            _button("insert_funnel", "InsertFunnelChart", "insert_funnel", locale),
+            _button("insert_boxplot", "InsertBoxplotChart", "insert_boxplot", locale),
+            _button("insert_table", "InsertTableChart", "insert_table", locale),
+            _button("insert_matrix", "InsertMatrixChart", "insert_matrix", locale),
         ),
         status=status,
         edit=(
@@ -166,6 +172,10 @@ def content(
                 else ()
             ),
             _button("menu_export_csv", "ExportCsv", "", locale, usable),
+            _button("menu_save_template", "SaveTemplate", "", locale, usable),
+            _button("menu_insert_template", "InsertTemplate", "", locale),
+            _button("menu_import_data", "ImportData", "", locale, usable and not linked),
+            _button("menu_insert_from_clipboard", "InsertFromClipboard", "", locale),
         ),
         link_status=links.status(state.link, locale) if state and state.link else "",
         link=_link(linked, usable, locale),
@@ -252,16 +262,23 @@ def content(
             _button(
                 "menu_element_next", "SetElement?next=1", "element_next", locale, element_selected
             ),
+            _button("menu_insert_process", "InsertGraphic?kind=process", "", locale),
+            _button("menu_insert_chevron", "InsertGraphic?kind=chevron", "", locale),
+            _button("menu_insert_pyramid", "InsertGraphic?kind=pyramid", "", locale),
         ),
         arrange=tuple(
             Button(
                 item.title,
                 item.command,
-                _ARRANGE_ICONS[item.command.removeprefix(PROTOCOL + "Arrange?op=")],
+                _ARRANGE_ICONS.get(item.command.removeprefix(PROTOCOL + "Arrange?op="), ""),
                 shapes_selected >= 2
                 and (shapes_selected == 2 or not item.command.endswith("op=swap")),
             )
-            for item in arrange_items(locale)
+            for item in (
+                leaf
+                for entry in arrange_items(locale)
+                for leaf in ((entry,) if entry.command else entry.children)
+            )
         ),
         agenda=(
             # always enabled: after its main slide was deleted, an agenda is inserted again
@@ -272,7 +289,12 @@ def content(
             _button("menu_start_chapter", "StartChapter", "", locale, has_agenda),
             _button("menu_update_agenda", "UpdateAgenda", "", locale, has_agenda),
         ),
-        design=(_button("menu_check_design", "CheckDesign", "", locale),),
+        design=(
+            _button("menu_check_design", "CheckDesign", "", locale),
+            _button("menu_audit", "AuditDeck", "", locale),
+            _button("menu_export_spec", "ExportDeckSpec", "", locale),
+            _button("menu_deuteranopia", "SimulateColorblind?kind=deuteranopia", "", locale),
+        ),
     )
 
 
@@ -325,8 +347,19 @@ def _format(state: ChartState | None, usable: bool, locale: str) -> tuple[Button
         buttons += (_button("menu_remove_same_scale", "RemoveSameScale", "", locale, usable),)
     if core_labels.movable(state):
         buttons += (_button("menu_move_labels", "MoveLabels", "", locale, usable),)
+        buttons += (
+            _button("menu_hide_label", "SetLabel", "", locale, usable),
+            _button("menu_edit_label", "SetLabelText", "", locale, usable),
+            _button("menu_reset_label", "ResetLabel", "", locale, usable),
+        )
         if state.labels:
             buttons += (_button("menu_reset_labels", "ResetLabels", "", locale, usable),)
+    buttons += (
+        _button("menu_source", "SetSource", "", locale, usable),
+        _button("menu_add_note", "AddNote", "", locale, usable),
+    )
+    if state.focus is not None:
+        buttons += (_button("menu_focus_clear", "ClearFocus", "", locale, usable),)
     if formats.supports(state, "number_format"):
         buttons += (_button("menu_number_format", "NumberFormat", "", locale, usable),)
     return buttons

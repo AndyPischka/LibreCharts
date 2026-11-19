@@ -14,20 +14,25 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from librecharts.core import annotations as notes
+from librecharts.core import trend as trends_module
 from librecharts.core import value_line
 from librecharts.core.axis_break import Break, resolve
 from librecharts.core.axis_break import axis as shortened_axis
 from librecharts.core.datasheet import ChartData, with_error_margins
 from librecharts.core.layout.common import (
     AXIS_BAND,
+    AXIS_TITLE_BAND,
     LABEL_HEIGHT,
-    LEGEND_HEIGHT,
     LEVEL_ARROW_INSET,
     LEVEL_LABEL_GAP,
     LEVEL_LANE_WIDTH,
+    axis_title,
+    baseline_cut,
     bracket,
+    category_title,
     format_value,
     legend,
+    legend_insets,
     level_arrow,
     point_runs,
     spread,
@@ -35,7 +40,7 @@ from librecharts.core.layout.common import (
     vertical_axis,
     vertical_grid,
 )
-from librecharts.core.model import Annotation, Format, LabelKey
+from librecharts.core.model import Annotation, Format, LabelKey, Trend
 from librecharts.core.primitives import Line, Marker, Polyline, Primitive, Text
 from librecharts.core.scale import Axis
 
@@ -48,6 +53,8 @@ SERIES_BAND = 2600.0  # room right of the lanes for series names
 SERIES_LABEL_GAP = 150.0  # between the lanes and a series name
 PICK_TOLERANCE = 900.0  # how far a click may miss a point and still pick it, 1/100 mm
 ERROR_CAP = 150.0  # half the width of an error bar's cap, 1/100 mm
+TREND_LABEL_GAP = 150.0  # between a trendline's end and its R² label
+TREND_LABEL_WIDTH = 3000.0
 
 _YScale = Callable[[float], float]
 
@@ -73,6 +80,7 @@ def layout_line(
     fmt: Format | None = None,
     length_per_unit: float | None = None,
     errors: tuple[tuple[float | None, ...], ...] | None = None,
+    trends: tuple[Trend, ...] = (),
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
@@ -97,18 +105,36 @@ def layout_line(
     def y(value: float) -> float:
         if length_per_unit is not None:
             return plot.top_band + scale_height - (value - axis.minimum) * length_per_unit
+        if axis.scale == "log":
+            if value <= 0:
+                return plot.top_band + scale_height
+            return plot.top_band + (1.0 - axis.fraction(fold(value))) * scale_height
         return plot.top_band + (axis.maximum - value) / span * scale_height
 
     fold = cut.fold if cut else _same
-    slot = plot.plot_width / len(data.categories)
+    extra = max((item.forecast for item in trends), default=0)
+    slot = plot.plot_width / (len(data.categories) + extra)
     out: list[Primitive] = []
     if fmt.series_names == "legend":
-        out.extend(legend([s.name for s in data.series], width))
+        out.extend(legend([s.name for s in data.series], width, fmt.legend, height))
     out.append(Line(plot.plot_left, y(0), plot.plot_left + plot.plot_width, y(0), "baseline"))
     if fmt.axis:
         if fmt.gridlines:
             out.extend(vertical_grid(axis, cut, y, plot.plot_left, plot.plot_width))
         out.extend(vertical_axis(axis, cut, y, plot.plot_left, fmt))
+    if fmt.axis_title:
+        out.extend(axis_title(fmt, 0.0, plot.top_band, AXIS_TITLE_BAND, scale_height, rotated=True))
+    if fmt.category_axis_title:
+        out.extend(
+            category_title(
+                fmt,
+                plot.plot_left,
+                plot.top_band + plot.plot_height + CATEGORY_BAND,
+                plot.plot_width,
+            )
+        )
+    if axis.minimum > 0:
+        out.extend(baseline_cut(plot.plot_left, plot.top_band + scale_height))
 
     for c, category in enumerate(data.categories):
         out.append(
@@ -130,10 +156,14 @@ def layout_line(
             for c, v in enumerate(series.values)
             if v is not None
         ]
+        categories = [c for c, v in enumerate(series.values) if v is not None]
         for run in point_runs(points, series.values):
             out.append(Polyline(tuple(run), index))
         if fmt.markers:
-            out.extend(Marker(x, py, index) for x, py in points)
+            out.extend(
+                Marker(x, py, index, category=c)
+                for (x, py), c in zip(points, categories, strict=True)
+            )
         for c, value in enumerate(series.values):
             if value is None:
                 continue
@@ -190,7 +220,7 @@ def layout_line(
     centre = {c: plot.plot_left + (c + 0.5) * slot for c in range(len(data.categories))}
     for lane, arrow in enumerate(plot.brackets):
         line_y = (
-            (LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0)
+            legend_insets(fmt)[1]
             + len(plot.brackets) * LANE_HEIGHT
             - lane * LANE_HEIGHT
             - LANE_LINE_GAP
@@ -240,6 +270,39 @@ def layout_line(
         )
     if fmt.series_names == "labels":
         out.extend(_series_names(data, y, fold, plot.plot_left + plot.plot_width))
+    for item in trends:
+        if item.series >= len(data.series):
+            continue
+        points = trends_module.points_of(data.series[item.series].values)
+        try:
+            fitted = trends_module.fit(points, item.kind)
+        except ValueError:
+            fitted = None
+        if fitted is None:
+            continue
+        first, last = points[0][0], points[-1][0]
+        end = last + item.forecast
+        start_point = (plot.plot_left + (first + 0.5) * slot, y(fold(fitted.value(first))))
+        end_point = (plot.plot_left + (last + 0.5) * slot, y(fold(fitted.value(last))))
+        out.append(Polyline((start_point, end_point), item.series))
+        label_x = end_point[0]
+        label_y = end_point[1]
+        if end > last:
+            forecast_point = (plot.plot_left + (end + 0.5) * slot, y(fold(fitted.value(end))))
+            out.append(Polyline((end_point, forecast_point), item.series, dashed=True))
+            label_x, label_y = forecast_point
+        if item.show_r2 or item.show_equation:
+            out.append(
+                Text(
+                    label_x + TREND_LABEL_GAP,
+                    label_y - LABEL_HEIGHT / 2,
+                    TREND_LABEL_WIDTH,
+                    LABEL_HEIGHT,
+                    trends_module.label(fitted, fmt, equation=item.show_equation),
+                    "left",
+                    "annotation",
+                )
+            )
     return tuple(out)
 
 
@@ -303,14 +366,16 @@ def _plot(
 ) -> _Plot:
     brackets, levels = notes.arrows(annotations, data, "line")
     value_lines = notes.value_lines(annotations, data, "line")
-    lanes_top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    inset_left, lanes_top, inset_right, inset_bottom = legend_insets(fmt)
     lanes = len(brackets) * LANE_HEIGHT
     top_band = lanes_top + lanes + TOP_BAND
-    plot_left = AXIS_BAND if fmt.axis else 0.0
+    title_band = AXIS_TITLE_BAND if fmt.axis_title else 0.0
+    category_band = AXIS_TITLE_BAND if fmt.category_axis_title else 0.0
+    plot_left = inset_left + title_band + (AXIS_BAND if fmt.axis else 0.0)
     right_lanes = len(levels) + len(value_lines)
     series_band = SERIES_BAND if fmt.series_names == "labels" else 0.0
-    plot_width = width - plot_left - right_lanes * LEVEL_LANE_WIDTH - series_band
-    plot_height = height - top_band - CATEGORY_BAND
+    plot_width = width - plot_left - inset_right - right_lanes * LEVEL_LANE_WIDTH - series_band
+    plot_height = height - top_band - inset_bottom - CATEGORY_BAND - category_band
     has_negative = any(v is not None and v < 0 for s in data.series for v in s.values)
     scale_height = plot_height - (LABEL_HEIGHT if has_negative else 0.0)
     if plot_width <= 0 or scale_height <= 0:
@@ -318,7 +383,9 @@ def _plot(
     scale_data = with_error_margins(data, errors) if errors is not None else data
     cut = None if length_per_unit is not None else resolve(annotations, scale_data, "clustered")
     axis = (
-        shortened_axis(scale_data, "clustered", cut) if cut else value_axis(scale_data, "clustered")
+        shortened_axis(scale_data, "clustered", cut)
+        if cut
+        else value_axis(scale_data, "clustered", fmt, include_zero=fmt.axis_scale != "log")
     )
     return _Plot(
         plot_left, top_band, plot_width, plot_height, axis, cut, brackets, levels, value_lines

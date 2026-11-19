@@ -8,7 +8,7 @@ dialog is built in code, no resource file to ship. Validation lives in ``core/ax
 from __future__ import annotations
 
 import traceback
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import unohelper
@@ -158,6 +158,154 @@ def _sync_fields(dialog: Any) -> None:
     manual = bool(dialog.getControl("manual").getState())
     for name in ("lower", "upper", "lower_label", "upper_label"):
         dialog.getModel().getByName(name).Enabled = manual
+
+
+def request_axes(ctx: Any, frame: Any, group: Any, state: ChartState) -> None:
+    """Ask for the manual axis, its titles and scale, then redraw the chart (M23)."""
+    key = str(frame.getController().getModel().RuntimeUID)
+    if key in _requests:
+        return
+    _requests[key] = _AxesRequest(key, ctx, frame, group, state)
+
+
+class _AxesRequest(unohelper.Base, XCallback):
+    def __init__(self, key: str, ctx: Any, frame: Any, group: Any, state: ChartState) -> None:
+        self.key, self.ctx, self.frame, self.group, self.state = key, ctx, frame, group, state
+        callback = ctx.ServiceManager.createInstanceWithContext(
+            "com.sun.star.awt.AsyncCallback", ctx
+        )
+        callback.addCallback(self, None)
+
+    def notify(self, data: Any) -> None:
+        try:
+            doc = self.frame.getController().getModel()
+            chart_id = store.chart_id_of(self.group)
+            state = (store.read_state(doc, chart_id) if chart_id else None) or self.state
+            values = ask_axes(self.ctx, self.frame, state)
+            if values is not None:
+                from librecharts.core import format as formats  # local: no cycle at load
+
+                chart.redraw(
+                    doc, self.group, replace(state, format=formats.axes(state.format, values))
+                )
+        except Exception:
+            traceback.print_exc()
+        finally:
+            _requests.pop(self.key, None)
+
+
+def ask_axes(ctx: Any, frame: Any, state: ChartState) -> dict[str, str] | None:
+    """The axis dialog; the dialog's fields as strings, or ``None`` if cancelled."""
+    locale = ui.ui_locale(ctx)
+    fmt = state.format
+    dialog = _build_axes(ctx, frame, locale, fmt)
+    outcome: list[dict[str, str]] = []
+    ok = _AxesOkListener(dialog, locale, state, outcome)
+    dialog.getControl("ok").addActionListener(ok)
+    try:
+        dialog.execute()
+    finally:
+        dialog.dispose()
+    return outcome[0] if outcome else None
+
+
+class _AxesOkListener(unohelper.Base, XActionListener):
+    def __init__(
+        self, dialog: Any, locale: str, state: ChartState, outcome: list[dict[str, str]]
+    ) -> None:
+        self.dialog, self.locale, self.state, self.outcome = dialog, locale, state, outcome
+
+    def actionPerformed(self, event: Any) -> None:
+        try:
+            names = ("axis_min", "axis_max", "axis_step", "axis_title", "category_axis_title")
+            values = {name: str(self.dialog.getControl(name).getText()).strip() for name in names}
+            values["axis_scale"] = "log" if self.dialog.getControl("log").getState() else "linear"
+            from librecharts.core import format as formats
+
+            try:
+                checked = formats.axes(self.state.format, values)
+                replace(self.state, format=checked)
+            except ValueError:
+                self.dialog.getModel().getByName("error").Label = text("axis_invalid", self.locale)
+                return
+            self.outcome.append(values)
+            self.dialog.endExecute()
+        except Exception:
+            traceback.print_exc()
+
+    def disposing(self, event: Any) -> None:
+        pass
+
+
+def _build_axes(ctx: Any, frame: Any, locale: str, fmt: Any) -> Any:
+    smgr = ctx.ServiceManager
+    model = smgr.createInstanceWithContext("com.sun.star.awt.UnoControlDialogModel", ctx)
+    model.Title, model.Width, model.Height = text("menu_axis_dialog", locale), 210, 190
+
+    def add(kind: str, name: str, x: int, y: int, width: int, height: int, **props: Any) -> None:
+        control = model.createInstance(f"com.sun.star.awt.UnoControl{kind}Model")
+        model.insertByName(name, control)
+        control.PositionX, control.PositionY = x, y
+        control.Width, control.Height = width, height
+        for prop, value in props.items():
+            setattr(control, prop, value)
+
+    def number(name: str, label: str, y: int, value: float | None) -> None:
+        add("FixedText", f"{name}_label", 10, y, 80, 10, Label=text(label, locale), TabIndex=y)
+        add("Edit", name, 95, y - 2, 100, 12, Text="" if value is None else f"{value:g}")
+
+    number("axis_min", "axis_min_label", 10, fmt.axis_min)
+    number("axis_max", "axis_max_label", 26, fmt.axis_max)
+    number("axis_step", "axis_step_label", 42, fmt.axis_step)
+    add(
+        "RadioButton",
+        "linear",
+        10,
+        60,
+        70,
+        10,
+        Label=text("axis_scale_linear", locale),
+        State=0 if fmt.axis_scale == "log" else 1,
+    )
+    add(
+        "RadioButton",
+        "log",
+        95,
+        60,
+        100,
+        10,
+        Label=text("axis_scale_log", locale),
+        State=1 if fmt.axis_scale == "log" else 0,
+    )
+    add("FixedText", "axis_title_label", 10, 76, 80, 10, Label=text("axis_title", locale))
+    add("Edit", "axis_title", 95, 74, 105, 12, Text=fmt.axis_title)
+    add(
+        "FixedText",
+        "category_title_label",
+        10,
+        92,
+        80,
+        10,
+        Label=text("category_axis_title", locale),
+    )
+    add("Edit", "category_axis_title", 95, 90, 105, 12, Text=fmt.category_axis_title)
+    add("FixedText", "error", 10, 108, 190, 20, Label="", TextColor=_RED, MultiLine=True)
+    add("Button", "ok", 90, 138, 50, 14, Label=text("button_ok", locale), DefaultButton=True)
+    add(
+        "Button",
+        "cancel",
+        146,
+        138,
+        50,
+        14,
+        Label=text("button_cancel", locale),
+        PushButtonType=_PUSH_BUTTON_CANCEL,
+    )
+    dialog = smgr.createInstanceWithContext("com.sun.star.awt.UnoControlDialog", ctx)
+    dialog.setModel(model)
+    toolkit = smgr.createInstanceWithContext("com.sun.star.awt.Toolkit", ctx)
+    dialog.createPeer(toolkit, frame.getContainerWindow())
+    return dialog
 
 
 def _build(

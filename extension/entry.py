@@ -76,10 +76,26 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.insert_butterfly_chart(self.ctx, self.frame)
             elif url.Path == "InsertGanttChart":
                 commands.insert_gantt_chart(self.ctx, self.frame)
+            elif url.Path == "InsertDumbbellChart":
+                commands.insert_dumbbell_chart(self.ctx, self.frame)
+            elif url.Path == "InsertBulletChart":
+                commands.insert_bullet_chart(self.ctx, self.frame)
+            elif url.Path == "InsertFunnelChart":
+                commands.insert_funnel_chart(self.ctx, self.frame)
+            elif url.Path == "InsertBoxplotChart":
+                commands.insert_boxplot_chart(self.ctx, self.frame)
+            elif url.Path == "InsertTableChart":
+                commands.insert_table_chart(self.ctx, self.frame)
+            elif url.Path == "InsertMatrixChart":
+                commands.insert_matrix_chart(self.ctx, self.frame)
             elif url.Path.startswith("ImportGanttCsv"):
                 commands.import_gantt_csv(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ImportGanttProject"):
                 commands.import_gantt_project(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("InsertGraphic"):
+                commands.insert_graphic(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("ChangeGraphic"):
+                commands.change_graphic(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("InsertElement"):
                 commands.insert_element(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("SetElement"):
@@ -94,6 +110,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.update_agenda(self.ctx, self.frame)
             elif url.Path == "EditData":
                 commands.edit_data(self.ctx, self.frame)
+            elif url.Path.startswith("LinkShared"):
+                commands.share_link(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("LinkData"):
                 commands.link_data(self.ctx, self.frame, _query(url))
             elif url.Path == "UpdateLink":
@@ -114,6 +132,24 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.pick_annotation(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ChangeChart"):
                 commands.change_chart(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("ChangeFocus"):
+                commands.change_focus(self.ctx, self.frame, _query(url))
+            elif url.Path == "ClearFocus":
+                commands.change_chart(self.ctx, self.frame, "focus=none")
+            elif url.Path.startswith("SetLabelText"):
+                commands.set_label(self.ctx, self.frame, _query(url), "SetLabelText")
+            elif url.Path.startswith("SetLabel"):
+                commands.set_label(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("ResetLabel"):
+                commands.set_label(self.ctx, self.frame, _query(url), "ResetLabel")
+            elif url.Path.startswith("SetSource"):
+                commands.set_source(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("AddNote"):
+                commands.add_note(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("RemoveNote"):
+                commands.remove_note(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("MoveNote"):
+                commands.move_note(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ChangeFormat"):
                 commands.change_format(self.ctx, self.frame, _query(url))
             elif url.Path == "MoveLabels":
@@ -122,6 +158,12 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.reset_labels(self.ctx, self.frame)
             elif url.Path == "NumberFormat":
                 commands.number_format(self.ctx, self.frame)
+            elif url.Path.startswith("Axes"):
+                commands.axes(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("AddTrendline"):
+                commands.add_trendline(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("RemoveTrendline"):
+                commands.remove_trendline(self.ctx, self.frame, _query(url))
             elif url.Path == "SameScale":
                 commands.same_scale(self.ctx, self.frame)
             elif url.Path == "RemoveSameScale":
@@ -136,6 +178,20 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.load_scheme(self.ctx, self.frame)
             elif url.Path == "SaveScheme":
                 commands.save_scheme(self.ctx, self.frame)
+            elif url.Path.startswith("SimulateColorblind"):
+                commands.simulate_colorblind(self.ctx, self.frame, _query(url))
+            elif url.Path == "AuditDeck":
+                commands.audit_deck(self.ctx, self.frame)
+            elif url.Path.startswith("ExportDeckSpec"):
+                commands.export_deck_spec(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("ImportData"):
+                commands.import_data(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("InsertFromClipboard"):
+                commands.insert_from_clipboard(self.ctx, self.frame)
+            elif url.Path.startswith("SaveTemplate"):
+                commands.save_template(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("InsertTemplate"):
+                commands.insert_template(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ExportCsv"):
                 commands.export_csv(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("CheckDesign"):
@@ -207,6 +263,11 @@ class DocumentJob(unohelper.Base, XJob, XServiceInfo):
                 doubleclick.attach(self.ctx, frame)
                 contextmenu.attach(self.ctx, frame)
                 links.offer_update(self.ctx, model)
+                if links.has_auto(model):
+                    from librecharts import api
+                    from librecharts.lo import ui
+
+                    api.update_links(self.ctx, model, None, ui.ui_locale(self.ctx))
         except Exception:
             traceback.print_exc()
         return None

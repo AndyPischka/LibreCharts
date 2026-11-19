@@ -40,10 +40,10 @@ def test_clustered_golden_geometry() -> None:
     chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
     assert layout_column(chart, "clustered", 2000, 10000) == (
         Line(0, 9000, 2000, 9000, "baseline"),
-        Rect(150, 4900, 700, 4100, 0),
+        Rect(150, 4900, 700, 4100, 0, category=0),
         Text(150, 4300, 700, LABEL_HEIGHT, "10", "center", "value", key=LabelKey("value", 0, 0)),
         Text(0, 9000, 1000, CATEGORY_BAND, "A", "center", "category"),
-        Rect(1150, 800, 700, 8200, 0),
+        Rect(1150, 800, 700, 8200, 0, category=1),
         Text(1150, 200, 700, LABEL_HEIGHT, "20", "center", "value", key=LabelKey("value", 1, 0)),
         Text(1000, 9000, 1000, CATEGORY_BAND, "B", "center", "category"),
     )
@@ -54,9 +54,9 @@ def test_stacked_golden_geometry() -> None:
     chart = data(("A", (10.0,)), ("B", (30.0,)), categories=("X",))
     assert layout_column(chart, "stacked", 1000, 10000) == (
         Line(0, 9000, 1000, 9000, "baseline"),
-        Rect(150, 6950, 700, 2050, 0),
+        Rect(150, 6950, 700, 2050, 0, category=0),
         Text(150, 6950, 700, 2050, "10", "center", "value", fill=0, key=LabelKey("value", 0, 0)),
-        Rect(150, 800, 700, 6150, 1),
+        Rect(150, 800, 700, 6150, 1, category=0),
         Text(150, 800, 700, 6150, "30", "center", "value", fill=1, key=LabelKey("value", 0, 1)),
         Text(150, 200, 700, LABEL_HEIGHT, "40", "center", "total", key=LabelKey("total", 0)),
         Text(0, 9000, 1000, CATEGORY_BAND, "X", "center", "category"),
@@ -554,15 +554,15 @@ def test_a_combination_chart_draws_one_series_as_a_line() -> None:
     primitives = layout_column(chart, "clustered", 2000, 10000, lines=(1,))
     assert primitives == (
         Line(0, 9000, 2000, 9000, "baseline"),
-        Rect(150, 4900, 700, 4100, 0),
+        Rect(150, 4900, 700, 4100, 0, category=0),
         Text(150, 4300, 700, LABEL_HEIGHT, "10", "center", "value", key=LabelKey("value", 0, 0)),
         Text(0, 9000, 1000, CATEGORY_BAND, "X", "center", "category"),
-        Rect(1150, 800, 700, 8200, 0),
+        Rect(1150, 800, 700, 8200, 0, category=1),
         Text(1150, 200, 700, LABEL_HEIGHT, "20", "center", "value", key=LabelKey("value", 1, 0)),
         Text(1000, 9000, 1000, CATEGORY_BAND, "Y", "center", "category"),
         Polyline(((500, 6950), (1500, 5720)), 1),
-        Marker(500, 6950, 1),
-        Marker(1500, 5720, 1),
+        Marker(500, 6950, 1, category=0),
+        Marker(1500, 5720, 1, category=1),
         Text(0, 6250, 1000, LABEL_HEIGHT, "5", "center", "value", key=LabelKey("value", 0, 1)),
         Text(1000, 5020, 1000, LABEL_HEIGHT, "8", "center", "value", key=LabelKey("value", 1, 1)),
     )
@@ -731,10 +731,10 @@ def test_floating_bars_draw_between_their_from_and_to_levels() -> None:
     chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
     assert layout_column(chart, "clustered", 2000, 10000, bases=((2.0, 5.0),)) == (
         Line(0, 9000, 2000, 9000, "baseline"),
-        Rect(150, 4900, 700, 3280, 0),  # y(10)=4900 to y(2)=8180
+        Rect(150, 4900, 700, 3280, 0, category=0),  # y(10)=4900 to y(2)=8180
         Text(150, 4300, 700, LABEL_HEIGHT, "10", "center", "value", key=LabelKey("value", 0, 0)),
         Text(0, 9000, 1000, CATEGORY_BAND, "A", "center", "category"),
-        Rect(1150, 800, 700, 6150, 0),  # y(20)=800 to y(5)=6950
+        Rect(1150, 800, 700, 6150, 0, category=1),  # y(20)=800 to y(5)=6950
         Text(1150, 200, 700, LABEL_HEIGHT, "20", "center", "value", key=LabelKey("value", 1, 0)),
         Text(1000, 9000, 1000, CATEGORY_BAND, "B", "center", "category"),
     )

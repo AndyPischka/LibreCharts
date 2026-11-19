@@ -17,11 +17,16 @@ from librecharts.core.model import (
     Annotation,
     Calendar,
     ChartState,
+    Focus,
     Format,
     LabelKey,
     LabelOffset,
     Link,
     Magnitude,
+    MatrixSpec,
+    Note,
+    TableSpec,
+    Trend,
 )
 
 _Raw = dict[str, Any]
@@ -146,6 +151,66 @@ def _v15_to_v16(raw: _Raw) -> _Raw:
     return {**raw, "format": {**_as_object(raw.get("format", {})), "patterns": False}}
 
 
+def _v16_to_v17(raw: _Raw) -> _Raw:
+    """Version 17 added label overrides, focus, source and notes, and the format's font size and
+    legend position (M22).
+
+    Existing labels keep their offset and stay visible with the layout's text; a chart has no
+    focus, source or notes, uses the scheme font and the top legend band.
+    """
+    labels: list[Any] = []
+    for label in _as_list(raw.get("labels", [])):
+        labels.append({**_as_object(label), "hidden": False, "text": ""})
+    return {
+        **raw,
+        "labels": labels,
+        "focus": None,
+        "notes": [],
+        "source": "",
+        "format": {
+            **_as_object(raw.get("format", {})),
+            "font_size": None,
+            "legend": "top",
+        },
+    }
+
+
+def _v17_to_v18(raw: _Raw) -> _Raw:
+    """Version 18 added manual axes, axis titles and trendlines (M23)."""
+    return {
+        **raw,
+        "trends": [],
+        "format": {
+            **_as_object(raw.get("format", {})),
+            "axis_min": None,
+            "axis_max": None,
+            "axis_step": None,
+            "axis_scale": "linear",
+            "axis_title": "",
+            "category_axis_title": "",
+        },
+    }
+
+
+def _v18_to_v19(raw: _Raw) -> _Raw:
+    """Version 19 added the comparison charts and the Pareto switch (M24)."""
+    return {**raw, "pareto": False}
+
+
+def _v19_to_v20(raw: _Raw) -> _Raw:
+    """Version 20 added table and matrix charts (M25); no old chart has their specs."""
+    return {**raw, "table": None, "matrix": None}
+
+
+def _v20_to_v21(raw: _Raw) -> _Raw:
+    """Version 21 added the auto-update flag of data links (M28)."""
+    link = raw.get("link")
+    if isinstance(link, dict):
+        entry = cast("_Raw", link)
+        return {**raw, "link": {**entry, "auto": False}}
+    return raw
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -163,6 +228,11 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     13: _v13_to_v14,
     14: _v14_to_v15,
     15: _v15_to_v16,
+    16: _v16_to_v17,
+    17: _v17_to_v18,
+    18: _v18_to_v19,
+    19: _v19_to_v20,
+    20: _v20_to_v21,
 }
 
 
@@ -194,6 +264,13 @@ def to_json(state: ChartState) -> str:
             "errors": state.errors,
             "horizontal": state.horizontal,
             "stacked": state.stacked,
+            "focus": None if state.focus is None else _focus_to_raw(state.focus),
+            "notes": [_note_to_raw(note) for note in state.notes],
+            "source": state.source,
+            "trends": [_trend_to_raw(trend) for trend in state.trends],
+            "pareto": state.pareto,
+            "table": None if state.table is None else _table_to_raw(state.table),
+            "matrix": None if state.matrix is None else _matrix_to_raw(state.matrix),
         },
         separators=(",", ":"),
         ensure_ascii=False,
@@ -230,6 +307,13 @@ def from_json(text: str) -> ChartState:
             errors=_as_flag(_get(raw, "errors"), "errors"),
             horizontal=_as_flag(_get(raw, "horizontal"), "horizontal"),
             stacked=_as_flag(_get(raw, "stacked"), "stacked"),
+            focus=_as_focus(_get(raw, "focus")),
+            notes=tuple(_as_note(item) for item in _as_array(_get(raw, "notes"), "notes")),
+            source=_as_text(_get(raw, "source"), "the source"),
+            trends=tuple(_as_trend(item) for item in _as_array(_get(raw, "trends"), "trends")),
+            pareto=_as_flag(_get(raw, "pareto"), "pareto"),
+            table=_as_table(_get(raw, "table")),
+            matrix=_as_matrix(_get(raw, "matrix")),
             version=raw["v"],
         )
     except ValueError as exc:
@@ -264,6 +348,14 @@ def _format_to_raw(fmt: Format) -> _Raw:
         "language": fmt.language,
         "markers": fmt.markers,
         "patterns": fmt.patterns,
+        "font_size": fmt.font_size,
+        "legend": fmt.legend,
+        "axis_min": fmt.axis_min,
+        "axis_max": fmt.axis_max,
+        "axis_step": fmt.axis_step,
+        "axis_scale": fmt.axis_scale,
+        "axis_title": fmt.axis_title,
+        "category_axis_title": fmt.category_axis_title,
     }
 
 
@@ -282,6 +374,7 @@ def _link_to_raw(link: Link) -> _Raw:
         "range": link.range,
         "updated": link.updated,
         "modified": link.modified,
+        "auto": link.auto,
     }
 
 
@@ -292,6 +385,54 @@ def _label_to_raw(offset: LabelOffset) -> _Raw:
         "series": offset.key.series,
         "dx": offset.dx,
         "dy": offset.dy,
+        "hidden": offset.hidden,
+        "text": offset.text,
+    }
+
+
+def _focus_to_raw(focus: Focus) -> _Raw:
+    return {"series": list(focus.series), "categories": list(focus.categories)}
+
+
+def _note_to_raw(note: Note) -> _Raw:
+    return {"text": note.text, "x": note.x, "y": note.y}
+
+
+def _table_to_raw(table: TableSpec) -> _Raw:
+    return {
+        "header": table.header,
+        "first_column": table.first_column,
+        "zebra": table.zebra,
+        "borders": table.borders,
+        "heatmap": table.heatmap,
+        "widths": list(table.widths),
+        "row_height": table.row_height,
+    }
+
+
+def _matrix_to_raw(matrix: MatrixSpec) -> _Raw:
+    return {
+        "x_title": matrix.x_title,
+        "y_title": matrix.y_title,
+        "x_low": matrix.x_low,
+        "x_high": matrix.x_high,
+        "y_low": matrix.y_low,
+        "y_high": matrix.y_high,
+        "quadrants": list(matrix.quadrants),
+        "x_split": matrix.x_split,
+        "y_split": matrix.y_split,
+        "bubbles": matrix.bubbles,
+        "labels": matrix.labels,
+    }
+
+
+def _trend_to_raw(trend: Trend) -> _Raw:
+    return {
+        "series": trend.series,
+        "kind": trend.kind,
+        "forecast": trend.forecast,
+        "show_r2": trend.show_r2,
+        "show_equation": trend.show_equation,
     }
 
 
@@ -393,6 +534,14 @@ def _as_format(value: object) -> Format:
         language=_as_str(_get(raw, "language")),
         markers=_as_flag(_get(raw, "markers"), "markers"),
         patterns=_as_flag(_get(raw, "patterns"), "patterns"),
+        font_size=_as_number(_get(raw, "font_size")),
+        legend=_get(raw, "legend"),
+        axis_min=_as_number(_get(raw, "axis_min")),
+        axis_max=_as_number(_get(raw, "axis_max")),
+        axis_step=_as_number(_get(raw, "axis_step")),
+        axis_scale=_get(raw, "axis_scale"),
+        axis_title=_as_text(_get(raw, "axis_title"), "the value-axis title"),
+        category_axis_title=_as_text(_get(raw, "category_axis_title"), "the category-axis title"),
     )
 
 
@@ -478,6 +627,78 @@ def _as_label(value: object) -> LabelOffset:
         ),
         dx,
         dy,
+        hidden=_as_flag(_get(raw, "hidden"), "hidden"),
+        text=_as_text(_get(raw, "text"), "the label text"),
+    )
+
+
+def _as_focus(value: object) -> Focus | None:
+    if value is None:
+        return None
+    raw = _as_object(value)
+    return Focus(
+        series=_as_indices(_get(raw, "series"), "focus series"),
+        categories=_as_indices(_get(raw, "categories"), "focus categories"),
+    )
+
+
+def _as_note(value: object) -> Note:
+    raw = _as_object(value)
+    x, y = _as_number(_get(raw, "x")), _as_number(_get(raw, "y"))
+    if x is None or y is None:
+        raise StateError("note positions must be numbers")
+    return Note(_as_text(_get(raw, "text"), "the note text"), x, y)
+
+
+def _as_table(value: object) -> TableSpec | None:
+    if value is None:
+        return None
+    raw = _as_object(value)
+    widths = _as_array(_get(raw, "widths"), "column widths")
+    return TableSpec(
+        header=_as_flag(_get(raw, "header"), "header"),
+        first_column=_as_flag(_get(raw, "first_column"), "first_column"),
+        zebra=_as_flag(_get(raw, "zebra"), "zebra"),
+        borders=_as_flag(_get(raw, "borders"), "borders"),
+        heatmap=_as_flag(_get(raw, "heatmap"), "heatmap"),
+        widths=tuple(_as_number(width) or 0.0 for width in widths),
+        row_height=_as_number(_get(raw, "row_height")),
+    )
+
+
+def _as_matrix(value: object) -> MatrixSpec | None:
+    if value is None:
+        return None
+    raw = _as_object(value)
+    quadrants = _as_array(_get(raw, "quadrants"), "quadrant labels")
+    if len(quadrants) != 4:
+        raise StateError("a matrix has four quadrant labels")
+    return MatrixSpec(
+        x_title=_as_text(_get(raw, "x_title"), "the x title"),
+        y_title=_as_text(_get(raw, "y_title"), "the y title"),
+        x_low=_as_text(_get(raw, "x_low"), "the x low label"),
+        x_high=_as_text(_get(raw, "x_high"), "the x high label"),
+        y_low=_as_text(_get(raw, "y_low"), "the y low label"),
+        y_high=_as_text(_get(raw, "y_high"), "the y high label"),
+        quadrants=cast(
+            "tuple[str, str, str, str]",
+            tuple(_as_text(item, "a quadrant label") for item in quadrants),
+        ),
+        x_split=_as_number(_get(raw, "x_split")),
+        y_split=_as_number(_get(raw, "y_split")),
+        bubbles=_as_flag(_get(raw, "bubbles"), "bubbles"),
+        labels=_as_flag(_get(raw, "labels"), "labels"),
+    )
+
+
+def _as_trend(value: object) -> Trend:
+    raw = _as_object(value)
+    return Trend(
+        series=_as_index(_get(raw, "series"), "trend series"),
+        kind=_get(raw, "kind"),
+        forecast=_as_index(_get(raw, "forecast"), "the forecast"),
+        show_r2=_as_flag(_get(raw, "show_r2"), "show_r2"),
+        show_equation=_as_flag(_get(raw, "show_equation"), "show_equation"),
     )
 
 
@@ -492,6 +713,7 @@ def _as_link(value: object) -> Link | None:
         range=_as_text(_get(raw, "range"), "the linked range"),
         updated=_as_text(_get(raw, "updated"), "the update time"),
         modified=_as_text(_get(raw, "modified"), "the modification time"),
+        auto=_as_flag(_get(raw, "auto"), "auto"),
     )
 
 

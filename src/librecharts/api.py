@@ -17,7 +17,7 @@ from librecharts.core import deck as core_deck
 from librecharts.core import designcheck as core_design
 from librecharts.core import links as core_links
 from librecharts.core.deck import DeckError
-from librecharts.lo import chart, datasheet, deck, designcheck, links, store
+from librecharts.lo import chart, datasheet, deck, designcheck, links, store, templates
 
 
 def build_deck(
@@ -37,7 +37,7 @@ def build_deck(
     Returns what to tell the user: how many charts were written and which placeholders stayed
     empty. Raises ``DeckError`` if nothing was built; then no file was written.
     """
-    spec = core_deck.parse(deck.read_spec(spec_url), locale)
+    spec = core_deck.parse(deck.read_spec(spec_url), locale, templates.loader(ctx, spec_url))
     return deck.build(ctx, template_url, spec, out_url, locale)
 
 
@@ -76,7 +76,7 @@ def insert_chart(ctx: Any, doc: Any, page_index: int, spec_json: str, locale: st
     Returns the chart id. Raises ``DeckError`` for a bad specification or a slide that does not
     exist.
     """
-    spec = core_deck.parse_chart(spec_json, locale)
+    spec = core_deck.parse_chart(spec_json, locale, templates.loader(ctx))
     if doc is None:
         raise DeckError("deck_no_document")
     pages = doc.getDrawPages()

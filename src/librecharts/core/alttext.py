@@ -23,6 +23,8 @@ ELLIPSIS = "…"
 def kind_key(state: ChartState) -> str:
     """The message key suffix naming the chart type and variant (``column_percent``, ``bubble``)."""
     kind = state.kind
+    if state.pareto:
+        return "pareto"
     if kind == "mekko" and not state.percent:
         return "mekko_units"
     if kind in ("column", "bar", "area") and state.percent:
@@ -55,6 +57,21 @@ def description(state: ChartState) -> str:
         lines = _series(state, kind)
     if lines is None:
         return text("alt_no_data", language, kind=kind)
+    if state.format.axis_title:
+        lines.append(text("alt_axis", language, title=state.format.axis_title))
+    for trend in state.trends:
+        lines.append(
+            text(
+                "alt_trend",
+                language,
+                series=str(trend.series + 1),
+                kind=text(f"trend_{trend.kind}", language),
+            )
+        )
+    if state.source:
+        lines.append(text("alt_source", language, source=state.source))
+    for note in state.notes:
+        lines.append(text("alt_note", language, text=note.text))
     return _cut(" ".join(lines))
 
 

@@ -46,6 +46,10 @@ def chart_menu(
     items = [_command("menu_show_data" if state.link else "menu_edit_data", "EditData", locale)]
     items += _link_items(state, locale)
     items.append(_command("menu_export_csv", "ExportCsv", locale))
+    items.append(_command("menu_save_template", "SaveTemplate", locale))
+    items.append(_command("menu_insert_template", "InsertTemplate", locale))
+    if state.link is None and state.kind not in ("table", "matrix"):
+        items.append(_command("menu_import_data", "ImportData", locale))
     if state.kind == "gantt" and state.link is None:
         items.append(
             MenuItem(
@@ -92,9 +96,12 @@ def chart_menu(
         _command("menu_apply_format", "ApplyChartFormat", locale),
     ]
     if core_labels.movable(state):
-        items.append(_command("menu_move_labels", "MoveLabels", locale))
-        if state.labels:
-            items.append(_command("menu_reset_labels", "ResetLabels", locale))
+        items.append(_label_menu(state, locale))
+    focus_menu = _focus_menu(state, data, locale)
+    if focus_menu.children:
+        items.append(focus_menu)
+    items.append(_command("menu_source", "SetSource", locale))
+    items.append(_notes_menu(state, locale))
     if state.scale_group is not None:
         items.append(_command("menu_remove_same_scale", "RemoveSameScale", locale))
     add_items: list[MenuItem] = []
@@ -167,7 +174,7 @@ def element_menu(element: Element, locale: str) -> MenuItem:
 
 
 def arrange_items(locale: str) -> tuple[MenuItem, ...]:
-    """The commands that arrange the selected shapes (same size, grid, swap)."""
+    """The commands that arrange the selected shapes (size, grid, distribute, align, swap)."""
     return (
         _command("menu_arrange_width", "Arrange?op=width", locale),
         _command("menu_arrange_height", "Arrange?op=height", locale),
@@ -178,6 +185,41 @@ def arrange_items(locale: str) -> tuple[MenuItem, ...]:
                 f"{PROTOCOL}Arrange?op=grid&columns={columns}",
             )
             for columns in GRID_COLUMNS
+        ),
+        MenuItem(
+            text("menu_arrange_distribute", locale),
+            children=(
+                _command(
+                    "menu_distribute_h_gaps", "Arrange?op=distribute&axis=h&mode=gaps", locale
+                ),
+                _command(
+                    "menu_distribute_h_centres", "Arrange?op=distribute&axis=h&mode=centres", locale
+                ),
+                _command(
+                    "menu_distribute_v_gaps", "Arrange?op=distribute&axis=v&mode=gaps", locale
+                ),
+                _command(
+                    "menu_distribute_v_centres", "Arrange?op=distribute&axis=v&mode=centres", locale
+                ),
+            ),
+        ),
+        MenuItem(
+            text("menu_arrange_align", locale),
+            children=tuple(
+                _command(f"menu_align_{edge}", f"Arrange?op=align&edge={edge}", locale)
+                for edge in ("left", "right", "top", "bottom", "hcenter", "vcenter")
+            ),
+        ),
+        MenuItem(
+            text("menu_arrange_slide", locale),
+            children=tuple(
+                _command(
+                    f"menu_align_slide_{edge}",
+                    f"Arrange?op=align-slide&edge={edge}",
+                    locale,
+                )
+                for edge in ("left", "right", "top", "bottom", "hcenter", "vcenter")
+            ),
         ),
         _command("menu_arrange_swap", "Arrange?op=swap", locale),
     )
@@ -279,6 +321,58 @@ def _series_names(state: ChartState, data: ChartData, locale: str) -> list[str]:
     return [series.name for series in data.series]
 
 
+def _label_menu(state: ChartState, locale: str) -> MenuItem:
+    """The "Labels" submenu: move, hide, retitle and reset single labels (M22)."""
+    entries = [
+        _command("menu_move_labels", "MoveLabels", locale),
+        _command("menu_hide_label", "SetLabel", locale),
+        _command("menu_edit_label", "SetLabelText", locale),
+        _command("menu_reset_label", "ResetLabel", locale),
+    ]
+    if state.labels:
+        entries.insert(1, _command("menu_reset_labels", "ResetLabels", locale))
+    return MenuItem(text("menu_labels", locale), children=tuple(entries))
+
+
+def _focus_menu(state: ChartState, data: ChartData, locale: str) -> MenuItem:
+    """The "Focus" submenu: series and categories to emphasise, plus clearing (M22)."""
+    focus = state.focus
+    entries: list[MenuItem] = []
+    for index, name in enumerate(_series_names(state, data, locale)):
+        selected = focus is not None and index in focus.series
+        entries.append(
+            MenuItem(
+                ("✓ " if selected else "") + text("menu_focus_series", locale, name=name),
+                PROTOCOL
+                + f"ChangeChart?focus=series&index={index}&on={'false' if selected else 'true'}",
+            )
+        )
+    if len(data.categories) <= 12:
+        for index, name in enumerate(data.categories):
+            selected = focus is not None and index in focus.categories
+            entries.append(
+                MenuItem(
+                    ("✓ " if selected else "") + text("menu_focus_category", locale, name=name),
+                    PROTOCOL
+                    + "ChangeChart?focus=category"
+                    + f"&index={index}&on={'false' if selected else 'true'}",
+                )
+            )
+    if focus is not None:
+        entries.append(_command("menu_focus_clear", "ChangeChart?focus=none", locale))
+    return MenuItem(text("menu_focus", locale), children=tuple(entries))
+
+
+def _notes_menu(state: ChartState, locale: str) -> MenuItem:
+    """The "Notes" submenu: add a callout, remove one (M22)."""
+    entries = [_command("menu_add_note", "AddNote", locale)]
+    entries += [
+        _command("menu_remove_note", f"RemoveNote?index={index}", locale)
+        for index in range(len(state.notes))
+    ]
+    return MenuItem(text("menu_notes", locale), children=tuple(entries))
+
+
 def _format_menu(state: ChartState, locale: str) -> MenuItem:
     """The "Format" submenu: axis/gridline toggles, series names, number format."""
     switches = formats.format_options(state)
@@ -294,8 +388,58 @@ def _format_menu(state: ChartState, locale: str) -> MenuItem:
     )
     if series:
         entries.append(MenuItem(text("menu_series_names", locale), children=series))
+    if formats.supports(state, "legend"):
+        entries.append(
+            MenuItem(
+                text("menu_legend", locale),
+                children=tuple(
+                    MenuItem(
+                        ("✓ " if state.format.legend == position else "")
+                        + text(f"menu_legend_{position}", locale),
+                        PROTOCOL + f"ChangeFormat?legend={position}",
+                    )
+                    for position in ("top", "right", "bottom", "left")
+                ),
+            )
+        )
+    if formats.supports(state, "font_size"):
+        sizes = (None, 8.0, 10.0, 12.0, 14.0, 16.0, 20.0, 24.0)
+        entries.append(
+            MenuItem(
+                text("menu_font_size", locale),
+                children=tuple(
+                    MenuItem(
+                        ("✓ " if state.format.font_size == size else "")
+                        + text(
+                            "menu_font_auto" if size is None else "menu_font_value",
+                            locale,
+                            size="" if size is None else f"{size:g}",
+                        ),
+                        PROTOCOL
+                        + f"ChangeFormat?font_size={'auto' if size is None else f'{size:g}'}",
+                    )
+                    for size in sizes
+                ),
+            )
+        )
     if formats.supports(state, "number_format"):
         entries.append(_command("menu_number_format", "NumberFormat", locale))
+    if formats.supports(state, "axis_min"):
+        entries.append(_command("menu_axis_dialog", "Axes", locale))
+    if state.kind in ("line", "scatter", "column") and not state.percent:
+        trend_items: list[MenuItem] = [
+            MenuItem(
+                text("menu_add_trendline", locale),
+                PROTOCOL + f"AddTrendline?series={index}",
+            )
+            for index in range(len(_series_names(state, notes.measured(state), locale)))
+            if all(trend.series != index for trend in state.trends)
+        ]
+        trend_items += [
+            _command("menu_remove_trendline", f"RemoveTrendline?series={trend.series}", locale)
+            for trend in state.trends
+        ]
+        entries.append(MenuItem(text("menu_trendlines", locale), children=tuple(trend_items)))
     return MenuItem(text("menu_format", locale), children=tuple(entries))
 
 

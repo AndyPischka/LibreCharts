@@ -17,9 +17,12 @@ from librecharts.core import value_line
 from librecharts.core.datasheet import ChartData
 from librecharts.core.layout.common import (
     AXIS_BAND,
-    LEGEND_HEIGHT,
+    AXIS_TITLE_BAND,
+    axis_title,
+    category_title,
     format_value,
     legend,
+    legend_insets,
     spread,
     vertical_axis,
     vertical_grid,
@@ -27,7 +30,7 @@ from librecharts.core.layout.common import (
 from librecharts.core.model import Annotation, Format, LabelKey
 from librecharts.core.percent import column_total, share, share_label
 from librecharts.core.primitives import Line, Polygon, Primitive, Text
-from librecharts.core.scale import Axis, nice_axis
+from librecharts.core.scale import Axis, manual_axis, nice_axis
 
 TOP_BAND = 800.0  # room above the plot for the highest area
 LABEL_HEIGHT = 600.0  # height of a value or series name box
@@ -65,22 +68,25 @@ def layout_area(
     """
     fmt = fmt or Format()
     value_lines = [] if percent else notes.value_lines(annotations, data, "area")
-    lanes_top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    inset_left, lanes_top, inset_right, inset_bottom = legend_insets(fmt)
     top_band = lanes_top + TOP_BAND
-    plot_left = AXIS_BAND if fmt.axis else 0.0
+    title_band = AXIS_TITLE_BAND if fmt.axis_title else 0.0
+    category_band = AXIS_TITLE_BAND if fmt.category_axis_title else 0.0
+    plot_left = inset_left + title_band + (AXIS_BAND if fmt.axis else 0.0)
     right_lanes = len(value_lines)
     series_band = SERIES_BAND if fmt.series_names == "labels" else 0.0
-    plot_width = width - plot_left - right_lanes * LEVEL_LANE_WIDTH - series_band
-    plot_height = height - top_band - CATEGORY_BAND
+    plot_width = width - plot_left - inset_right - right_lanes * LEVEL_LANE_WIDTH - series_band
+    plot_height = height - top_band - inset_bottom - CATEGORY_BAND - category_band
     if plot_width <= 0 or plot_height <= 0:
         raise ValueError("chart area too small")
     if not data.categories or not data.series:
         return ()
 
-    axis = PERCENT_AXIS if percent else _value_axis(data)
+    axis = PERCENT_AXIS if percent else _value_axis(data, fmt)
     span = axis.maximum - axis.minimum
 
     def y(value: float) -> float:
+        value = max(value, axis.minimum)
         if length_per_unit is not None:
             return top_band + plot_height - (value - axis.minimum) * length_per_unit
         return top_band + (axis.maximum - value) / span * plot_height
@@ -88,12 +94,23 @@ def layout_area(
     slot = plot_width / len(data.categories)
     out: list[Primitive] = []
     if fmt.series_names == "legend":
-        out.extend(legend([s.name for s in data.series], width))
+        out.extend(legend([s.name for s in data.series], width, fmt.legend, height))
     out.append(Line(plot_left, y(0), plot_left + plot_width, y(0), "baseline"))
     if fmt.axis:
         if fmt.gridlines:
             out.extend(vertical_grid(axis, None, y, plot_left, plot_width))
         out.extend(vertical_axis(axis, None, y, plot_left, fmt))
+    if fmt.axis_title:
+        out.extend(axis_title(fmt, 0.0, top_band, AXIS_TITLE_BAND, plot_height, rotated=True))
+    if fmt.category_axis_title:
+        out.extend(
+            category_title(
+                fmt,
+                plot_left,
+                top_band + plot_height + CATEGORY_BAND,
+                plot_width,
+            )
+        )
     for c, category in enumerate(data.categories):
         out.append(
             Text(
@@ -193,15 +210,15 @@ def natural_length_per_unit(
         return None
     fmt = fmt or Format()
     value_lines = notes.value_lines(annotations, data, "area")
-    lanes_top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    _, lanes_top, _, inset_bottom = legend_insets(fmt)
     top_band = lanes_top + TOP_BAND
     plot_left = AXIS_BAND if fmt.axis else 0.0
     series_band = SERIES_BAND if fmt.series_names == "labels" else 0.0
     plot_width = width - plot_left - len(value_lines) * LEVEL_LANE_WIDTH - series_band
-    plot_height = height - top_band - CATEGORY_BAND
+    plot_height = height - top_band - inset_bottom - CATEGORY_BAND
     if plot_width <= 0 or plot_height <= 0 or not data.categories or not data.series:
         return None
-    axis = _value_axis(data)
+    axis = _value_axis(data, fmt)
     span = axis.maximum - axis.minimum
     if span <= 0:
         return None
@@ -215,13 +232,17 @@ def _height(value: float | None, total: float, percent: bool) -> float:
     return value if value is not None and value > 0 else 0.0
 
 
-def _value_axis(data: ChartData) -> Axis:
-    """0..the highest stack of positive values."""
+def _value_axis(data: ChartData, fmt: Format | None = None) -> Axis:
+    """0..the highest stack of positive values, honouring manual limits (M23)."""
+    fmt = fmt or Format()
     totals = [
         sum(v for s in data.series if (v := s.values[c]) is not None and v > 0)
         for c in range(len(data.categories))
     ]
-    return nice_axis(0.0, max(totals, default=0.0))
+    fallback = nice_axis(0.0, max(totals, default=0.0))
+    if fmt.axis_min is None and fmt.axis_max is None:
+        return fallback
+    return manual_axis(fmt.axis_min, fmt.axis_max, fmt.axis_step, fallback=fallback)
 
 
 def _series_names(

@@ -8,33 +8,52 @@ from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlencode
 
 import uno
 
 from librecharts import api
-from librecharts.core import annotations, csvexport, elements, gantt, gantt_import, options, style
+from librecharts.core import (
+    annotations,
+    colorblind,
+    csvexport,
+    deck_export,
+    elements,
+    gantt,
+    gantt_import,
+    options,
+    style,
+)
 from librecharts.core import arrange as core_arrange
+from librecharts.core import audit as core_audit
 from librecharts.core import calendar as working_calendar
 from librecharts.core import designcheck as core_design
 from librecharts.core import format as formats
+from librecharts.core import graphics as core_graphics
+from librecharts.core import importdata as core_import
 from librecharts.core import labels as core_labels
 from librecharts.core import links as core_links
+from librecharts.core import notes as core_notes
 from librecharts.core import samescale as core_samescale
+from librecharts.core import templates as core_templates
 from librecharts.core.deck import DeckError
+from librecharts.core.layout.chart import layout_chart
 from librecharts.core.messages import text
-from librecharts.core.model import Annotation, AnnotationKind, ChartState
+from librecharts.core.model import Annotation, AnnotationKind, ChartState, Trend
 from librecharts.core.picking import PickSession, annotation_kind, supports
 from librecharts.core.state_io import StateError
 from librecharts.lo import agenda as lo_agenda
 from librecharts.lo import arrange as lo_arrange
+from librecharts.lo import audit as lo_audit
 from librecharts.lo import (
     axisdialog,
     calendardialog,
     chart,
+    dataimport,
     datasheet,
     designcheck,
     formatdialog,
+    labelpick,
     labels,
     linkdialog,
     links,
@@ -44,9 +63,16 @@ from librecharts.lo import (
     scheme,
     store,
     textdialog,
+    trenddialog,
     ui,
 )
 from librecharts.lo import elements as lo_elements
+from librecharts.lo import (
+    graphics as lo_graphics,
+)
+from librecharts.lo import (
+    templates as lo_templates,
+)
 from librecharts.lo.datasheet import OrphanedChartError, open_datasheet
 
 # The format copied by "Copy chart format", shared by the menu and the sidebar in this process.
@@ -93,6 +119,30 @@ def insert_gantt_chart(ctx: Any, frame: Any) -> None:
     _insert(ctx, frame, chart.insert_gantt_chart)
 
 
+def insert_dumbbell_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_dumbbell_chart)
+
+
+def insert_bullet_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_bullet_chart)
+
+
+def insert_funnel_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_funnel_chart)
+
+
+def insert_boxplot_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_boxplot_chart)
+
+
+def insert_table_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_table_chart)
+
+
+def insert_matrix_chart(ctx: Any, frame: Any) -> None:
+    _insert(ctx, frame, chart.insert_matrix_chart)
+
+
 def _insert(ctx: Any, frame: Any, insert: Any) -> None:
     controller = frame.getController()
     doc = controller.getModel()
@@ -101,6 +151,57 @@ def _insert(ctx: Any, frame: Any, insert: Any) -> None:
         doc
     )  # normally done by the document-open job; covers a freshly installed extension
     controller.select(group)
+
+
+def insert_graphic(ctx: Any, frame: Any, query: str) -> None:
+    """Insert a process, chevron, pyramid or icon graphic (M26); one undo step."""
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    kind = args.get("kind", "process")
+    locale = ui.ui_locale(ctx)
+    try:
+        if kind == "icon":
+            graphic = core_graphics.Graphic("icon", icon=args.get("name", ""))
+        else:
+            graphic = core_graphics.Graphic(
+                kind,  # pyright: ignore[reportArgumentType]
+                int(args.get("steps", "4")),
+                args.get("horizontal", "true") != "false",
+            )
+    except ValueError:
+        ui.show_info(ctx, frame, text("graphic_unsupported", locale))
+        return
+    controller = frame.getController()
+    doc = controller.getModel()
+    labels = tuple(args[key] for key in sorted(args) if key.startswith("text"))
+    if len(labels) < graphic.steps:
+        labels = ()
+    controller.select(lo_graphics.insert(doc, controller.getCurrentPage(), graphic, labels))
+    resize.watch(doc)
+
+
+def change_graphic(ctx: Any, frame: Any, query: str) -> None:
+    """Add/remove a step or switch a graphic's direction (M26); one undo step."""
+    controller = frame.getController()
+    locale = ui.ui_locale(ctx)
+    selection = controller.getSelection()
+    group = selection if selection is not None and hasattr(selection, "Name") else None
+    graphic = lo_graphics.find(group) if group is not None else None
+    if graphic is None:
+        ui.show_info(ctx, frame, text("graphic_not_selected", locale))
+        return
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    try:
+        if args.get("op") == "direction":
+            changed = replace(graphic, horizontal=not graphic.horizontal)
+        elif args.get("op") in ("add", "remove"):
+            step = 1 if args["op"] == "add" else -1
+            changed = replace(graphic, steps=graphic.steps + step)
+        else:
+            raise ValueError(args)
+    except ValueError:
+        ui.show_info(ctx, frame, text("graphic_unsupported", locale))
+        return
+    lo_graphics.change(controller.getModel(), group, changed)
 
 
 def insert_element(ctx: Any, frame: Any, query: str) -> None:
@@ -171,6 +272,19 @@ def arrange(ctx: Any, frame: Any, query: str) -> None:
                 ui.show_info(ctx, frame, text("arrange_need_exactly_two", locale))
                 return
             wanted = list(core_arrange.swap(rects[0], rects[1]))
+        elif op == "distribute":
+            wanted = core_arrange.distribute(rects, args.get("axis", "h"), args.get("mode", "gaps"))
+        elif op == "align":
+            wanted = core_arrange.align(rects, args.get("edge", "left"))
+        elif op == "align-slide":
+            page = controller.getCurrentPage()
+            wanted = core_arrange.align_slide(
+                rects,
+                args.get("edge", "left"),
+                page.Width,
+                page.Height,
+                int(args.get("margin", "0")),
+            )
         else:
             raise ValueError(op)
     except ValueError:
@@ -244,12 +358,53 @@ def link_data(ctx: Any, frame: Any, query: str) -> None:
         ui.show_info(ctx, frame, text(checked, locale, range=args.get("range", "")))
         return
     try:
-        linked = links.link(ctx, doc, state, links.as_url(args.get("url", "")), *checked)
+        linked = links.link(
+            ctx,
+            doc,
+            state,
+            links.as_url(args.get("url", "")),
+            *checked,
+            auto=args.get("auto") == "true",
+        )
     except links.LinkError as exc:
         ui.show_info(ctx, frame, exc.message(locale))
         return
     chart.redraw(doc, group, linked)
     _refresh_datasheet(doc, group)
+
+
+def share_link(ctx: Any, frame: Any, query: str) -> None:
+    """Link every selected chart to the same range (M28); one undo step."""
+    controller = frame.getController()
+    locale = ui.ui_locale(ctx)
+    groups = selected_charts(controller)
+    if not groups:
+        ui.show_info(ctx, frame, text("select_chart", locale))
+        return
+    doc = controller.getModel()
+    states = _claimed_states(ctx, frame, doc, groups, locale)
+    if states is None:
+        return
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    checked = core_links.target(args.get("sheet", ""), args.get("range", ""))
+    if isinstance(checked, str):
+        ui.show_info(ctx, frame, text(checked, locale, range=args.get("range", "")))
+        return
+    changes: dict[Any, ChartState] = {}
+    try:
+        for group, state in states:
+            changes[group] = links.link(
+                ctx,
+                doc,
+                state,
+                links.as_url(args.get("url", "")),
+                *checked,
+                auto=args.get("auto") == "true",
+            )
+    except links.LinkError as exc:
+        ui.show_info(ctx, frame, exc.message(locale))
+        return
+    chart.apply_changes(doc, changes)
 
 
 def update_link(ctx: Any, frame: Any) -> None:
@@ -438,8 +593,12 @@ def _text_of(data: bytes) -> str:
 def _pick_import_file(ctx: Any, title: str, kind: str, locale: str) -> str | None:
     picker = ctx.ServiceManager.createInstanceWithContext("com.sun.star.ui.dialogs.FilePicker", ctx)
     picker.setTitle(title)
-    label = text("import_csv_filter" if kind == "csv" else "import_project_filter", locale)
-    picker.appendFilter(label, "*.csv;*.txt;*.tsv" if kind == "csv" else "*.pod;*.xml")
+    if kind == "data":
+        label, pattern = text("import_data_filter", locale), "*.csv;*.txt;*.tsv;*.ods;*.xlsx"
+    else:
+        label = text("import_csv_filter" if kind == "csv" else "import_project_filter", locale)
+        pattern = "*.csv;*.txt;*.tsv" if kind == "csv" else "*.pod;*.xml"
+    picker.appendFilter(label, pattern)
     picker.setCurrentFilter(label)
     if picker.execute() != 1:  # com.sun.star.ui.dialogs.ExecutableDialogResults.OK
         return None
@@ -504,6 +663,105 @@ def change_format(ctx: Any, frame: Any, query: str) -> None:
         chart.redraw(frame.getController().getModel(), group, replace(state, format=changed))
 
 
+def change_focus(ctx: Any, frame: Any, query: str) -> None:
+    """Change the focus sets from the compact UI form ``series=2&on=true`` (M22)."""
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    kind = "series" if "series" in args else ("category" if "category" in args else "")
+    if not kind:
+        change_chart(ctx, frame, "focus=none" if args.get("clear") == "true" else query)
+        return
+    args["focus"] = kind
+    args["index"] = args.pop(kind)
+    change_chart(ctx, frame, urlencode(args))
+
+
+def set_label(ctx: Any, frame: Any, query: str, command: str = "SetLabel") -> None:
+    """Hide, retitle or reset one label (M22); one undo step.
+
+    Without a query the label picker starts: the user clicks a label, then the text dialog asks
+    (``SetLabelText``) or the label is hidden/reset at once.
+    """
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    if not query:
+        labelpick.start(ctx, frame, group, command)
+        return
+    try:
+        changed = core_labels.override(state, query, command=command)
+    except ValueError:
+        ui.show_info(ctx, frame, text("label_unsupported", ui.ui_locale(ctx)))
+        return
+    if changed != state:
+        chart.redraw(frame.getController().getModel(), group, changed)
+
+
+def set_source(ctx: Any, frame: Any, query: str) -> None:
+    """Set or clear the chart's source line (M22); one undo step."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    locale = ui.ui_locale(ctx)
+    if not query:
+        value = textdialog.ask_text(ctx, frame, "source_title", "source_label", state.source)
+        if value is None:
+            return
+        query = urlencode({"text": value})
+    try:
+        changed = core_notes.changed(state, query, "SetSource")
+    except ValueError:
+        ui.show_info(ctx, frame, text("note_unsupported", locale))
+        return
+    if changed != state:
+        chart.redraw(frame.getController().getModel(), group, changed)
+
+
+def add_note(ctx: Any, frame: Any, query: str) -> None:
+    """Add a free callout at a fraction of the chart box (M22); one undo step."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    locale = ui.ui_locale(ctx)
+    if not query:
+        value = textdialog.ask_text(ctx, frame, "note_title", "note_label", "")
+        if value is None:
+            return
+        query = urlencode({"text": value, "x": "0.1", "y": "0.1"})
+    try:
+        changed = core_notes.changed(state, query, "AddNote")
+    except ValueError:
+        ui.show_info(ctx, frame, text("note_unsupported", locale))
+        return
+    chart.redraw(frame.getController().getModel(), group, changed)
+
+
+def remove_note(ctx: Any, frame: Any, query: str) -> None:
+    """Remove the note at ``index=...`` (M22); one undo step."""
+    _change_note(ctx, frame, query, "RemoveNote")
+
+
+def move_note(ctx: Any, frame: Any, query: str) -> None:
+    """Move the note at ``index=...`` to ``x`` and ``y`` (M22); one undo step."""
+    _change_note(ctx, frame, query, "MoveNote")
+
+
+def _change_note(ctx: Any, frame: Any, query: str, command: str) -> None:
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    try:
+        changed = core_notes.changed(state, query, command)
+    except ValueError:
+        ui.show_info(ctx, frame, text("note_unsupported", ui.ui_locale(ctx)))
+        return
+    if changed != state:
+        chart.redraw(frame.getController().getModel(), group, changed)
+
+
 def move_labels(ctx: Any, frame: Any) -> None:
     """Enter the selected chart so that its value labels and totals can be dragged (ADR 0023)."""
     found = _annotatable_chart(ctx, frame, None)
@@ -524,6 +782,94 @@ def reset_labels(ctx: Any, frame: Any) -> None:
     group, state = found
     if state.labels:
         chart.redraw(frame.getController().getModel(), group, replace(state, labels=()))
+
+
+def axes(ctx: Any, frame: Any, query: str) -> None:
+    """Open the axis dialog, or apply its fields from ``query``; one undo step (M23)."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    locale = ui.ui_locale(ctx)
+    if not query:
+        axisdialog.request_axes(ctx, frame, group, state)
+        return
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    try:
+        fmt = formats.axes(state.format, args)
+    except ValueError:
+        ui.show_info(ctx, frame, text("axis_invalid", locale))
+        return
+    if (
+        fmt.axis_min is not None
+        and fmt.axis_min > 0
+        and state.kind not in ("line", "scatter")
+        and not ui.ask(ctx, frame, text("axis_cut_warning", locale))
+    ):
+        return
+    try:
+        changed = replace(state, format=fmt)
+        # Constructing the state validates the bounds and titles.
+        if fmt.axis_scale == "log":
+            layout_chart(changed, 4000, 4000)
+    except ValueError:
+        ui.show_info(ctx, frame, text("axis_invalid", locale))
+        return
+    if changed != state:
+        chart.redraw(frame.getController().getModel(), group, changed)
+
+
+def add_trendline(ctx: Any, frame: Any, query: str) -> None:
+    """Add or replace the trendline of one series; one undo step (M23)."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    locale = ui.ui_locale(ctx)
+    if not query:
+        trenddialog.request(ctx, frame, group, state, None)
+        return
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    try:
+        series = int(args["series"])
+        trend = Trend(
+            series,
+            args.get("kind", "linear"),  # pyright: ignore[reportArgumentType]
+            int(args.get("forecast", "0")),
+            args.get("r2", "true") != "false",
+            args.get("equation", "false") == "true",
+        )
+    except (KeyError, ValueError):
+        ui.show_info(ctx, frame, text("trend_invalid", locale))
+        return
+    if series >= len(state.values) - 1:
+        ui.show_info(ctx, frame, text("trend_invalid", locale))
+        return
+    changed = replace(
+        state, trends=(*(item for item in state.trends if item.series != series), trend)
+    )
+    try:
+        layout_chart(changed, 4000, 4000)
+    except ValueError:
+        ui.show_info(ctx, frame, text("trend_invalid", locale))
+        return
+    chart.redraw(frame.getController().getModel(), group, changed)
+
+
+def remove_trendline(ctx: Any, frame: Any, query: str) -> None:
+    """Remove the trendline of ``series=...``; one undo step (M23)."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    try:
+        series = int(args["series"])
+    except (KeyError, ValueError):
+        return
+    trends = tuple(item for item in state.trends if item.series != series)
+    if trends != state.trends:
+        chart.redraw(frame.getController().getModel(), group, replace(state, trends=trends))
 
 
 def number_format(ctx: Any, frame: Any) -> None:
@@ -805,6 +1151,153 @@ def check_design(ctx: Any, frame: Any, query: str) -> None:
             return
     designcheck.check_and_fix(doc, rules)
     ui.tell(ctx, frame, text("design_done", locale, count=str(len(result.findings))))
+
+
+def simulate_colorblind(ctx: Any, frame: Any, query: str) -> None:
+    """Replace the document's colours with their colour-blind simulation (M30); one undo step."""
+    locale = ui.ui_locale(ctx)
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    kind = args.get("kind", "deuteranopia")
+    doc = frame.getController().getModel()
+    try:
+        simulated = colorblind.scheme(scheme.load(doc), kind)  # pyright: ignore[reportArgumentType]
+    except ValueError:
+        ui.show_info(ctx, frame, text("colorblind_unknown", locale))
+        return
+    chart.set_scheme(doc, simulated)
+
+
+def audit_deck(ctx: Any, frame: Any) -> None:
+    """Report unreadable charts, links and stale sources with their slides (M29)."""
+    locale = ui.ui_locale(ctx)
+    findings = lo_audit.inspect(frame.getController().getModel())
+    ui.tell(ctx, frame, core_audit.report(findings, locale))
+
+
+def export_deck_spec(ctx: Any, frame: Any, query: str) -> None:
+    """Write the charts of the presentation as a deck specification (M29)."""
+    locale = ui.ui_locale(ctx)
+    doc = frame.getController().getModel()
+    entries: list[tuple[str, ChartState]] = []
+    for group, chart_id in store.all_charts(doc):
+        try:
+            state = store.read_state(doc, chart_id)
+        except (StateError, ValueError):
+            continue
+        if state is not None and state.kind not in ("table", "matrix"):
+            entries.append((str(group.Name), state))
+    location = _query_arg(query, "url") or _pick_file(
+        ctx, text("menu_export_spec", locale), save=True
+    )
+    if not location:
+        return
+    try:
+        path = uno.fileUrlToSystemPath(links.as_url(location))
+        Path(path).write_text(deck_export.to_json(entries), encoding="utf-8")
+    except Exception as exc:
+        ui.show_info(ctx, frame, text("spec_export_failed", locale, detail=str(exc)))
+        return
+    ui.tell(ctx, frame, text("spec_exported", locale, count=str(len(entries))))
+
+
+def import_data(ctx: Any, frame: Any, query: str) -> None:
+    """Replace the selected chart's data sheet from a CSV, ODS or XLSX file (M28)."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    locale = ui.ui_locale(ctx)
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    location = args.get("url", "")
+    if not location:
+        location = _pick_import_file(ctx, text("import_data_title", locale), "data", locale) or ""
+        if not location:
+            return
+    try:
+        rows = dataimport.read_file(ctx, location, args.get("sheet", ""))
+        changed = core_import.state_with_table(state, rows)
+    except (OSError, core_import.ImportError) as exc:
+        detail = text(exc.key, locale) if isinstance(exc, core_import.ImportError) else str(exc)
+        ui.show_info(ctx, frame, text("import_data_failed", locale, detail=detail))
+        return
+    chart.redraw(frame.getController().getModel(), group, changed)
+
+
+def insert_from_clipboard(ctx: Any, frame: Any) -> None:
+    """Insert a column chart from the CSV/TSV text on the clipboard (M28); one undo step."""
+    locale = ui.ui_locale(ctx)
+    text_ = dataimport.clipboard_text(ctx)
+    if not text_.strip():
+        ui.show_info(ctx, frame, text("clipboard_empty", locale))
+        return
+    try:
+        rows = core_import.table(text_)
+        state = core_import.state_with_table(_with_default_format_for("column", locale), rows)
+    except (ValueError, core_import.ImportError):
+        ui.show_info(ctx, frame, text("import_invalid", locale))
+        return
+    controller = frame.getController()
+    resize.watch(controller.getModel())
+    controller.select(chart.insert_at(controller.getModel(), controller.getCurrentPage(), state))
+
+
+def _with_default_format_for(kind: str, locale: str) -> ChartState:
+    from librecharts.core.datasheet import sample_state
+    from librecharts.core.format import default_format
+
+    state = sample_state()
+    return replace(state, kind=kind, format=default_format(kind, state.grouping, locale))
+
+
+def save_template(ctx: Any, frame: Any, query: str) -> None:
+    """Save the selected chart as a template in the user's template folder (M27)."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    _, state = found
+    locale = ui.ui_locale(ctx)
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    name = args.get("name", "")
+    if not name:
+        name = textdialog.ask_text(ctx, frame, "template_save_title", "template_name", "") or ""
+        if not name:
+            return
+    try:
+        path = lo_templates.save(
+            ctx,
+            core_templates.Template(
+                name, core_templates.stripped(state), args.get("description", "")
+            ),
+        )
+    except (OSError, ValueError) as exc:
+        ui.show_info(ctx, frame, text("template_save_failed", locale, detail=str(exc)))
+        return
+    ui.show_info(ctx, frame, text("template_saved", locale, path=str(path)))
+
+
+def insert_template(ctx: Any, frame: Any, query: str) -> None:
+    """Insert a template at the slide centre (M27); one undo step."""
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    name = args.get("name", "")
+    locale = ui.ui_locale(ctx)
+    if not name:
+        name = textdialog.ask_text(ctx, frame, "menu_insert_template", "template_name", "") or ""
+        if not name:
+            return
+    path = lo_templates.find(ctx, name)
+    if path is None:
+        ui.show_info(ctx, frame, text("template_missing", locale, name=name))
+        return
+    try:
+        template = lo_templates.load(path)
+    except (OSError, core_templates.TemplateError) as exc:
+        ui.show_info(ctx, frame, text("template_load_failed", locale, detail=str(exc)))
+        return
+    controller = frame.getController()
+    resize.watch(controller.getModel())
+    controller.select(
+        chart.insert_at(controller.getModel(), controller.getCurrentPage(), template.state)
+    )
 
 
 def export_csv(ctx: Any, frame: Any, query: str) -> None:

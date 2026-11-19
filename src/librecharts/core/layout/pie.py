@@ -23,7 +23,6 @@ from librecharts.core.geometry import polar, sector
 from librecharts.core.layout.column import LANE_HEIGHT, LANE_LINE_GAP
 from librecharts.core.layout.common import (
     LABEL_HEIGHT,
-    LEGEND_HEIGHT,
     LEVEL_ARROW_INSET,
     LEVEL_LANE_WIDTH,
     SWATCH,
@@ -31,6 +30,7 @@ from librecharts.core.layout.common import (
     bracket,
     format_value,
     legend,
+    legend_insets,
     level_arrow,
     spread,
 )
@@ -68,12 +68,12 @@ def layout_pie(
     fmt = fmt or Format()
     arrow_data = shares(data)
     brackets, levels = notes.arrows(annotations, arrow_data, "pie")
-    legend_band = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    inset_left, legend_band, inset_right, inset_bottom = legend_insets(fmt)
     top = legend_band + len(brackets) * LANE_HEIGHT
     right_lanes = len(levels) * LEVEL_LANE_WIDTH
     band = SERIES_BAND if fmt.series_names == "labels" else 0.0
-    plot_width = width - band - right_lanes
-    plot_height = height - top - CATEGORY_BAND
+    plot_width = width - inset_left - inset_right - band - right_lanes
+    plot_height = height - top - inset_bottom - CATEGORY_BAND
     slot = plot_width / max(len(data.categories), 1)
     # The outside labels must fit into the slot: they reach 1.15 r plus half a label box.
     radius = (min(slot, plot_height) / 2 - LABEL_WIDTH / 2) / OUTSIDE_RADIUS
@@ -84,14 +84,14 @@ def layout_pie(
 
     out: list[Primitive] = []
     if fmt.series_names == "legend":
-        out.extend(legend([s.name for s in data.series], width))
+        out.extend(legend([s.name for s in data.series], width, fmt.legend, height))
     inner = radius * DOUGHNUT_HOLE if doughnut else 0.0
     inside = radius * ((1 + DOUGHNUT_HOLE) / 2 if doughnut else INSIDE_RADIUS_PIE)
     cy = top + plot_height / 2
     arcs: dict[tuple[int, int], tuple[float, float]] = {}  # (category, series) -> arc midpoint
     orders = pie_order(data, sort)
     for c, category in enumerate(data.categories):
-        cx = (c + 0.5) * slot
+        cx = inset_left + (c + 0.5) * slot
         total = column_total(data, c)
         percentages = consistent_shares([series.values[c] for series in data.series], total, fmt)
         angle = 0.0
@@ -102,7 +102,9 @@ def layout_pie(
             if value is None or share(value, total) is None:
                 continue
             sweep = value / total * 360.0
-            out.append(Polygon(sector(cx, cy, radius, inner, angle, angle + sweep), index))
+            out.append(
+                Polygon(sector(cx, cy, radius, inner, angle, angle + sweep), index, category=c)
+            )
             is_inside = sweep >= MIN_INSIDE_ANGLE
             label_radius = inside if is_inside else radius * OUTSIDE_RADIUS
             label_x, label_y = polar(cx, cy, label_radius, angle + sweep / 2)
@@ -194,7 +196,7 @@ def layout_pie(
             )
         )
     if fmt.series_names == "labels":
-        out.extend(_series_names(data, plot_width + right_lanes, top, plot_height))
+        out.extend(_series_names(data, inset_left + plot_width + right_lanes, top, plot_height))
     return tuple(out)
 
 
@@ -238,20 +240,25 @@ def pie_at(
     fmt = fmt or Format()
     arrow_data = shares(data)
     brackets, levels = notes.arrows(annotations, arrow_data, "pie")
-    legend_band = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    inset_left, legend_band, inset_right, inset_bottom = legend_insets(fmt)
     top = legend_band + len(brackets) * LANE_HEIGHT
     right_lanes = len(levels) * LEVEL_LANE_WIDTH
     band = SERIES_BAND if fmt.series_names == "labels" else 0.0
-    plot_width = width - band - right_lanes
-    plot_height = height - top - CATEGORY_BAND
+    plot_width = width - inset_left - inset_right - band - right_lanes
+    plot_height = height - top - inset_bottom - CATEGORY_BAND
     slot = plot_width / max(len(data.categories), 1)
     radius = (min(slot, plot_height) / 2 - LABEL_WIDTH / 2) / OUTSIDE_RADIUS
-    if radius <= 0 or not data.categories or not data.series or not 0 <= x < plot_width:
+    if (
+        radius <= 0
+        or not data.categories
+        or not data.series
+        or not inset_left <= x < inset_left + plot_width
+    ):
         return None
-    category = int(x // slot)
+    category = int((x - inset_left) // slot)
     if category >= len(data.categories):
         return None
-    cx, cy = (category + 0.5) * slot, top + plot_height / 2
+    cx, cy = inset_left + (category + 0.5) * slot, top + plot_height / 2
     dx, dy = x - cx, y - cy
     distance = math.hypot(dx, dy)
     inner = radius * (DOUGHNUT_HOLE if doughnut else 0.0)

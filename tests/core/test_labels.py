@@ -390,7 +390,8 @@ def test_the_panel_offers_to_move_labels_and_to_reset_moved_ones() -> None:
     assert "ResetLabels" not in format_commands(sample_state())
     moved = replace(sample_state(), labels=(LabelOffset(LabelKey("total", 0), 0.0, -500.0),))
     commands = format_commands(moved)
-    assert commands.index("MoveLabels") + 1 == commands.index("ResetLabels")
+    assert commands.index("MoveLabels") < commands.index("ResetLabels")
+    assert {"SetLabel", "SetLabelText", "ResetLabel"} <= set(commands)
     assert "MoveLabels" not in format_commands(sample_gantt_state())
     assert "MoveLabels" not in format_commands(None)
     buttons = {b.command.removeprefix(PROTOCOL): b for b in content(moved, False, "de-DE").format}

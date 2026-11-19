@@ -2,23 +2,35 @@
 
 from __future__ import annotations
 
-from librecharts.core import labels, sorting
-from librecharts.core.datasheet import ChartData, errored, parse, ranged
+from librecharts.core import focus, labels, sorting
+from librecharts.core.boxplot import parse as parse_boxplot
+from librecharts.core.bullet import parse as parse_bullet
+from librecharts.core.datasheet import ChartData, Series, errored, parse, ranged
 from librecharts.core.gantt import parse_gantt
 from librecharts.core.layout.area import layout_area
 from librecharts.core.layout.bar import layout_bar
+from librecharts.core.layout.boxplot import layout_boxplot
+from librecharts.core.layout.bullet import layout_bullet
 from librecharts.core.layout.butterfly import layout_butterfly
 from librecharts.core.layout.column import layout_column
+from librecharts.core.layout.common import SOURCE_BAND, decorations
+from librecharts.core.layout.dumbbell import layout_dumbbell
+from librecharts.core.layout.funnel import layout_funnel
 from librecharts.core.layout.gantt import layout_gantt
 from librecharts.core.layout.line import layout_line
+from librecharts.core.layout.matrix import layout_matrix
 from librecharts.core.layout.mekko import layout_mekko
+from librecharts.core.layout.pareto import layout_pareto
 from librecharts.core.layout.pie import layout_pie
 from librecharts.core.layout.scatter import layout_scatter
+from librecharts.core.layout.table import layout_table
 from librecharts.core.layout.waterfall import layout_waterfall
+from librecharts.core.matrix import parse as parse_matrix
 from librecharts.core.mekko import parse_mekko
 from librecharts.core.model import Annotation, ChartState, Grouping
 from librecharts.core.primitives import Primitive
 from librecharts.core.scatter import parse_scatter
+from librecharts.core.table import parse as parse_table
 from librecharts.core.waterfall import parse_waterfall
 
 
@@ -35,10 +47,17 @@ def layout_chart(
     ``state.labels`` are applied (``core/labels.py``). Raises ``ValueError`` if the box is too small
     for the chart.
     """
-    primitives = _layout(state, width, height, length_per_unit)
-    if state.kind == "gantt":  # its texts stay where the layout puts them
-        return primitives
-    return labels.place(labels.keyed(primitives, _order(state)), state.labels)
+    source_band = SOURCE_BAND if state.source else 0.0
+    primitives = _layout(state, width, body_height(state, height), length_per_unit)
+    if state.kind != "gantt":  # its texts stay where the layout puts them
+        primitives = labels.place(labels.keyed(primitives, _order(state)), state.labels)
+    primitives = focus.apply(primitives, state.focus)
+    return primitives + tuple(decorations(state, width, height, source_band))
+
+
+def body_height(state: ChartState, height: float) -> float:
+    """The height the plot may use: the chart box minus the footer band of a source line."""
+    return height - (SOURCE_BAND if state.source else 0.0)
 
 
 def _order(state: ChartState) -> tuple[int, ...] | None:
@@ -72,7 +91,36 @@ def _layout(
             state.annotations,
         )
     if state.kind == "scatter":
-        return layout_scatter(parse_scatter(state), width, height, state.annotations, state.format)
+        return layout_scatter(
+            parse_scatter(state),
+            width,
+            height,
+            state.annotations,
+            state.format,
+            state.trends,
+        )
+    if state.kind == "table":
+        return layout_table(parse_table(state), width, height, state.format)
+    if state.kind == "matrix":
+        return layout_matrix(parse_matrix(state), width, height, state.format)
+    if state.kind == "bullet":
+        return layout_bullet(parse_bullet(state), width, height, state.format)
+    if state.kind == "boxplot":
+        return layout_boxplot(parse_boxplot(state), width, height, state.format)
+    if state.kind == "funnel":
+        return layout_funnel(parse(state), width, height, state.format)
+    if state.kind == "dumbbell":
+        start_data, bases = ranged(state)
+        if not bases:
+            return ()
+        dumbbell = ChartData(
+            start_data.categories,
+            (
+                Series("Start", bases[0]),
+                Series("End", start_data.series[0].values),
+            ),
+        )
+        return layout_dumbbell(dumbbell, width, height, state.format, horizontal=state.horizontal)
     if state.kind == "gantt":
         return layout_gantt(
             parse_gantt(state, state.sort),
@@ -103,7 +151,14 @@ def _layout(
         return layout_butterfly(data, width, height, state.format, length_per_unit)
     if state.kind == "line":
         return layout_line(
-            data, width, height, annotations, state.format, length_per_unit, errors=errors
+            data,
+            width,
+            height,
+            annotations,
+            state.format,
+            length_per_unit,
+            errors=errors,
+            trends=state.trends,
         )
     if state.kind == "area":
         return layout_area(
@@ -116,6 +171,8 @@ def _layout(
             fmt=state.format,
             length_per_unit=length_per_unit,
         )
+    if state.pareto:
+        return layout_pareto(data, width, height, state.format)
     if state.kind == "bar":
         return layout_bar(
             data,
@@ -142,6 +199,7 @@ def _layout(
         length_per_unit=length_per_unit,
         bases=bases,
         errors=errors,
+        trends=state.trends,
     )
 
 

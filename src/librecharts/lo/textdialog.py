@@ -45,6 +45,25 @@ def ask(ctx: Any, frame: Any, initial: str) -> str | None:
     return outcome[0] if outcome else None
 
 
+def ask_text(
+    ctx: Any, frame: Any, title_key: str, label_key: str, initial: str, *, limit: int = 200
+) -> str | None:
+    """A one-line text dialog for the source line, a note or a label (M22); ``None`` if cancelled.
+
+    The returned text is stripped. An empty text is allowed (it clears a source or a custom label).
+    """
+    locale = ui.ui_locale(ctx)
+    dialog = _build_text(ctx, frame, locale, title_key, label_key, initial, limit)
+    outcome: list[str] = []
+    ok = _OkTextListener(dialog, locale, outcome, limit, allow_empty=True)
+    dialog.getControl("ok").addActionListener(ok)
+    try:
+        dialog.execute()
+    finally:
+        dialog.dispose()
+    return outcome[0] if outcome else None
+
+
 def request_edit(ctx: Any, frame: Any, group: Any, state: ChartState, index: int) -> None:
     """Ask for the text of the group bracket at ``index``, then change it; one undo step.
 
@@ -112,6 +131,32 @@ class _OkListener(unohelper.Base, XActionListener):
         pass
 
 
+class _OkTextListener(_OkListener):
+    """OK of a free text dialog: length and emptiness check, then close with the text."""
+
+    def __init__(
+        self, dialog: Any, locale: str, outcome: list[str], limit: int, *, allow_empty: bool
+    ) -> None:
+        super().__init__(dialog, locale, outcome)
+        self.limit, self.allow_empty = limit, allow_empty
+
+    def actionPerformed(self, event: Any) -> None:
+        try:
+            value = self.dialog.getControl("label").getText().strip()
+            if not value and not self.allow_empty:
+                self.dialog.getModel().getByName("error").Label = text("text_empty", self.locale)
+                return
+            if len(value) > self.limit:
+                self.dialog.getModel().getByName("error").Label = text(
+                    "text_too_long", self.locale, limit=str(self.limit)
+                )
+                return
+            self.outcome.append(value)
+            self.dialog.endExecute()
+        except Exception:
+            traceback.print_exc()
+
+
 def _build(ctx: Any, frame: Any, locale: str, initial: str) -> Any:
     """The dialog control, not yet shown. Sizes are in "Map AppFont" units."""
     smgr = ctx.ServiceManager
@@ -152,6 +197,60 @@ def _build(ctx: Any, frame: Any, locale: str, initial: str) -> Any:
         TabIndex=4,
     )
 
+    dialog = smgr.createInstanceWithContext("com.sun.star.awt.UnoControlDialog", ctx)
+    dialog.setModel(model)
+    toolkit = smgr.createInstanceWithContext("com.sun.star.awt.Toolkit", ctx)
+    dialog.createPeer(toolkit, frame.getContainerWindow())
+    return dialog
+
+
+def _build_text(
+    ctx: Any,
+    frame: Any,
+    locale: str,
+    title_key: str,
+    label_key: str,
+    initial: str,
+    limit: int,
+) -> Any:
+    """A one-line text dialog; the same layout as the bracket dialog (M22)."""
+    smgr = ctx.ServiceManager
+    model = smgr.createInstanceWithContext("com.sun.star.awt.UnoControlDialogModel", ctx)
+    model.Title, model.Width, model.Height = text(title_key, locale), 190, 72
+
+    def add(kind: str, name: str, x: int, y: int, width: int, height: int, **props: Any) -> None:
+        control = model.createInstance(f"com.sun.star.awt.UnoControl{kind}Model")
+        model.insertByName(name, control)
+        control.PositionX, control.PositionY = x, y
+        control.Width, control.Height = width, height
+        for prop, value in props.items():
+            setattr(control, prop, value)
+
+    add("FixedText", "label_label", 10, 10, 170, 10, Label=text(label_key, locale), TabIndex=0)
+    add("Edit", "label", 10, 24, 170, 12, Text=initial, MaxTextLen=limit, TabIndex=1)
+    add("FixedText", "error", 10, 42, 170, 10, Label="", TextColor=_RED, TabIndex=2)
+    add(
+        "Button",
+        "ok",
+        80,
+        54,
+        50,
+        14,
+        Label=text("button_ok", locale),
+        DefaultButton=True,
+        TabIndex=3,
+    )
+    add(
+        "Button",
+        "cancel",
+        134,
+        54,
+        50,
+        14,
+        Label=text("button_cancel", locale),
+        PushButtonType=_PUSH_BUTTON_CANCEL,
+        TabIndex=4,
+    )
     dialog = smgr.createInstanceWithContext("com.sun.star.awt.UnoControlDialog", ctx)
     dialog.setModel(model)
     toolkit = smgr.createInstanceWithContext("com.sun.star.awt.Toolkit", ctx)

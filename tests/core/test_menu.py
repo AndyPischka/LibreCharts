@@ -17,10 +17,16 @@ FORMAT_STATE = Format(axis=True, gridlines=True, series_names="labels")
 EDIT = MenuItem("Edit chart data", PROTOCOL + "EditData")
 LINK = MenuItem("Link data...", PROTOCOL + "LinkData")
 EXPORT = MenuItem("Export chart data as CSV...", PROTOCOL + "ExportCsv")
+TEMPLATES = (
+    MenuItem("Save chart as template...", PROTOCOL + "SaveTemplate"),
+    MenuItem("Insert from template", PROTOCOL + "InsertTemplate"),
+    MenuItem("Import data...", PROTOCOL + "ImportData"),
+)
 PATTERNS = MenuItem("Show patterns", PROTOCOL + "ChangeFormat?patterns=true")
 VARIANTS = (
     MenuItem("Show clustered", PROTOCOL + "ChangeChart?grouping=clustered"),
     MenuItem("Show as 100 %", PROTOCOL + "ChangeChart?percent=true"),
+    MenuItem("Show as Pareto chart", PROTOCOL + "ChangeChart?pareto=true"),
     MenuItem("Floating bars", PROTOCOL + "ChangeChart?range=true"),
     MenuItem("Error bars", PROTOCOL + "ChangeChart?errors=true"),
 )
@@ -51,22 +57,72 @@ SERIES = MenuItem(
     ),
 )
 NUMBER_FORMAT = MenuItem("Number format...", PROTOCOL + "NumberFormat")
+LEGEND = MenuItem(
+    "Legend position",
+    children=(
+        MenuItem("✓ Legend at the top", PROTOCOL + "ChangeFormat?legend=top"),
+        MenuItem("Legend on the right", PROTOCOL + "ChangeFormat?legend=right"),
+        MenuItem("Legend at the bottom", PROTOCOL + "ChangeFormat?legend=bottom"),
+        MenuItem("Legend on the left", PROTOCOL + "ChangeFormat?legend=left"),
+    ),
+)
+FONT_SIZE = MenuItem(
+    "Font size",
+    children=(
+        MenuItem("✓ Automatic (scheme)", PROTOCOL + "ChangeFormat?font_size=auto"),
+        MenuItem("8 pt", PROTOCOL + "ChangeFormat?font_size=8"),
+        MenuItem("10 pt", PROTOCOL + "ChangeFormat?font_size=10"),
+        MenuItem("12 pt", PROTOCOL + "ChangeFormat?font_size=12"),
+        MenuItem("14 pt", PROTOCOL + "ChangeFormat?font_size=14"),
+        MenuItem("16 pt", PROTOCOL + "ChangeFormat?font_size=16"),
+        MenuItem("20 pt", PROTOCOL + "ChangeFormat?font_size=20"),
+        MenuItem("24 pt", PROTOCOL + "ChangeFormat?font_size=24"),
+    ),
+)
+AXES = MenuItem("Axes...", PROTOCOL + "Axes")
+TRENDS = MenuItem(
+    "Trendlines",
+    children=tuple(
+        MenuItem("Add trendline...", PROTOCOL + f"AddTrendline?series={index}")
+        for index in range(3)
+    ),
+)
 FORMAT = MenuItem(
     "Format",
     children=(
         MenuItem("Show value axis", PROTOCOL + "ChangeFormat?axis=true"),
         PATTERNS,
         SERIES,
+        LEGEND,
+        FONT_SIZE,
         NUMBER_FORMAT,
+        AXES,
+        TRENDS,
     ),
 )
-FORMAT_MEKKO = MenuItem("Format", children=(PATTERNS, SERIES, NUMBER_FORMAT))
+FORMAT_BAR = MenuItem(
+    "Format",
+    children=(
+        MenuItem("Show value axis", PROTOCOL + "ChangeFormat?axis=true"),
+        PATTERNS,
+        SERIES,
+        LEGEND,
+        FONT_SIZE,
+        NUMBER_FORMAT,
+        AXES,
+    ),
+)
+FORMAT_MEKKO = MenuItem(
+    "Format", children=(PATTERNS, SERIES, LEGEND, FONT_SIZE, NUMBER_FORMAT, AXES)
+)
 FORMAT_WATERFALL = MenuItem(
     "Format",
     children=(
         MenuItem("Show value axis", PROTOCOL + "ChangeFormat?axis=true"),
         PATTERNS,
+        FONT_SIZE,
         NUMBER_FORMAT,
+        AXES,
     ),
 )
 ARROWS = (
@@ -91,12 +147,53 @@ ADD_WATERFALL = (
     MenuItem("Add axis break", PROTOCOL + "AxisBreak"),
     MenuItem("Add value line...", PROTOCOL + "ValueLine"),
 )
-FORMAT_TOOLS = (
-    SEPARATOR,
-    MenuItem("Copy chart format", PROTOCOL + "CopyChartFormat"),
-    MenuItem("Apply chart format", PROTOCOL + "ApplyChartFormat"),
-    MenuItem("Move labels", PROTOCOL + "MoveLabels"),
+LABELS = MenuItem(
+    "Labels",
+    children=(
+        MenuItem("Move labels", PROTOCOL + "MoveLabels"),
+        MenuItem("Hide label...", PROTOCOL + "SetLabel"),
+        MenuItem("Change label text...", PROTOCOL + "SetLabelText"),
+        MenuItem("Reset label...", PROTOCOL + "ResetLabel"),
+    ),
 )
+
+
+def focus_menu(series: tuple[str, ...], categories: tuple[str, ...]) -> MenuItem:
+    return MenuItem(
+        "Focus",
+        children=tuple(
+            MenuItem(
+                f"Series: {name}",
+                PROTOCOL + f"ChangeChart?focus=series&index={index}&on=true",
+            )
+            for index, name in enumerate(series)
+        )
+        + tuple(
+            MenuItem(
+                f"Category: {name}",
+                PROTOCOL + f"ChangeChart?focus=category&index={index}&on=true",
+            )
+            for index, name in enumerate(categories)
+        ),
+    )
+
+
+SOURCE = MenuItem("Source...", PROTOCOL + "SetSource")
+NOTES = MenuItem("Notes", children=(MenuItem("Add note...", PROTOCOL + "AddNote"),))
+SERIES_NAMES = ("Product A", "Product B", "Product C")
+YEARS = ("2023", "2024", "2025")
+
+
+def format_tools(focus: MenuItem) -> tuple[MenuItem, ...]:
+    return (
+        SEPARATOR,
+        MenuItem("Copy chart format", PROTOCOL + "CopyChartFormat"),
+        MenuItem("Apply chart format", PROTOCOL + "ApplyChartFormat"),
+        LABELS,
+        focus,
+        SOURCE,
+        NOTES,
+    )
 
 
 def colour_menu(*names: str) -> MenuItem:
@@ -130,12 +227,13 @@ def test_column_chart_without_annotations_offers_data_variants_sort_format_and_a
             EDIT,
             LINK,
             EXPORT,
+            *TEMPLATES,
             *VARIANTS,
             LINES,
             colour_menu("Product A", "Product B", "Product C"),
             SORT,
             FORMAT,
-            *FORMAT_TOOLS,
+            *format_tools(focus_menu(SERIES_NAMES, YEARS)),
             *ADD,
         ),
     )
@@ -146,11 +244,12 @@ def test_bar_charts_offer_the_same_variants_and_annotations() -> None:
         EDIT,
         LINK,
         EXPORT,
+        *TEMPLATES,
         *VARIANTS,
         colour_menu("Product A", "Product B", "Product C"),
         SORT,
-        FORMAT,
-        *FORMAT_TOOLS,
+        FORMAT_BAR,
+        *format_tools(focus_menu(SERIES_NAMES, YEARS)),
         *ADD,
     )
 
@@ -188,9 +287,15 @@ def test_waterfall_charts_offer_horizontal_and_stacked_but_no_sort() -> None:
         EDIT,
         LINK,
         EXPORT,
+        *TEMPLATES,
         *WATERFALL_VARIANTS,
         FORMAT_WATERFALL,
-        *FORMAT_TOOLS,
+        *format_tools(
+            focus_menu(
+                ("Level",),
+                ("Start", "Growth", "New markets", "Costs", "Currency", "End"),
+            )
+        ),
         *ADD_WATERFALL,
     )
 
@@ -212,10 +317,11 @@ def test_a_percent_mekko_offers_the_data_the_switch_to_units_and_the_format() ->
         EDIT,
         LINK,
         EXPORT,
+        *TEMPLATES,
         units,
         colour_menu("Product A", "Product B", "Product C"),
         FORMAT_MEKKO,
-        *FORMAT_TOOLS,
+        *format_tools(focus_menu(SERIES_NAMES, ("Europe", "Americas", "Asia", "Other"))),
         *add,
     )
 
@@ -235,7 +341,12 @@ def test_a_units_mekko_offers_the_switch_back_to_percent_and_an_axis() -> None:
     items = chart_menu(state, "de-DE").children
     format_menu = next(item for item in items if item.title == "Format")
     export = MenuItem("Diagrammdaten als CSV exportieren...", EXPORT.command)
-    assert items[:4] == (edit, link, export, percent)
+    templates = (
+        MenuItem("Diagramm als Vorlage speichern...", PROTOCOL + "SaveTemplate"),
+        MenuItem("Aus Vorlage einfügen", PROTOCOL + "InsertTemplate"),
+        MenuItem("Daten importieren...", PROTOCOL + "ImportData"),
+    )
+    assert items[:7] == (edit, link, export, *templates, percent)
     assert format_menu.title == "Format"
     assert "Wertachse anzeigen" in [child.title for child in format_menu.children]
 
@@ -250,7 +361,11 @@ def test_the_format_menu_hides_what_the_chart_already_shows() -> None:
         "Hide gridlines",
         "Show patterns",
         "Series labels",
+        "Legend position",
+        "Font size",
         "Number format...",
+        "Axes...",
+        "Trendlines",
     ]
     assert commands(format_menu)[0] == PROTOCOL + "ChangeFormat?axis=false"
     assert commands(format_menu)[1] == PROTOCOL + "ChangeFormat?gridlines=false"
@@ -289,7 +404,16 @@ def test_annotations_are_listed_with_their_actions_and_remove_all() -> None:
         item
         for item in items
         if item.children
-        and item.title not in ("Series as lines", "Series colour", "Sort categories", "Format")
+        and item.title
+        not in (
+            "Series as lines",
+            "Series colour",
+            "Sort categories",
+            "Format",
+            "Labels",
+            "Focus",
+            "Notes",
+        )
     ]
     assert [item.title for item in annotation_items] == [
         "Difference 2023 → 2025",
@@ -338,7 +462,16 @@ def test_hidden_annotations_are_not_listed_but_keep_their_index() -> None:
         item
         for item in chart_menu(state, "en-US").children
         if item.children
-        and item.title not in ("Series as lines", "Series colour", "Sort categories", "Format")
+        and item.title
+        not in (
+            "Series as lines",
+            "Series colour",
+            "Sort categories",
+            "Format",
+            "Labels",
+            "Focus",
+            "Notes",
+        )
     ]
     assert len(listed) == 1
     assert commands(listed[0])[-1] == PROTOCOL + "RemoveAnnotation?index=1"
@@ -449,15 +582,20 @@ def test_a_check_mark_menu_offers_the_other_symbols() -> None:
     ]
 
 
+def labels_of(state) -> MenuItem:
+    return next(item for item in chart_menu(state, "en").children if item.title == "Labels")
+
+
 def test_moved_labels_can_be_reset() -> None:
-    plain = chart_menu(sample_state(), "en")
+    plain = labels_of(sample_state())
     assert "ResetLabels" not in [item.command.removeprefix(PROTOCOL) for item in plain.children]
     moved = replace(sample_state(), labels=(LabelOffset(LabelKey("total", 0), 0.0, -500.0),))
-    commands = [item.command.removeprefix(PROTOCOL) for item in chart_menu(moved, "en").children]
+    commands = [item.command.removeprefix(PROTOCOL) for item in labels_of(moved).children]
     assert commands.index("MoveLabels") + 1 == commands.index("ResetLabels")
-    german = {
-        item.command.removeprefix(PROTOCOL): item.title for item in chart_menu(moved, "de").children
-    }
+    german_labels = next(
+        item for item in chart_menu(moved, "de").children if item.title == "Beschriftungen"
+    )
+    german = {item.command.removeprefix(PROTOCOL): item.title for item in german_labels.children}
     assert german["MoveLabels"] == "Beschriftungen verschieben"
     assert german["ResetLabels"] == "Beschriftungen zurücksetzen"
 

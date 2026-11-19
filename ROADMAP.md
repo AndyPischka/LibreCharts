@@ -73,12 +73,12 @@ through Weblate (ADR 0031).
 
 | | Milestone | Content | Status |
 |---|---|---|---|
-| M22 | Labels and emphasis | Hide, rewrite or reposition single labels; a focus mode that mutes the rest; callouts and a source line; font size and legend placement (builds on ADR 0023) | planned |
-| M23 | Axes and trends | Manual axis limits, tick interval and axis titles; a logarithmic axis; trendlines and forecasts with R² and an optional confidence band | planned |
-| M24 | Comparison and distribution charts | Dumbbell/slope, bullet, Pareto, funnel and box plot charts, reusing the scatter, floating-bar and column layouts | planned |
-| M25 | Table and matrix | A styled table element with Harvey balls, check marks, sparklines and heatmap cells; a data table under a chart; a 2×2 matrix with labelled axes and quadrants | planned |
-| M26 | Layout tools | Distribute shapes evenly, equal gaps, align edges and to the slide; process, pyramid and chevron graphics; a built-in icon set | planned |
-| M27 | Chart templates | Save a chart's kind, options, format, colours, annotations and sample data as a template; insert it from the sidebar or the command line | planned |
+| M22 | Labels and emphasis | Hide, rewrite or reposition single labels; a focus mode that mutes the rest; callouts and a source line; font size and legend placement (builds on ADR 0023) | done |
+| M23 | Axes and trends | Manual axis limits, tick interval and axis titles; a logarithmic axis; trendlines and forecasts with R² and an optional confidence band | done |
+| M24 | Comparison and distribution charts | Dumbbell/slope, bullet, Pareto, funnel and box plot charts, reusing the scatter, floating-bar and column layouts | done |
+| M25 | Table and matrix | A styled table element with Harvey balls, check marks, sparklines and heatmap cells; a data table under a chart; a 2×2 matrix with labelled axes and quadrants | done |
+| M26 | Layout tools | Distribute shapes evenly, equal gaps, align edges and to the slide; process, pyramid and chevron graphics; a built-in icon set | done |
+| M27 | Chart templates | Save a chart's kind, options, format, colours, annotations and sample data as a template; insert it from the sidebar or the command line | done |
 
 Plans: [M22](docs/plans/labels-and-emphasis.md), [M23](docs/plans/axes-and-trends.md),
 [M24](docs/plans/comparison-charts.md), [M25](docs/plans/table-and-matrix.md),
@@ -88,9 +88,9 @@ Plans: [M22](docs/plans/labels-and-emphasis.md), [M23](docs/plans/axes-and-trend
 
 | | Milestone | Content | Status |
 |---|---|---|---|
-| M28 | Data workflow | Import CSV, ODS or XLSX into any data sheet; insert a chart from copied cells; update data links on open; one shared source for several charts | planned |
-| M29 | Automation round-trip and audit | Export an existing deck as a deck specification; audit a deck (charts, links, stale sources, design deviations, support data) with jump-to-slide; batch format and data operations | planned |
-| M30 | Design and accessibility | Extend the corporate design check to master slides, layouts and pictures; a report dialog; theme colours and fonts; colour-blindness simulation; alternative text for every element; a palette editor | planned |
+| M28 | Data workflow | Import CSV, ODS or XLSX into any data sheet; insert a chart from copied cells; update data links on open; one shared source for several charts | done |
+| M29 | Automation round-trip and audit | Export an existing deck as a deck specification; audit a deck (charts, links, stale sources, design deviations, support data) with jump-to-slide; batch format and data operations | started |
+| M30 | Design and accessibility | Extend the corporate design check to master slides, layouts and pictures; a report dialog; theme colours and fonts; colour-blindness simulation; alternative text for every element; a palette editor | started |
 
 Plans: [M28](docs/plans/data-workflow.md), [M29](docs/plans/automation-roundtrip.md),
 [M30](docs/plans/design-and-accessibility.md).

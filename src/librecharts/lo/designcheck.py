@@ -80,6 +80,12 @@ def collect(doc: Any) -> tuple[list[core.ShapeInfo], dict[tuple[int, tuple[int, 
         page = pages.getByIndex(slide)
         for index in range(page.getCount()):
             _visit(page.getByIndex(index), slide, (index,), shapes, handles, top=True)
+    # Master slides and layouts carry their own shapes; negative indices keep them apart.
+    masters = doc.getMasterPages()
+    for index in range(masters.getCount()):
+        page = masters.getByIndex(index)
+        for child in range(page.getCount()):
+            _visit(page.getByIndex(child), -1 - index, (child,), shapes, handles, top=True)
     return shapes, handles
 
 

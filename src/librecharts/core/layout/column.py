@@ -30,26 +30,31 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 
 from librecharts.core import annotations as notes
+from librecharts.core import trend as trends_module
 from librecharts.core import value_line
 from librecharts.core.axis_break import Break, column_tops, resolve
 from librecharts.core.axis_break import axis as shortened_axis
 from librecharts.core.datasheet import ChartData, with_error_margins, with_from_levels
 from librecharts.core.layout.common import (
     AXIS_BAND,
+    AXIS_TITLE_BAND,
     GAP_RATIO,
     GAP_WIDTH,
     LABEL_HEIGHT,
-    LEGEND_HEIGHT,
     LEVEL_ARROW_INSET,
     LEVEL_LABEL_GAP,
     LEVEL_LANE_WIDTH,
     TICK_GAP,
     TICK_HEIGHT,
+    axis_title,
+    baseline_cut,
     bracket,
+    category_title,
     column_top,
     format_value,
     group_bracket,
     legend,
+    legend_insets,
     level_arrow,
     point_runs,
     slot_at,
@@ -62,7 +67,7 @@ from librecharts.core.layout.common import (
 from librecharts.core.layout.common import (
     MIN_ARROW_LABEL_WIDTH as MIN_ARROW_LABEL_WIDTH,
 )
-from librecharts.core.model import Annotation, Format, Grouping, LabelKey
+from librecharts.core.model import Annotation, Format, Grouping, LabelKey, Trend
 from librecharts.core.percent import column_total, negative_total
 from librecharts.core.primitives import (
     BACKGROUND,
@@ -82,6 +87,8 @@ PERCENT_AXIS = Axis(0.0, 100.0, 20.0)  # the fixed scale of a 100 % chart
 TOP_BAND = 800.0  # room above the plot for total / outside value labels
 CATEGORY_BAND = 1000.0  # room below the plot for category names
 MIN_SEGMENT_FOR_LABEL = 500.0  # segments flatter than this get no inside label
+TREND_LABEL_GAP = 150.0  # between a trendline's end and its R² label
+TREND_LABEL_WIDTH = 3000.0
 LANE_HEIGHT = 800.0  # room for one arrow above the plot: its label and line
 LANE_LINE_GAP = 100.0  # between an arrow's line and the bottom of its lane, or a column's label
 SERIES_BAND = 2600.0  # room right of the lanes for series names
@@ -142,6 +149,7 @@ def layout_column(
     length_per_unit: float | None = None,
     bases: tuple[tuple[float | None, ...], ...] | None = None,
     errors: tuple[tuple[float | None, ...], ...] | None = None,
+    trends: tuple[Trend, ...] = (),
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
@@ -192,6 +200,7 @@ def layout_column(
 
     def y(value: float) -> float:
         """The y of a value already on the (folded) axis scale."""
+        value = max(value, axis.minimum)
         if geo.length_per_unit is not None:
             return geo.top_band + geo.scale_height - (value - axis.minimum) * geo.length_per_unit
         return geo.top_band + (axis.maximum - value) / span * geo.scale_height
@@ -223,7 +232,7 @@ def layout_column(
 
     out: list[Primitive] = []
     if fmt.series_names == "legend":
-        out.extend(legend([s.name for s in data.series], width))
+        out.extend(legend([s.name for s in data.series], width, fmt.legend, height))
     out.append(Line(geo.plot_left, y(0), geo.plot_left + geo.plot_width, y(0), "baseline"))
     if fmt.axis:
         out.extend(_grid(axis, cut, y, geo.plot_left, geo.plot_width) if fmt.gridlines else [])
@@ -232,6 +241,21 @@ def layout_column(
         out.extend(
             _right_axis(geo.secondary_axis, y_secondary, geo.plot_left + geo.plot_width, fmt)
         )
+    if fmt.axis_title:
+        out.extend(
+            axis_title(fmt, 0.0, geo.top_band, AXIS_TITLE_BAND, geo.scale_height, rotated=True)
+        )
+    if fmt.category_axis_title:
+        out.extend(
+            category_title(
+                fmt,
+                geo.plot_left,
+                geo.top_band + geo.plot_height + CATEGORY_BAND,
+                geo.plot_width,
+            )
+        )
+    if axis.minimum > 0:
+        out.extend(baseline_cut(geo.plot_left, geo.top_band + geo.scale_height))
 
     for c, category in enumerate(data.categories):
         left = slot_x(c)
@@ -333,7 +357,7 @@ def layout_column(
         """The series the arrow's end measures: its own, or the start's when it has none."""
         return arrow.series_end if arrow.series_end is not None else arrow.series
 
-    lanes_top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    lanes_top = legend_insets(fmt)[1]
     lanes = (len(geo.brackets) + len(geo.groups)) * LANE_HEIGHT
     for lane, arrow in enumerate(geo.brackets):
         line_y = lanes_top + lanes - lane * LANE_HEIGHT - LANE_LINE_GAP
@@ -389,6 +413,39 @@ def layout_column(
         out.extend(
             _series_names(columns_data, grouping, column_indices, y_data, band_x, line_names)
         )
+    if grouping == "clustered" and not percent and geo.bases is None:
+        for item in trends:
+            if item.series >= len(data.series):
+                continue
+            points = trends_module.points_of(data.series[item.series].values)
+            try:
+                fitted = trends_module.fit(points, item.kind)
+            except ValueError:
+                fitted = None
+            if fitted is None:
+                continue
+            first, last = int(points[0][0]), int(points[-1][0])
+            out.append(
+                Polyline(
+                    (
+                        (centre(first), y_data(fitted.value(first))),
+                        (centre(last), y_data(fitted.value(last))),
+                    ),
+                    item.series,
+                )
+            )
+            if item.show_r2 or item.show_equation:
+                out.append(
+                    Text(
+                        centre(last) + TREND_LABEL_GAP,
+                        y_data(fitted.value(last)) - LABEL_HEIGHT / 2,
+                        TREND_LABEL_WIDTH,
+                        LABEL_HEIGHT,
+                        trends_module.label(fitted, fmt, equation=item.show_equation),
+                        "left",
+                        "annotation",
+                    )
+                )
     return tuple(out)
 
 
@@ -465,20 +522,24 @@ def _geometry(
         value_lines = notes.value_lines(annotations, columns_data, "column")
         gaps = notes.category_gaps(annotations, columns_data, "column")
         groups = notes.group_brackets(annotations, columns_data, "column")
-    lanes_top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    inset_left, inset_top, inset_right, inset_bottom = legend_insets(fmt)
+    lanes_top = inset_top
     top_band = lanes_top + (len(brackets) + len(groups)) * LANE_HEIGHT + TOP_BAND
-    plot_left = AXIS_BAND if fmt.axis else 0.0
+    title_band = AXIS_TITLE_BAND if fmt.axis_title else 0.0
+    category_band = AXIS_TITLE_BAND if fmt.category_axis_title else 0.0
+    plot_left = inset_left + title_band + (AXIS_BAND if fmt.axis else 0.0)
     right_lanes = len(levels) + len(value_lines)
     series_band = SERIES_BAND if fmt.series_names == "labels" else 0.0
     secondary_axis = _secondary_axis(data, secondary_set)
     plot_width = (
         width
         - plot_left
+        - inset_right
         - right_lanes * LEVEL_LANE_WIDTH
         - series_band
         - (AXIS_BAND if secondary_axis is not None else 0.0)
     )
-    plot_height = height - top_band - CATEGORY_BAND
+    plot_height = height - top_band - inset_bottom - CATEGORY_BAND - category_band
     # Floating bars: the scale covers the from levels as well, and the bars measure clustered.
     # Error bars: the scale covers value ± error as well.
     if bases is not None:
@@ -513,7 +574,7 @@ def _geometry(
         axis = (
             shortened_axis(scale_data, scale_grouping, cut)
             if cut
-            else value_axis(scale_data, scale_grouping)
+            else value_axis(scale_data, scale_grouping, fmt)
         )
     primary_lines = tuple(i for i in sorted(line_set) if i not in secondary_set)
     axis = _with_line_values(axis, data, primary_lines, fold)
@@ -717,7 +778,10 @@ def _line_series(
         Polyline(tuple(run), index) for run in point_runs(points, series.values)
     ]
     if fmt.markers:
-        out.extend(Marker(x, py, index) for x, py in points)
+        categories = [c for c, value in enumerate(series.values) if value is not None]
+        out.extend(
+            Marker(x, py, index, category=c) for (x, py), c in zip(points, categories, strict=True)
+        )
     for c, value in enumerate(series.values):
         if value is None:
             continue
@@ -855,14 +919,17 @@ def column_at(
     gaps = notes.category_gaps(annotations, columns_data, "column")
     groups = notes.group_brackets(annotations, columns_data, "column")
     gap_starts = tuple(sorted({gap.start for gap in gaps}))
-    lanes_top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
-    plot_left = AXIS_BAND if fmt.axis else 0.0
+    inset_left, lanes_top, inset_right, _ = legend_insets(fmt)
+    plot_left = (
+        inset_left + (AXIS_TITLE_BAND if fmt.axis_title else 0.0) + (AXIS_BAND if fmt.axis else 0.0)
+    )
     series_band = SERIES_BAND if fmt.series_names == "labels" else 0.0
     secondary_axis = _secondary_axis(data, frozenset(i for i in secondary if i in line_set))
     secondary_band = AXIS_BAND if secondary_axis is not None else 0.0
     plot_width = (
         width
         - plot_left
+        - inset_right
         - (len(levels) + len(value_lines)) * LEVEL_LANE_WIDTH
         - series_band
         - secondary_band
@@ -1005,7 +1072,7 @@ def _stacked_column(
         else:
             top, bottom = y(fold(negative)), y(fold(negative + value))
             negative += value
-        out.append(Rect(x, top, width, bottom - top, i))
+        out.append(Rect(x, top, width, bottom - top, i, category=c))
         # Always emit the label right after its segment: the primitive structure must not depend
         # on the size, so a resized chart can be re-laid out in place (lo/render.py). A segment
         # too flat to hold its label gets a slot in the lane at its outer end instead (M16
@@ -1094,7 +1161,7 @@ def _percent_column(
         height = (value or 0.0) / total * 100
         top, bottom = y(level + height), y(level)
         level += height
-        out.append(Rect(x, top, width, bottom - top, i))
+        out.append(Rect(x, top, width, bottom - top, i, category=c))
         # Always emit the label: the structure must not depend on the size. A segment too flat to
         # hold its label gets a slot in the lane above the column instead (M16 decluttering).
         if bottom - top >= MIN_SEGMENT_FOR_LABEL:
@@ -1155,7 +1222,7 @@ def _clustered_column(
         bar_x = x + drawn * bar_width
         drawn += 1
         top, bottom = (y(fold(value)), y(0)) if value >= 0 else (y(0), y(fold(value)))
-        out.append(Rect(bar_x, top, bar_width, bottom - top, i))
+        out.append(Rect(bar_x, top, bar_width, bottom - top, i, category=c))
         label_y = top - LABEL_HEIGHT if value >= 0 else bottom
         out.append(
             Text(
@@ -1260,7 +1327,7 @@ def _range_column(
         base = 0.0 if base is None else base  # an empty from cell means the baseline
         bar_x = x + i * bar_width
         top, bottom = y(fold(max(to, base))), y(fold(min(to, base)))
-        out.append(Rect(bar_x, top, bar_width, bottom - top, i))
+        out.append(Rect(bar_x, top, bar_width, bottom - top, i, category=c))
         label_y = top - LABEL_HEIGHT if to >= base else bottom
         out.append(
             Text(

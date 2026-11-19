@@ -99,11 +99,13 @@ def default_format(kind: str, grouping: Grouping, locale: str) -> Format:
 def supports(state: ChartState, option: str) -> bool:
     """Whether the chart kind (and variant) has the format option."""
     if option == "axis":  # a scatter chart always has its axes, a Gantt chart its date scale
-        return state.kind not in ("pie", "scatter", "gantt") and (
+        return state.kind not in ("pie", "scatter", "gantt", "table", "matrix") and (
             state.kind != "mekko" or not state.percent
         )
     if option == "gridlines":
-        return state.kind != "pie" and (state.kind != "mekko" or not state.percent)
+        return state.kind not in ("pie", "table", "matrix") and (
+            state.kind != "mekko" or not state.percent
+        )
     if option == "series_names":
         return state.kind in ("column", "bar", "mekko", "line", "area", "pie")
     if option == "markers":
@@ -112,6 +114,19 @@ def supports(state: ChartState, option: str) -> bool:
         return True
     if option == "number_format":  # a Gantt chart shows dates, no numbers
         return state.kind != "gantt"
+    if option == "font_size":  # every chart draws text; source and notes included
+        return True
+    if option == "legend":
+        return supports(state, "series_names")
+    if option in (
+        "axis_min",
+        "axis_max",
+        "axis_step",
+        "axis_scale",
+        "axis_title",
+        "category_axis_title",
+    ):
+        return state.kind not in ("pie", "gantt", "table", "matrix")
     return False
 
 
@@ -148,6 +163,34 @@ def changed(current: Format, query: str) -> Format:
         if value not in ("none", "labels", "legend"):
             raise ValueError(f"series_names must be none, labels or legend, not {value!r}")
         return replace(current, series_names=value)
+    if key == "legend":
+        if value not in ("top", "right", "bottom", "left"):
+            raise ValueError(f"legend must be top, right, bottom or left, not {value!r}")
+        return replace(current, legend=value)
+    if key == "font_size":
+        if value in ("", "auto", "none"):
+            return replace(current, font_size=None)
+        try:
+            size = float(value)
+        except ValueError as exc:
+            raise ValueError(f"font_size must be a number, not {value!r}") from exc
+        return replace(current, font_size=size)
+    if key in ("axis_min", "axis_max", "axis_step"):
+        if value in ("", "auto", "none"):
+            return replace(current, **{key: None})
+        try:
+            number = float(value)
+        except ValueError as exc:
+            raise ValueError(f"{key} must be a number, not {value!r}") from exc
+        return replace(current, **{key: number})
+    if key == "axis_scale":
+        if value not in ("linear", "log"):
+            raise ValueError(f"axis_scale must be linear or log, not {value!r}")
+        return replace(current, axis_scale=value)
+    if key in ("axis_title", "category_axis_title"):
+        if len(value) > 80:
+            raise ValueError(f"{key} must be at most 80 characters")
+        return replace(current, **{key: value})
     raise ValueError(f"unknown format option: {key!r}")
 
 
@@ -157,6 +200,31 @@ def settled(state: ChartState, current: Format, query: str) -> Format:
     if not supports(state, key):
         raise ValueError(f"a {state.kind} chart has no {key} option")
     return changed(current, query)
+
+
+def axes(current: Format, values: Mapping[str, str]) -> Format:
+    """The format after the axis dialog's fields; invalid values raise ``ValueError``.
+
+    ``axis_min``, ``axis_max`` and ``axis_step`` accept an empty string for automatic.
+    """
+    fields: dict[str, Any] = {}
+    for key in ("axis_min", "axis_max", "axis_step"):
+        if key in values:
+            text = values[key].strip()
+            if not text or text.lower() in ("auto", "automatic", "automatisch"):
+                fields[key] = None
+            else:
+                try:
+                    fields[key] = float(text.replace(",", "."))
+                except ValueError as exc:
+                    raise ValueError(f"{key} must be a number") from exc
+    if "axis_scale" in values:
+        fields["axis_scale"] = values["axis_scale"]
+    if "axis_title" in values:
+        fields["axis_title"] = values["axis_title"]
+    if "category_axis_title" in values:
+        fields["category_axis_title"] = values["category_axis_title"]
+    return replace(current, **fields)
 
 
 def apply(target: ChartState, source: ChartState) -> ChartState:

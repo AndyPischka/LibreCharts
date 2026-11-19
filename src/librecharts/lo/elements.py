@@ -77,6 +77,7 @@ def insert(doc: Any, page: Any, element: Element) -> Any:
             render.Look(scheme.load(doc)),
         )
         group.Name = elements.name(element)
+        render.describe(group, _alt_title(element), _alt_title(element))
     undo.add_action(
         doc,
         "Insert LibreCharts element",
@@ -84,6 +85,14 @@ def insert(doc: Any, page: Any, element: Element) -> Any:
         redo=lambda: page.add(group),
     )
     return group
+
+
+def _alt_title(element: Element) -> str:
+    from librecharts.core.messages import text
+
+    if element.kind == "harvey":
+        return text("alt_harvey", "en", level=element.value)
+    return text(f"alt_check_{element.value}", "en")
 
 
 def change(doc: Any, changes: dict[Any, Element]) -> None:

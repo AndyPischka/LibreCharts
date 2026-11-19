@@ -131,7 +131,7 @@ def test_patterns_are_a_format_switch_of_every_chart() -> None:
 def test_patterns_survive_saving_and_old_states_load_without_them() -> None:
     state = replace(sample_state(), format=Format(patterns=True))
     assert from_json(to_json(state)).format.patterns
-    old = to_json(sample_state()).replace('"v":16', '"v":15').replace(',"patterns":false', "")
+    old = to_json(sample_state()).replace('"v":21', '"v":15').replace(',"patterns":false', "")
     assert not from_json(old).format.patterns
 
 

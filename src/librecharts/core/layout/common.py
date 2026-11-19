@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING
 
 from librecharts.core.datasheet import ChartData
 from librecharts.core.format import magnitude_suffix
-from librecharts.core.model import Format, Grouping
+from librecharts.core.model import ChartState, Format, Grouping
 from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
-from librecharts.core.scale import Axis, nice_axis
+from librecharts.core.scale import Axis, manual_axis, nice_axis
 
 if TYPE_CHECKING:
     from librecharts.core.axis_break import Break
@@ -19,11 +20,17 @@ GAP_WIDTH = 500.0  # the wider empty space a category gap opens between two slot
 BRACKET_TICK = 200.0  # how far the end ticks of a group bracket drop below its line
 
 AXIS_BAND = 1600.0  # room left of (below, for bars) the plot for tick labels
+AXIS_TITLE_BAND = 700.0  # room for a rotated value-axis title or a category-axis title
 TICK_HEIGHT = 500.0  # height of one tick label box
 TICK_GAP = 100.0  # between the plot edge and the tick label
-LEGEND_HEIGHT = 800.0  # band above the plot for a legend
+LEGEND_HEIGHT = 800.0  # band above (or below) the plot for a horizontal legend
+LEGEND_COLUMN = 2600.0  # band left or right of the plot for a vertical legend
+LEGEND_ROW = 600.0  # height of one entry of a vertical legend
 SWATCH = 250.0  # legend colour swatch
 SWATCH_GAP = 120.0  # between a legend swatch and its text
+SOURCE_BAND = 900.0  # footer band reserved by a chart-level source line
+NOTE_WIDTH = 5000.0  # width of a free callout text box
+NOTE_HEIGHT = 600.0  # height of a free callout text box
 AXIS_BREAK_GAP = 300.0  # height of the white gap of a vertical axis break mark
 AXIS_BREAK_SLANT = 100.0  # how far the break lines fall from left to right
 
@@ -81,8 +88,19 @@ def column_top(data: ChartData, grouping: Grouping, category: int, series: int |
     return sum(v for v in values if v > 0)
 
 
-def value_axis(data: ChartData, grouping: Grouping) -> Axis:
-    """The value range covering all segments (stacked: per-category sums), always including zero."""
+def value_axis(
+    data: ChartData,
+    grouping: Grouping,
+    fmt: Format | None = None,
+    *,
+    include_zero: bool = True,
+) -> Axis:
+    """The value range of the data, with the format's manual limits and scale (M23).
+
+    ``include_zero`` keeps the baseline visible, which column and bar charts need. A logarithmic
+    axis rejects non-positive data: the dialog never lets the user switch such a chart.
+    """
+    fmt = fmt or Format()
     if grouping == "stacked":
         lows: list[float] = []
         highs: list[float] = []
@@ -90,9 +108,74 @@ def value_axis(data: ChartData, grouping: Grouping) -> Axis:
             column = [v for s in data.series if (v := s.values[c]) is not None]
             lows.append(sum(v for v in column if v < 0))
             highs.append(sum(v for v in column if v > 0))
-        return nice_axis(min(lows), max(highs))
-    values = [v for s in data.series for v in s.values if v is not None]
-    return nice_axis(min(values, default=0.0), max(values, default=0.0))
+    else:
+        values = [v for s in data.series for v in s.values if v is not None]
+        lows = [min(values, default=0.0)]
+        highs = [max(values, default=0.0)]
+    low, high = min(lows, default=0.0), max(highs, default=0.0)
+    if fmt.axis_scale == "log":
+        positive = [v for v in (*lows, *highs) if v > 0]
+        if not positive or low <= 0 or high <= 0:
+            raise ValueError("a logarithmic axis needs positive data")
+        fallback = Axis(low, high, _log_step(low, high), "log")
+    else:
+        fallback = nice_axis(low, high, include_zero=include_zero)
+    if fmt.axis_min is None and fmt.axis_max is None and fmt.axis_scale == "linear":
+        return fallback
+    return manual_axis(
+        fmt.axis_min,
+        fmt.axis_max,
+        fmt.axis_step,
+        scale=fmt.axis_scale,
+        fallback=fallback,
+    )
+
+
+def _log_step(low: float, high: float) -> float:
+    """A representative step of a log axis, used when the user did not give one."""
+    return max(10.0 ** math.floor(math.log10(low)), (high - low) / 5)
+
+
+def axis_title(
+    fmt: Format, x: float, y: float, width: float, height: float, *, rotated: bool
+) -> list[Primitive]:
+    """The value-axis title in a band left of (or below) the plot (M23)."""
+    if not fmt.axis_title:
+        return []
+    return [
+        Text(x, y, width, height, fmt.axis_title, "center", "axis", rotation=90 if rotated else 0)
+    ]
+
+
+def category_title(fmt: Format, x: float, y: float, width: float) -> list[Primitive]:
+    """The category-axis title below the category names (M23)."""
+    if not fmt.category_axis_title:
+        return []
+    return [
+        Text(
+            x,
+            y,
+            width,
+            AXIS_TITLE_BAND,
+            fmt.category_axis_title,
+            "center",
+            "axis",
+        )
+    ]
+
+
+def baseline_cut(x: float, y: float, *, vertical: bool = True) -> list[Primitive]:
+    """A small cut mark at the foot of an axis that starts above zero (M23)."""
+    size = 250.0
+    if vertical:
+        return [
+            Rect(x - size / 2, y - size / 2, size, size, BACKGROUND),
+            Line(x - size / 2, y + size / 2, x + size / 2, y - size / 2, "axis"),
+        ]
+    return [
+        Rect(x - size / 2, y - size / 2, size, size, BACKGROUND),
+        Line(x + size / 2, y - size / 2, x - size / 2, y + size / 2, "axis"),
+    ]
 
 
 def visible_ticks(axis: Axis, cut: Break | None = None) -> list[float]:
@@ -100,13 +183,56 @@ def visible_ticks(axis: Axis, cut: Break | None = None) -> list[float]:
     return [t for t in axis.ticks() if cut is None or not (cut.lower < t < cut.upper)]
 
 
-def legend(names: Sequence[str], width: float) -> list[Primitive]:
-    """A horizontal legend in the band ``0..LEGEND_HEIGHT`` across ``width``."""
+def legend_insets(fmt: Format | None = None) -> tuple[float, float, float, float]:
+    """Left, top, right and bottom space a chart's legend takes from the plot box."""
+    fmt = fmt or Format()
+    if fmt.series_names != "legend":
+        return 0.0, 0.0, 0.0, 0.0
+    if fmt.legend == "bottom":
+        return 0.0, 0.0, 0.0, LEGEND_HEIGHT
+    if fmt.legend == "left":
+        return LEGEND_COLUMN, 0.0, 0.0, 0.0
+    if fmt.legend == "right":
+        return 0.0, 0.0, LEGEND_COLUMN, 0.0
+    return 0.0, LEGEND_HEIGHT, 0.0, 0.0
+
+
+def legend(
+    names: Sequence[str], width: float, position: str = "top", height: float = 0.0
+) -> list[Primitive]:
+    """A legend in ``position``: horizontal above or below the plot, or a vertical column.
+
+    The caller reserves the band with :func:`legend_insets`; ``width`` and ``height`` are the full
+    chart box, so the legend lands on the correct edge.
+    """
     if not names:
         return []
+    if position in ("left", "right"):
+        x = 0.0 if position == "left" else width - LEGEND_COLUMN
+        row = min(LEGEND_ROW, height / len(names)) if height else LEGEND_ROW
+        out: list[Primitive] = []
+        for i, name in enumerate(names):
+            top = i * row + (row - SWATCH) / 2
+            out.append(Rect(x, top, SWATCH, SWATCH, i))
+            out.append(
+                Text(
+                    x + SWATCH + SWATCH_GAP,
+                    top,
+                    max(LEGEND_COLUMN - SWATCH - SWATCH_GAP, 0.0),
+                    SWATCH,
+                    name,
+                    "left",
+                    "series",
+                )
+            )
+        return out
     entry = width / len(names)
-    top = (LEGEND_HEIGHT - SWATCH) / 2
-    out: list[Primitive] = []
+    top = (
+        height - LEGEND_HEIGHT + (LEGEND_HEIGHT - SWATCH) / 2
+        if position == "bottom"
+        else (LEGEND_HEIGHT - SWATCH) / 2
+    )
+    out = []
     for i, name in enumerate(names):
         x = i * entry
         out.append(Rect(x, top, SWATCH, SWATCH, i))
@@ -119,6 +245,43 @@ def legend(names: Sequence[str], width: float) -> list[Primitive]:
                 name,
                 "left",
                 "series",
+            )
+        )
+    return out
+
+
+def decorations(
+    state: ChartState, width: float, height: float, source_band: float
+) -> list[Primitive]:
+    """The source line and free notes of ``state`` (M22).
+
+    ``source_band`` is the footer reserved for the source; notes are anchored at fractions of the
+    full layout box, so they stay where the author put them when the chart is resized.
+    """
+    out: list[Primitive] = []
+    if state.source:
+        out.append(
+            Text(
+                0.0,
+                height - source_band,
+                width,
+                source_band,
+                state.source,
+                "left",
+                "axis",
+            )
+        )
+    for index, note in enumerate(state.notes):
+        out.append(
+            Text(
+                note.x * width,
+                note.y * height,
+                NOTE_WIDTH,
+                NOTE_HEIGHT,
+                note.text,
+                "left",
+                "note",
+                name=f"librecharts-note:{index}",
             )
         )
     return out

@@ -11,7 +11,7 @@ from typing import Literal
 
 from librecharts.core.model import LabelKey
 
-TextRole = Literal["value", "total", "category", "series", "annotation", "axis", "heading"]
+TextRole = Literal["value", "total", "category", "series", "annotation", "axis", "heading", "note"]
 LineRole = Literal["baseline", "connector", "annotation", "helper", "axis", "grid"]
 Align = Literal["left", "center", "right"]
 
@@ -23,6 +23,8 @@ class Rect:
     width: float
     height: float
     series: int  # index into ChartData.series, selects the fill colour; or BACKGROUND, SHADE
+    category: int | None = None  # data sheet category, for focus muting (M22)
+    muted: bool = False  # outside the chart's focus: draw the colour towards the background
 
 
 BACKGROUND = -1  # Rect.series of gaps cut into other shapes (axis breaks): slide background
@@ -45,6 +47,8 @@ class Line:
     y2: float
     role: LineRole
     arrow: bool = False  # arrowhead at (x2, y2)
+    category: int | None = None  # data sheet category, for focus muting (M22)
+    muted: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +73,9 @@ class Text:
     fill: int | None = None
     key: LabelKey | None = None
     hidden: bool = False
+    muted: bool = False
+    name: str = ""  # shape name in the chart group (a note's index, for a drag session)
+    rotation: int = 0  # degrees clockwise; 90 for a rotated value-axis title (M23)
 
     @property
     def shown(self) -> str:
@@ -86,6 +93,9 @@ class Polyline:
 
     points: tuple[tuple[float, float], ...]
     series: int
+    category: int | None = None
+    muted: bool = False
+    dashed: bool = False  # a trendline or forecast is dashed (M23)
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,6 +109,8 @@ class Polygon:
     points: tuple[tuple[float, float], ...]
     series: int
     outline: bool = False
+    category: int | None = None
+    muted: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,6 +120,8 @@ class Marker:
     x: float
     y: float
     series: int
+    category: int | None = None
+    muted: bool = False
 
 
 MARKER_SIZE = 250.0  # diameter of a point marker, 1/100 mm; the renderer keeps it fixed on resize
@@ -125,6 +139,8 @@ class Bubble:
     y: float
     diameter: float
     series: int
+    category: int | None = None
+    muted: bool = False
 
 
 Primitive = Rect | Line | Text | Polyline | Polygon | Marker | Bubble

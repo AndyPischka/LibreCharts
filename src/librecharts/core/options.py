@@ -22,9 +22,10 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from urllib.parse import parse_qs
 
+from librecharts.core import focus
 from librecharts.core.model import ChartState, Grouping, SortOrder
 
-SORTABLE = frozenset({"column", "bar", "butterfly", "gantt", "pie"})  # chart kinds that sort
+SORTABLE = frozenset({"column", "bar", "butterfly", "gantt", "pie", "dumbbell"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,17 +66,38 @@ def variants(state: ChartState) -> tuple[Switch, ...]:
             Switch("menu_error_bars", "ChangeChart?errors=true", state.errors),
             Switch("menu_no_error_bars", "ChangeChart?errors=false", not state.errors),
         )
+    if state.kind == "dumbbell":
+        return (
+            Switch("menu_dumbbell_horizontal", "ChangeChart?horizontal=true", state.horizontal),
+            Switch("menu_dumbbell_vertical", "ChangeChart?horizontal=false", not state.horizontal),
+        )
     if state.kind not in ("column", "bar"):
         return ()
     if state.range:  # floating bars are always clustered and draw from their from level
         return (Switch("menu_baseline", "ChangeChart?range=false", True),)
     clustered = state.grouping == "clustered"
+    typical = (
+        []
+        if state.pareto
+        else [
+            Switch(
+                "menu_stacked",
+                "ChangeChart?grouping=stacked",
+                not clustered and not state.percent,
+            ),
+            Switch("menu_clustered", "ChangeChart?grouping=clustered", clustered),
+            Switch("menu_percent", "ChangeChart?percent=true", state.percent),
+        ]
+    )
     switches = [
-        Switch("menu_stacked", "ChangeChart?grouping=stacked", not clustered and not state.percent),
-        Switch("menu_clustered", "ChangeChart?grouping=clustered", clustered),
-        Switch("menu_percent", "ChangeChart?percent=true", state.percent),
+        *typical,
+        Switch(
+            "menu_pareto_off" if state.pareto else "menu_pareto",
+            f"ChangeChart?pareto={'false' if state.pareto else 'true'}",
+            state.pareto,
+        ),
     ]
-    if not state.percent:
+    if not state.pareto and not state.percent:
         switches += [
             Switch("menu_floating", "ChangeChart?range=true", state.range),
             Switch("menu_baseline", "ChangeChart?range=false", not state.range),
@@ -172,6 +194,8 @@ def changed(state: ChartState, query: str) -> ChartState:
     not have.
     """
     args = {key: values[-1] for key, values in parse_qs(query, strict_parsing=True).items()}
+    if "focus" in args or set(args) == {"clear"}:
+        return focus.changed(state, query)
     if len(args) == 1:
         key, value = next(iter(args.items()))
     elif set(args) == {"line", "on"}:
@@ -188,6 +212,8 @@ def changed(state: ChartState, query: str) -> ChartState:
         return _variant(state, _percent(state, value))
     if key == "doughnut":
         return _variant(state, _doughnut(state, value))
+    if key == "pareto":
+        return _variant(state, _pareto(state, value))
     if key in ("range", "errors", "horizontal", "stacked"):
         return _flag(state, key, value)
     if key == "working":
@@ -250,6 +276,26 @@ def _doughnut(state: ChartState, value: str) -> ChartState:
     return replace(state, doughnut=enabled)
 
 
+def _pareto(state: ChartState, value: str) -> ChartState:
+    enabled = {"true": True, "false": False}.get(value)
+    if enabled is None:
+        raise ValueError(f"pareto must be true or false, not {value!r}")
+    if state.kind not in ("column", "bar"):
+        raise ValueError(f"a {state.kind} chart has no Pareto option")
+    if enabled:
+        return replace(
+            state,
+            pareto=True,
+            grouping="clustered",
+            percent=False,
+            range=False,
+            errors=False,
+            lines=(),
+            secondary=(),
+        )
+    return replace(state, pareto=False)
+
+
 def _flag(state: ChartState, key: str, value: str) -> ChartState:
     """Switch a boolean variant on or off (``range=true``); invalid combinations raise."""
     enabled = {"true": True, "false": False}.get(value)
@@ -258,7 +304,7 @@ def _flag(state: ChartState, key: str, value: str) -> ChartState:
     allowed = {
         "range": ("column", "bar"),
         "errors": ("column", "bar", "line"),
-        "horizontal": ("waterfall",),
+        "horizontal": ("waterfall", "dumbbell"),
         "stacked": ("waterfall",),
     }
     if state.kind not in allowed[key]:

@@ -7,10 +7,25 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 21
 
 ChartKind = Literal[
-    "column", "bar", "waterfall", "mekko", "line", "area", "pie", "scatter", "butterfly", "gantt"
+    "column",
+    "bar",
+    "waterfall",
+    "mekko",
+    "line",
+    "area",
+    "pie",
+    "scatter",
+    "butterfly",
+    "gantt",
+    "dumbbell",
+    "bullet",
+    "funnel",
+    "boxplot",
+    "table",
+    "matrix",
 ]
 Grouping = Literal["stacked", "clustered"]
 SortOrder = Literal["none", "descending", "ascending"]
@@ -20,6 +35,8 @@ AnnotationKind = Literal[
 ArrowStyle = Literal["bracket", "level"]
 LabelMode = Literal["percent", "absolute"]
 SeriesNames = Literal["none", "labels", "legend"]
+LegendPosition = Literal["top", "right", "bottom", "left"]
+AxisScale = Literal["linear", "log"]
 Magnitude = Literal[0, 3, 6, 9]
 Separator = Literal[".", ","]
 LabelRole = Literal["value", "total"]
@@ -48,10 +65,24 @@ class Format:
     language: str = "en"
     markers: bool = True  # point markers on line series
     patterns: bool = False  # hatch fills and dashed lines beside the colours (M20, ADR 0030)
+    font_size: float | None = None  # per-chart override of the scheme font size (M22)
+    legend: LegendPosition = "top"  # where the legend of ``series_names == "legend"`` sits
+    axis_min: float | None = None  # manual primary value-axis bounds (M23)
+    axis_max: float | None = None
+    axis_step: float | None = None
+    axis_scale: AxisScale = "linear"
+    axis_title: str = ""
+    category_axis_title: str = ""
 
     def __post_init__(self) -> None:
         if self.series_names not in get_args(SeriesNames):
             raise ValueError(f"unknown series name mode: {self.series_names!r}")
+        if self.legend not in get_args(LegendPosition):
+            raise ValueError(f"unknown legend position: {self.legend!r}")
+        if self.font_size is not None and (
+            not math.isfinite(self.font_size) or not 4.0 <= self.font_size <= 72.0
+        ):
+            raise ValueError("the font size must be None or between 4 and 72 points")
         if not isinstance(self.markers, bool):  # pyright: ignore
             raise ValueError("markers must be true or false")
         if not isinstance(self.patterns, bool):  # pyright: ignore
@@ -70,6 +101,25 @@ class Format:
             raise ValueError(f"unknown decimal separator: {self.separator!r}")
         if len(self.language) != 2 or not self.language.isalpha():
             raise ValueError(f"language must be a two-letter code, not {self.language!r}")
+        if self.axis_scale not in get_args(AxisScale):
+            raise ValueError(f"unknown axis scale: {self.axis_scale!r}")
+        for name in ("axis_min", "axis_max", "axis_step"):
+            value = getattr(self, name)
+            if value is not None and not math.isfinite(value):
+                raise ValueError(f"{name} must be None or a finite number")
+        if self.axis_step is not None and self.axis_step <= 0:
+            raise ValueError("the axis step must be positive")
+        if (
+            self.axis_min is not None
+            and self.axis_max is not None
+            and self.axis_min >= self.axis_max
+        ):
+            raise ValueError("the axis minimum must be below its maximum")
+        if self.axis_scale == "log" and self.axis_min is not None and self.axis_min <= 0:
+            raise ValueError("a logarithmic axis needs a positive minimum")
+        for name in ("axis_title", "category_axis_title"):
+            if len(getattr(self, name)) > 80:
+                raise ValueError(f"{name} must be at most 80 characters")
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,18 +261,164 @@ class LabelKey:
 
 @dataclass(frozen=True, slots=True)
 class LabelOffset:
-    """How far the user moved a label's centre from where the layout puts it, in 1/100 mm.
+    """How the user changed one label: its offset, visibility and custom text (ADR 0023, M22).
 
-    Absolute: not scaled when the chart is resized, like font sizes (ADR 0023).
+    ``dx`` and ``dy`` move the label's centre from where the layout puts it, in 1/100 mm.
+    Absolute: not scaled when the chart is resized, like font sizes. ``hidden`` hides the label,
+    ``text`` replaces its text (empty: keep the layout's text). At most one record per label.
     """
 
     key: LabelKey
-    dx: float
-    dy: float
+    dx: float = 0.0
+    dy: float = 0.0
+    hidden: bool = False
+    text: str = ""
 
     def __post_init__(self) -> None:
         if not (math.isfinite(self.dx) and math.isfinite(self.dy)):
             raise ValueError("a label offset must be finite")
+        if not isinstance(self.hidden, bool):  # pyright: ignore
+            raise ValueError("a hidden label flag must be true or false")
+        if len(self.text) > 80:
+            raise ValueError("a label text must be at most 80 characters")
+
+
+@dataclass(frozen=True, slots=True)
+class Focus:
+    """The series and categories a chart emphasises (M22).
+
+    A data point stays at full colour when its series is in ``series`` **or** its category is in
+    ``categories``; everything else is muted. Either set may be empty, but not both. Indices refer
+    to the data sheet, like annotations and label keys, so a dangling index is ignored.
+    """
+
+    series: tuple[int, ...] = ()
+    categories: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.series and not self.categories:
+            raise ValueError("a focus needs at least one series or category")
+        if len(set(self.series)) != len(self.series) or len(set(self.categories)) != len(
+            self.categories
+        ):
+            raise ValueError("focus indices must be unique")
+        if any(index < 0 for index in (*self.series, *self.categories)):
+            raise ValueError("focus indices must not be negative")
+
+    def shown(self, series: int | None, category: int | None) -> bool:
+        """Whether a point of ``series`` and ``category`` stays at full colour."""
+        if series is not None and series in self.series:
+            return True
+        return category is not None and category in self.categories
+
+
+@dataclass(frozen=True, slots=True)
+class Note:
+    """A free callout text anchored at fractions of the chart's layout box (M22).
+
+    ``x`` and ``y`` are in 0..1 from the top-left. The text is drawn left-aligned from that point.
+    """
+
+    text: str
+    x: float
+    y: float
+
+    def __post_init__(self) -> None:
+        if not self.text.strip():
+            raise ValueError("a note needs a text")
+        if len(self.text) > 200:
+            raise ValueError("a note must be at most 200 characters")
+        if not (math.isfinite(self.x) and math.isfinite(self.y)):
+            raise ValueError("a note position must be finite")
+        if not 0.0 <= self.x <= 1.0 or not 0.0 <= self.y <= 1.0:
+            raise ValueError("a note position must be between 0 and 1")
+
+
+@dataclass(frozen=True, slots=True)
+class TableSpec:
+    """How a table chart draws its cell grid (M25)."""
+
+    header: bool = True
+    first_column: bool = True
+    zebra: bool = False
+    borders: bool = True
+    heatmap: bool = False
+    widths: tuple[float, ...] = ()
+    row_height: float | None = None
+
+    def __post_init__(self) -> None:
+        if any(width <= 0 or not math.isfinite(width) for width in self.widths):
+            raise ValueError("column widths must be positive")
+        if self.row_height is not None and (
+            self.row_height <= 0 or not math.isfinite(self.row_height)
+        ):
+            raise ValueError("the row height must be positive")
+
+
+@dataclass(frozen=True, slots=True)
+class MatrixSpec:
+    """The labels, titles and split lines of a 2x2 matrix (M25)."""
+
+    x_title: str = ""
+    y_title: str = ""
+    x_low: str = ""
+    x_high: str = ""
+    y_low: str = ""
+    y_high: str = ""
+    quadrants: tuple[str, str, str, str] = ("", "", "", "")
+    x_split: float | None = None
+    y_split: float | None = None
+    bubbles: bool = False
+    labels: bool = True
+
+    def __post_init__(self) -> None:
+        if len(self.quadrants) != 4:
+            raise ValueError("a matrix has four quadrant labels")
+        for value in (
+            self.x_title,
+            self.y_title,
+            self.x_low,
+            self.x_high,
+            self.y_low,
+            self.y_high,
+            *self.quadrants,
+        ):
+            if len(value) > 40:
+                raise ValueError("matrix labels must be at most 40 characters")
+        for value in (self.x_split, self.y_split):
+            if value is not None and not math.isfinite(value):
+                raise ValueError("matrix splits must be finite")
+
+
+TrendKind = Literal["linear", "exponential"]
+
+
+@dataclass(frozen=True, slots=True)
+class Trend:
+    """A trendline of one series (M23).
+
+    ``kind`` is a straight line or a straight line in log-y space. ``forecast`` extends the line
+    that many categories (or x units on a scatter chart) beyond the last actual point. ``show_r2``
+    puts the coefficient of determination next to the line, ``show_equation`` the fitted equation.
+    """
+
+    series: int
+    kind: TrendKind = "linear"
+    forecast: int = 0
+    show_r2: bool = True
+    show_equation: bool = False
+
+    def __post_init__(self) -> None:
+        if self.kind not in get_args(TrendKind):
+            raise ValueError(f"unknown trend kind: {self.kind!r}")
+        if self.series < 0:
+            raise ValueError("a trend series index must not be negative")
+        if self.forecast < 0:
+            raise ValueError("a forecast must not be negative")
+        if not isinstance(self.show_r2, bool):  # pyright: ignore
+            raise ValueError("show_r2 must be true or false")
+        if not isinstance(self.show_equation, bool):  # pyright: ignore
+            raise ValueError("show_equation must be true or false")
 
 
 @dataclass(frozen=True, slots=True)
@@ -243,12 +439,15 @@ class Link:
     relative: str = ""
     updated: str = ""
     modified: str = ""
+    auto: bool = False  # update from the source when the presentation opens (M28)
 
     def __post_init__(self) -> None:
         if not self.url.strip():
             raise ValueError("a data link needs the URL of its source")
         if not self.range.strip():
             raise ValueError("a data link needs a range or a name")
+        if not isinstance(self.auto, bool):  # pyright: ignore
+            raise ValueError("a data link's auto flag must be true or false")
 
 
 @dataclass(frozen=True, slots=True)
@@ -287,8 +486,12 @@ class ChartState:
     without its source.
 
     ``labels`` holds the offsets of value labels and totals the user moved by hand, at most one per
-    label. Like annotation indices they refer to data sheet indices: sorting never touches them, and
-    an offset whose label is gone stays stored and unused.
+    label, together with labels hidden or given a custom text (M22). Like annotation indices they
+    refer to data sheet indices: sorting never touches them, and an offset whose label is gone stays
+    stored and unused.
+
+    ``focus`` mutes everything that is not part of the message, ``source`` is a chart-level source
+    line and ``notes`` are free callouts (M22).
 
     ``range`` draws floating (from/to) bars on a column or bar chart: the series rows come in pairs,
     an even row is the from level and the odd row below it the to level of one bar. ``errors`` draws
@@ -318,6 +521,13 @@ class ChartState:
     errors: bool = False
     horizontal: bool = False
     stacked: bool = False
+    focus: Focus | None = None
+    notes: tuple[Note, ...] = ()
+    source: str = ""
+    trends: tuple[Trend, ...] = ()
+    pareto: bool = False
+    table: TableSpec | None = None
+    matrix: MatrixSpec | None = None
     version: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -337,7 +547,14 @@ class ChartState:
             )
         if self.kind in ("line", "area") and self.grouping != "stacked":
             raise ValueError(f"a {self.kind} chart is always stacked")
-        if self.sort != "none" and self.kind not in ("column", "bar", "butterfly", "gantt", "pie"):
+        if self.sort != "none" and self.kind not in (
+            "column",
+            "bar",
+            "butterfly",
+            "gantt",
+            "pie",
+            "dumbbell",
+        ):
             raise ValueError(f"a {self.kind} chart cannot be sorted")
         if self.kind == "gantt" and self.sort == "descending":
             raise ValueError("a Gantt chart sorts by ascending start date only")
@@ -357,8 +574,8 @@ class ChartState:
             raise ValueError("a 100 % chart cannot have error bars")
         if self.errors and self.lines:
             raise ValueError("a chart with error bars cannot draw series as lines")
-        if self.horizontal and self.kind != "waterfall":
-            raise ValueError("only a waterfall chart can be horizontal")
+        if self.horizontal and self.kind not in ("waterfall", "dumbbell"):
+            raise ValueError("only a waterfall or dumbbell chart can be horizontal")
         if self.stacked and self.kind != "waterfall":
             raise ValueError("only a waterfall chart can be stacked")
         if (self.lines or self.secondary) and self.kind != "column":
@@ -386,3 +603,39 @@ class ChartState:
             raise ValueError("values must be finite numbers or None")
         if len({offset.key for offset in self.labels}) != len(self.labels):
             raise ValueError("a label can only have one offset")
+        if len(self.notes) > 8:
+            raise ValueError("a chart has at most 8 notes")
+        if len(self.source) > 200:
+            raise ValueError("the source must be at most 200 characters")
+        if len({trend.series for trend in self.trends}) != len(self.trends):
+            raise ValueError("a series can only have one trendline")
+        if self.trends and self.kind not in ("line", "scatter", "column"):
+            raise ValueError(f"a {self.kind} chart has no trendlines")
+        if self.trends and self.percent:
+            raise ValueError("a 100 % chart has no trendlines")
+        if self.pareto:
+            if self.kind not in ("column", "bar"):
+                raise ValueError("only a column or bar chart can be a Pareto chart")
+            if self.percent or self.range or self.errors or self.lines or self.secondary:
+                raise ValueError("a Pareto chart cannot be stacked, floating or combined")
+            if self.cells and len(self.cells) > 2:
+                raise ValueError("a Pareto chart has exactly one series")
+        if self.table is not None and self.kind != "table":
+            raise ValueError("only a table chart has table options")
+        if self.matrix is not None and self.kind != "matrix":
+            raise ValueError("only a matrix chart has matrix options")
+        if self.kind == "table" and self.table is None:
+            object.__setattr__(self, "table", TableSpec())
+        if self.kind == "matrix" and self.matrix is None:
+            object.__setattr__(self, "matrix", MatrixSpec())
+        if self.kind in ("table", "matrix") and (
+            self.annotations
+            or self.percent
+            or self.sort != "none"
+            or self.range
+            or self.errors
+            or self.lines
+            or self.secondary
+            or self.trends
+        ):
+            raise ValueError("a table or matrix has no chart options")

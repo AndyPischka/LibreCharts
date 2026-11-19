@@ -31,16 +31,20 @@ from librecharts.core.layout.column import (
     BREAK_SLANT,
 )
 from librecharts.core.layout.common import (
+    AXIS_TITLE_BAND,
     BRACKET_TICK,
     GAP_RATIO,
     GAP_WIDTH,
-    LEGEND_HEIGHT,
     MIN_ARROW_LABEL_WIDTH,
     TICK_GAP,
     TICK_HEIGHT,
+    axis_title,
+    baseline_cut,
+    category_title,
     column_top,
     format_value,
     legend,
+    legend_insets,
     slot_at,
     slot_start,
     spread,
@@ -152,13 +156,14 @@ def layout_bar(
         else (
             shortened_axis(scale_data, scale_grouping, cut)
             if cut
-            else value_axis(scale_data, scale_grouping)
+            else value_axis(scale_data, scale_grouping, fmt)
         )
     )
     span = axis.maximum - axis.minimum
     fold = cut.fold if cut else _same
 
     def x(value: float) -> float:
+        value = max(value, axis.minimum)
         if length_per_unit is not None:
             return plot_left + (value - axis.minimum) * length_per_unit
         return plot_left + (fold(value) - axis.minimum) / span * plot_width
@@ -180,12 +185,25 @@ def layout_bar(
     plot_bottom = plot_top + plot_height
     out: list[Primitive] = []
     if fmt.series_names == "legend":
-        out.extend(legend([s.name for s in data.series], width))
+        out.extend(legend([s.name for s in data.series], width, fmt.legend, height))
     out.append(Line(x(0), plot_top, x(0), plot_bottom, "baseline"))
     if fmt.axis:
         if fmt.gridlines:
             out.extend(_grid(axis, cut, x, plot_top, plot_bottom))
         out.extend(_axis(axis, cut, x, plot_bottom, fmt))
+    if fmt.axis_title:
+        out.extend(axis_title(fmt, plot_left, 0.0, plot_width, AXIS_TITLE_BAND, rotated=False))
+    if fmt.category_axis_title:
+        out.extend(
+            category_title(
+                fmt,
+                plot_left,
+                plot_bottom + (1500.0 if fmt.axis else 0.0),
+                plot_width,
+            )
+        )
+    if axis.minimum > 0:
+        out.extend(baseline_cut(plot_left, plot_bottom, vertical=False))
 
     for c, category in enumerate(data.categories):
         slot_top = slot_y(c)
@@ -324,7 +342,7 @@ def natural_length_per_unit(
     axis = (
         shortened_axis(scale_data, scale_grouping, cut)
         if cut
-        else value_axis(scale_data, scale_grouping)
+        else value_axis(scale_data, scale_grouping, fmt)
     )
     span = axis.maximum - axis.minimum
     if span <= 0:
@@ -350,12 +368,18 @@ def _plot(
         v is not None and v < 0 for s in data.series for v in s.values
     )
     # Labels of negative bars hang to the left of them and must not run into the category names.
-    plot_left = LEFT_BAND + (LABEL_WIDTH if has_negative else 0.0)
-    plot_top = LEGEND_HEIGHT if fmt.series_names == "legend" else 0.0
+    inset_left, plot_top, inset_right, inset_bottom = legend_insets(fmt)
+    if fmt.axis_title:
+        plot_top += AXIS_TITLE_BAND
+    if fmt.category_axis_title:
+        inset_bottom += AXIS_TITLE_BAND
+    plot_left = inset_left + LEFT_BAND + (LABEL_WIDTH if has_negative else 0.0)
     series_band = SERIES_BAND if fmt.series_names == "labels" else 0.0
-    plot_width = width - plot_left - RIGHT_BAND - brackets * BRACKET_LANE_WIDTH - series_band
+    plot_width = (
+        width - plot_left - inset_right - RIGHT_BAND - brackets * BRACKET_LANE_WIDTH - series_band
+    )
     axis_band = AXIS_BAND_HEIGHT if fmt.axis else 0.0
-    plot_height = height - plot_top - axis_band - lanes * LEVEL_LANE_HEIGHT
+    plot_height = height - plot_top - inset_bottom - axis_band - lanes * LEVEL_LANE_HEIGHT
     return plot_left, plot_top, plot_width, plot_height
 
 
@@ -669,7 +693,7 @@ def _stacked_bar(
         else:
             left, right = x(negative + value), x(negative)
             negative += value
-        out.append(Rect(left, y, right - left, thickness, i))
+        out.append(Rect(left, y, right - left, thickness, i, category=c))
         # Always emit the label right after its segment: the structure must not depend on the
         # size, so a resized chart can be re-laid out in place (lo/render.py). A segment too
         # narrow to hold its label gets a slot in the lane at its outer end instead (M16
@@ -775,7 +799,7 @@ def _percent_bar(
         length = (value or 0.0) / total * 100
         left, right = x(level), x(level + length)
         level += length
-        out.append(Rect(left, y, right - left, thickness, i))
+        out.append(Rect(left, y, right - left, thickness, i, category=c))
         # Always emit the label right after its segment: the structure must not depend on the
         # size. A segment too narrow to hold its label gets a slot in the lane right of the bar
         # instead (M16 decluttering), as plain text without a fill.
@@ -857,7 +881,7 @@ def _clustered_bar(
                 "value",
                 key=key,
             )
-        out.append(Rect(left, bar_y, right - left, bar_height, i))
+        out.append(Rect(left, bar_y, right - left, bar_height, i, category=c))
         out.append(label)
         if cut and cut.cuts(value):  # bars sit one below the other: the mark stays on its bar
             out.extend(_break_mark(x(cut.lower), bar_y, bar_height, 0.0))
@@ -944,7 +968,7 @@ def _range_bar(
         bar_y = y + i * bar_height
         label_y = bar_y + (bar_height - LABEL_HEIGHT) / 2
         left, right = x(fold(min(to, base))), x(fold(max(to, base)))
-        out.append(Rect(left, bar_y, right - left, bar_height, i))
+        out.append(Rect(left, bar_y, right - left, bar_height, i, category=c))
         if to >= base:
             label = Text(
                 right + LABEL_GAP,

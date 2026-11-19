@@ -16,6 +16,7 @@ from librecharts.core import annotations as notes
 from librecharts.core import sorting
 from librecharts.core.datasheet import errored, parse, ranged
 from librecharts.core.layout.bar import bar_at
+from librecharts.core.layout.chart import body_height
 from librecharts.core.layout.column import column_at
 from librecharts.core.layout.line import line_at
 from librecharts.core.layout.mekko import mekko_at
@@ -36,6 +37,7 @@ def target_at(state: ChartState, width: float, height: float, x: float, y: float
 
     The returned category is the data sheet index, even when sorting drew the category elsewhere.
     """
+    height = body_height(state, height)
     if state.kind == "column":
         if state.range:  # floating bars are picked like a clustered chart, at their to level
             data, _bases = ranged(state)

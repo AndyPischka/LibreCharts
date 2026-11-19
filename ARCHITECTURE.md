@@ -83,7 +83,17 @@ only names the functions and delegates to `lo/`. `cli.py` and `lo/worker.py` are
 | `layout/mekko.py` | Variable-width columns, 100 % high (percent) or scaled by their sums (units); value, total and width labels, series names, difference and CAGR arrows over segment levels; `mekko_at` |
 | `layout/common.py` | Number format, value axis and gridlines, series labels and legend, value-line lanes shared by the layouts |
 | `layout/chart.py` | `layout_chart(state, w, h, length_per_unit=None)`: applies sorting, picks the layout by chart kind, passes the shared scale of a same-scale group (ADR 0017) and applies the label offsets |
-| `labels.py` | Label placement: `place` applies the offsets of moved value labels and totals to laid-out primitives, `moved` finds them again from the shapes' boxes (ADR 0023) |
+| `labels.py` | Label placement: `place` applies offsets, hidden flags and custom text of value labels and totals, `moved` finds them again from the shapes' boxes (ADRs 0023, 0032) |
+| `focus.py` | Focus mode: mutes primitives outside the selected series or categories (ADR 0032) |
+| `notes.py` | Chart source line and free callouts (ADR 0032) |
+| `trend.py` | Least-squares linear and exponential fits, R² and forecast labels (ADR 0033) |
+| `table.py`, `matrix.py` | Typed table cells and 2x2 matrix points (ADR 0035) |
+| `templates.py` | Chart templates as JSON, stripping the data link and same-scale group (ADR 0037) |
+| `bullet.py`, `boxplot.py` | Fixed-column data sheets of the bullet and box plot charts (ADR 0034) |
+| `importdata.py` | CSV tables and replacing a chart's data sheet (ADR 0038) |
+| `audit.py`, `deck_export.py` | Deck audit findings and exporting a deck specification (ADR 0039) |
+| `colorblind.py` | Colour-blindness simulation of a scheme (ADR 0040) |
+| `graphics.py`, `icons.py` | Process, chevron and pyramid graphics and the built-in icon set (ADR 0036) |
 
 Data flow: Calc cells -> `ChartState` (stored in the document) -> `datasheet.parse` -> `ChartData`
 -> `layout_column` -> primitives -> `lo/` draws shapes. Stored state is part of the user's files,
@@ -126,6 +136,10 @@ so every released schema version must stay readable (`state_io.py`).
 | `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place, including their scale group (ADRs 0007, 0017); looks for moved labels where one can have moved (ADR 0023) |
 | `labels.py` | Moved labels: reads the shapes' boxes, stores the offsets `core/labels.moved` finds (no undo action) and puts other dragged shapes back; the *Move labels* session (ADR 0023) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |
+| `graphics.py` | Process, chevron, pyramid and icon groups: insert, change, fit (ADR 0036) |
+| `templates.py` | The user's template folder, listing, reading, writing and deck-template resolution (ADR 0037) |
+| `dataimport.py` | Reading CSV, ODS and XLSX files and the clipboard (ADR 0038) |
+| `audit.py` | Walking a presentation for the audit (ADR 0039) |
 | `axisdialog.py` | The axis break dialog (modal, built in code); asks, then adds or changes the break |
 | `calendardialog.py` | The working-days dialog of a Gantt chart (modal, built in code): weekdays and holidays; validation in `core/calendar.py` (M17) |
 | `textdialog.py` | The group bracket label dialog (modal, built in code); asks for the text after the picks and for *Change text...* |

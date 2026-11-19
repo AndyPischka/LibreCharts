@@ -32,8 +32,8 @@ def test_line_golden_geometry() -> None:
         Text(0, 9000, 1000, CATEGORY_BAND, "A", "center", "category"),
         Text(1000, 9000, 1000, CATEGORY_BAND, "B", "center", "category"),
         Polyline(((500, 4900), (1500, 800)), 0),
-        Marker(500, 4900, 0),
-        Marker(1500, 800, 0),
+        Marker(500, 4900, 0, category=0),
+        Marker(1500, 800, 0, category=1),
         Text(
             0,
             4900 - LABEL_HEIGHT - LABEL_GAP,

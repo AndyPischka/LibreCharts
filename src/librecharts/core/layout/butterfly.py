@@ -92,10 +92,10 @@ def layout_butterfly(
             bar = length(value)
             align: Align
             if side == 0:
-                out.append(Rect(left_zero - bar, bar_y, bar, thickness, 0))
+                out.append(Rect(left_zero - bar, bar_y, bar, thickness, 0, category=c))
                 label_x, align = left_zero - bar - LABEL_GAP - LABEL_WIDTH, "right"
             else:
-                out.append(Rect(right_zero, bar_y, bar, thickness, 1))
+                out.append(Rect(right_zero, bar_y, bar, thickness, 1, category=c))
                 label_x, align = right_zero + bar + LABEL_GAP, "left"
             out.append(
                 Text(

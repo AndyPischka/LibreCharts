@@ -57,15 +57,18 @@ from librecharts.core.layout.column import (
 )
 from librecharts.core.layout.common import (
     AXIS_BAND,
+    AXIS_TITLE_BAND,
     GAP_RATIO,
     TICK_GAP,
     TICK_HEIGHT,
+    axis_title,
+    category_title,
     format_value,
     visible_ticks,
 )
 from librecharts.core.model import Annotation, Format, LabelKey
 from librecharts.core.primitives import BACKGROUND, Line, Primitive, Rect, Text
-from librecharts.core.scale import Axis, nice_axis
+from librecharts.core.scale import Axis, manual_axis, nice_axis
 from librecharts.core.waterfall import Step, WaterfallData, levels
 
 TOP_BAND = 800.0  # room above the plot for labels of rising bars
@@ -104,9 +107,11 @@ def layout_waterfall(
     lines = notes.value_lines(annotations, measured, "waterfall")
     lanes = len(brackets) * LANE_HEIGHT
     top_band = lanes + TOP_BAND
-    plot_left = AXIS_BAND if fmt.axis else 0.0
+    title_band = AXIS_TITLE_BAND if fmt.axis_title else 0.0
+    category_band = AXIS_TITLE_BAND if fmt.category_axis_title else 0.0
+    plot_left = title_band + (AXIS_BAND if fmt.axis else 0.0)
     plot_width = width - plot_left - (len(level_arrows) + len(lines)) * LEVEL_LANE_WIDTH
-    plot_height = height - top_band - CATEGORY_BAND
+    plot_height = height - top_band - CATEGORY_BAND - category_band
     # Labels of falling bars hang below them and must not run into the category names.
     scale_height = plot_height - (LABEL_HEIGHT if any(_falls(s) for s in data.steps) else 0.0)
     if plot_width <= 0 or scale_height <= 0:
@@ -117,10 +122,11 @@ def layout_waterfall(
     cut = None if length_per_unit is not None else resolve_waterfall(annotations, data)
     fold = cut.fold if cut else _same
     shown = [fold(level) for level in [0.0, *_levels_of(data)]]
-    axis = nice_axis(min(shown), max(shown))
+    axis = _waterfall_axis(fmt, min(shown), max(shown))
     span = axis.maximum - axis.minimum
 
     def y(value: float) -> float:
+        value = max(value, axis.minimum)
         if length_per_unit is not None:
             return top_band + scale_height - (value - axis.minimum) * length_per_unit
         return top_band + (axis.maximum - fold(value)) / span * scale_height
@@ -133,6 +139,17 @@ def layout_waterfall(
         if fmt.gridlines:
             out.extend(_grid(axis, cut, y, plot_left, plot_width))
         out.extend(_axis(axis, cut, y, plot_left, fmt))
+    if fmt.axis_title:
+        out.extend(axis_title(fmt, 0.0, top_band, AXIS_TITLE_BAND, scale_height, rotated=True))
+    if fmt.category_axis_title:
+        out.extend(
+            category_title(
+                fmt,
+                plot_left,
+                top_band + plot_height + CATEGORY_BAND,
+                plot_width,
+            )
+        )
 
     for i, step in enumerate(data.steps):
         slot_x = plot_left + i * slot
@@ -141,7 +158,14 @@ def layout_waterfall(
             for j, (s_start, s_end, has_value) in enumerate(step.segments):
                 top, bottom = y(max(s_start, s_end)), y(min(s_start, s_end))
                 out.append(
-                    Rect(x, top, column_width, bottom - top, _segment_series(step, s_end - s_start))
+                    Rect(
+                        x,
+                        top,
+                        column_width,
+                        bottom - top,
+                        _segment_series(step, s_end - s_start),
+                        category=i,
+                    )
                 )
                 label_y = bottom if s_end < s_start else top - LABEL_HEIGHT
                 out.append(
@@ -158,7 +182,7 @@ def layout_waterfall(
                 )
         else:
             top, bottom = y(max(step.start, step.end)), y(min(step.start, step.end))
-            out.append(Rect(x, top, column_width, bottom - top, _series(step)))
+            out.append(Rect(x, top, column_width, bottom - top, _series(step), category=i))
             label_y = bottom if _label_below(step) else top - LABEL_HEIGHT
             out.append(
                 Text(
@@ -248,11 +272,19 @@ def natural_length_per_unit(
     cut = resolve_waterfall(annotations, data)
     fold = cut.fold if cut else _same
     shown = [fold(level) for level in [0.0, *_levels_of(data)]]
-    axis = nice_axis(min(shown), max(shown))
+    axis = _waterfall_axis(fmt, min(shown), max(shown))
     span = axis.maximum - axis.minimum
     if span <= 0:
         return None
     return scale / span
+
+
+def _waterfall_axis(fmt: Format, low: float, high: float) -> Axis:
+    """The waterfall scale: automatic, or the format's manual limits (M23)."""
+    fallback = nice_axis(low, high)
+    if fmt.axis_min is None and fmt.axis_max is None:
+        return fallback
+    return manual_axis(fmt.axis_min, fmt.axis_max, fmt.axis_step, fallback=fallback)
 
 
 def _axis(
@@ -483,10 +515,11 @@ def _layout_horizontal(
     cut = None if length_per_unit is not None else resolve_waterfall(annotations, data)
     fold = cut.fold if cut else _same
     shown = [fold(level) for level in [0.0, *_levels_of(data)]]
-    axis = nice_axis(min(shown), max(shown))
+    axis = _waterfall_axis(fmt, min(shown), max(shown))
     span = axis.maximum - axis.minimum
 
     def x(value: float) -> float:
+        value = max(value, axis.minimum)
         if length_per_unit is not None:
             return plot_left + (value - axis.minimum) * length_per_unit
         return plot_left + (fold(value) - axis.minimum) / span * plot_width

@@ -33,6 +33,7 @@ def test_a_column_offers_all_variants_with_the_current_ones_marked() -> None:
         Switch("menu_stacked", "ChangeChart?grouping=stacked", True),
         Switch("menu_clustered", "ChangeChart?grouping=clustered", False),
         Switch("menu_percent", "ChangeChart?percent=true", False),
+        Switch("menu_pareto", "ChangeChart?pareto=true", False),
         Switch("menu_floating", "ChangeChart?range=true", False),
         Switch("menu_baseline", "ChangeChart?range=false", True),
         Switch("menu_error_bars", "ChangeChart?errors=true", False),
@@ -94,6 +95,7 @@ def test_a_100_percent_chart_offers_no_floating_or_error_bars() -> None:
         "ChangeChart?grouping=stacked",
         "ChangeChart?grouping=clustered",
         "ChangeChart?percent=true",
+        "ChangeChart?pareto=true",
     ]
 
 

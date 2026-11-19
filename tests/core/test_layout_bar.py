@@ -32,10 +32,10 @@ def test_clustered_golden_geometry() -> None:
     chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
     assert layout_bar(chart, "clustered", 8200, 4000) == (
         Line(3000, 0, 3000, 4000, "baseline"),
-        Rect(3000, 300, 2000, 1400, 0),
+        Rect(3000, 300, 2000, 1400, 0, category=0),
         Text(5150, 700, 1050, LABEL_HEIGHT, "10", "left", "value", key=LabelKey("value", 0, 0)),
         Text(0, 0, 2850, 2000, "A", "right", "category"),
-        Rect(3000, 2300, 4000, 1400, 0),
+        Rect(3000, 2300, 4000, 1400, 0, category=1),
         Text(7150, 2700, 1050, LABEL_HEIGHT, "20", "left", "value", key=LabelKey("value", 1, 0)),
         Text(0, 2000, 2850, 2000, "B", "right", "category"),
     )
@@ -46,9 +46,9 @@ def test_stacked_golden_geometry() -> None:
     chart = data(("A", (10.0,)), ("B", (30.0,)), categories=("X",))
     assert layout_bar(chart, "stacked", 8200, 2000) == (
         Line(3000, 0, 3000, 2000, "baseline"),
-        Rect(3000, 300, 1000, 1400, 0),
+        Rect(3000, 300, 1000, 1400, 0, category=0),
         Text(3000, 300, 1000, 1400, "10", "center", "value", fill=0, key=LabelKey("value", 0, 0)),
-        Rect(4000, 300, 3000, 1400, 1),
+        Rect(4000, 300, 3000, 1400, 1, category=0),
         Text(4000, 300, 3000, 1400, "30", "center", "value", fill=1, key=LabelKey("value", 0, 1)),
         Text(7150, 700, 1050, LABEL_HEIGHT, "40", "left", "total", key=LabelKey("total", 0)),
         Text(0, 0, 2850, 2000, "X", "right", "category"),
@@ -531,10 +531,10 @@ def test_floating_bars_golden_geometry() -> None:
     chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
     assert layout_bar(chart, "clustered", 8200, 4000, bases=((2.0, 5.0),)) == (
         Line(3000, 0, 3000, 4000, "baseline"),
-        Rect(3400, 300, 1600, 1400, 0),  # x(2)=3400 to x(10)=5000
+        Rect(3400, 300, 1600, 1400, 0, category=0),  # x(2)=3400 to x(10)=5000
         Text(5150, 700, 1050, LABEL_HEIGHT, "10", "left", "value", key=LabelKey("value", 0, 0)),
         Text(0, 0, 2850, 2000, "A", "right", "category"),
-        Rect(4000, 2300, 3000, 1400, 0),  # x(5)=4000 to x(20)=7000
+        Rect(4000, 2300, 3000, 1400, 0, category=1),  # x(5)=4000 to x(20)=7000
         Text(7150, 2700, 1050, LABEL_HEIGHT, "20", "left", "value", key=LabelKey("value", 1, 0)),
         Text(0, 2000, 2850, 2000, "B", "right", "category"),
     )

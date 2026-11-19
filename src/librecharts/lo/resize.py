@@ -25,7 +25,7 @@ from com.sun.star.awt import XCallback
 from com.sun.star.document import XUndoManagerListener
 from com.sun.star.util import XModifyListener
 
-from librecharts.lo import chart, labels, render, samescale, store
+from librecharts.lo import chart, graphics, labels, render, samescale, store
 from librecharts.lo import elements as slide_elements
 
 _watchers: dict[str, _Watcher] = {}
@@ -55,6 +55,8 @@ class _Watcher(unohelper.Base, XModifyListener, XUndoManagerListener, XCallback)
             "com.sun.star.awt.AsyncCallback", ctx
         )
         for group, _ in store.all_charts(doc):
+            self._sizes[group.Name] = render.layout_box(group)[2:]
+        for group in graphics.all_graphics(doc):
             self._sizes[group.Name] = render.layout_box(group)[2:]
         doc.addModifyListener(self)
         doc.getUndoManager().addUndoManagerListener(self)
@@ -139,6 +141,11 @@ class _Watcher(unohelper.Base, XModifyListener, XUndoManagerListener, XCallback)
             # Elements share their names, so their sizes are not tracked; the check is idempotent.
             for group, _ in slide_elements.all_elements(self.doc):
                 slide_elements.fit_to_size(group)
+            for group in graphics.all_graphics(self.doc):
+                size = render.layout_box(group)[2:]
+                if self._sizes.get(group.Name) != size:
+                    graphics.fit_to_size(self.doc, group)
+                    self._sizes[group.Name] = render.layout_box(group)[2:]
         except Exception:
             # Never let an exception escape into the event handling of LibreOffice.
             traceback.print_exc()

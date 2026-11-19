@@ -16,10 +16,12 @@ import math
 from collections.abc import Callable
 
 from librecharts.core import annotations as notes
+from librecharts.core import trend as trends_module
 from librecharts.core import value_line
 from librecharts.core.layout.column import LANE_HEIGHT, LANE_LINE_GAP
 from librecharts.core.layout.common import (
     AXIS_BAND,
+    AXIS_TITLE_BAND,
     LABEL_HEIGHT,
     LEGEND_HEIGHT,
     LEVEL_ARROW_INSET,
@@ -27,14 +29,25 @@ from librecharts.core.layout.common import (
     LEVEL_LANE_WIDTH,
     TICK_GAP,
     TICK_HEIGHT,
+    axis_title,
     bracket,
+    category_title,
     format_value,
     legend,
+    legend_insets,
     level_arrow,
 )
-from librecharts.core.model import Annotation, Format, LabelKey
-from librecharts.core.primitives import MARKER_SIZE, Bubble, Line, Marker, Primitive, Text
-from librecharts.core.scale import Axis, nice_axis
+from librecharts.core.model import Annotation, Format, LabelKey, Trend
+from librecharts.core.primitives import (
+    MARKER_SIZE,
+    Bubble,
+    Line,
+    Marker,
+    Polyline,
+    Primitive,
+    Text,
+)
+from librecharts.core.scale import Axis, manual_axis, nice_axis
 from librecharts.core.scatter import ScatterData, levels
 
 TOP_BAND = 600.0  # room above the plot so that the topmost marker or bubble is not cut off
@@ -55,6 +68,7 @@ def layout_scatter(
     height: float,
     annotations: tuple[Annotation, ...] = (),
     fmt: Format | None = None,
+    trends: tuple[Trend, ...] = (),
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
@@ -64,12 +78,24 @@ def layout_scatter(
     measured = levels(data)
     lines = notes.value_lines(annotations, measured, "scatter")
     brackets, level_arrows = notes.arrows(annotations, measured, "scatter")
-    top = TOP_BAND + (LEGEND_HEIGHT if any(data.groups) else 0.0) + len(brackets) * LANE_HEIGHT
-    plot_left = AXIS_BAND
-    plot_width = (
-        width - plot_left - RIGHT_BAND - (len(lines) + len(level_arrows)) * LEVEL_LANE_WIDTH
+    inset_left, inset_top, inset_right, inset_bottom = legend_insets(fmt)
+    top = (
+        TOP_BAND
+        + inset_top
+        + (LEGEND_HEIGHT if any(data.groups) else 0.0)
+        + len(brackets) * LANE_HEIGHT
     )
-    plot_height = height - top - X_AXIS_BAND
+    title_band = AXIS_TITLE_BAND if fmt.axis_title else 0.0
+    category_band = AXIS_TITLE_BAND if fmt.category_axis_title else 0.0
+    plot_left = inset_left + title_band + AXIS_BAND
+    plot_width = (
+        width
+        - plot_left
+        - inset_right
+        - RIGHT_BAND
+        - (len(lines) + len(level_arrows)) * LEVEL_LANE_WIDTH
+    )
+    plot_height = height - top - inset_bottom - X_AXIS_BAND - category_band
     if plot_width <= 0 or plot_height <= 0:
         raise ValueError("chart area too small")
     if not data.points:
@@ -79,14 +105,20 @@ def layout_scatter(
     shown = [level for level in marked if level is not None]
     xs = [point.x for point in data.points]
     ys = [point.y for point in data.points] + shown
-    x_axis = nice_axis(min(xs), max(xs), include_zero=False)
-    y_axis = nice_axis(min(ys), max(ys), include_zero=False)
+    x_high = max([max(xs), *(max(xs) + item.forecast for item in trends)])
+    x_axis = nice_axis(min(xs), x_high, include_zero=False)
+    fallback = nice_axis(min(ys), max(ys), include_zero=False)
+    y_axis = (
+        manual_axis(fmt.axis_min, fmt.axis_max, fmt.axis_step, fallback=fallback)
+        if fmt.axis_min is not None or fmt.axis_max is not None
+        else fallback
+    )
 
     def x(value: float) -> float:
         return plot_left + (value - x_axis.minimum) / (x_axis.maximum - x_axis.minimum) * plot_width
 
     def y(value: float) -> float:
-        return top + (y_axis.maximum - value) / (y_axis.maximum - y_axis.minimum) * plot_height
+        return top + (1.0 - y_axis.fraction(value)) * plot_height
 
     plot_bottom = top + plot_height
     out: list[Primitive] = []
@@ -95,17 +127,25 @@ def layout_scatter(
     if fmt.gridlines:
         out.extend(_grid(x_axis, y_axis, x, y, plot_left, plot_width, top, plot_bottom))
     out.extend(_axes(x_axis, y_axis, x, y, plot_left, plot_bottom, fmt))
+    if fmt.axis_title:
+        out.extend(axis_title(fmt, 0.0, top, AXIS_TITLE_BAND, plot_height, rotated=True))
+    if fmt.category_axis_title:
+        out.extend(category_title(fmt, plot_left, plot_bottom + X_AXIS_BAND, plot_width))
 
     diameters = _bubble_diameters(data, top, plot_width, plot_height)
     # Big bubbles first, so that small ones stay visible on top of them.
     sized = sorted(
-        ((p, d) for p, d in zip(data.points, diameters, strict=True) if d > 0.0),
-        key=lambda item: -(item[0].size or 0.0),
+        (
+            (number, p, d)
+            for number, (p, d) in enumerate(zip(data.points, diameters, strict=True))
+            if d > 0.0
+        ),
+        key=lambda item: -(item[1].size or 0.0),
     )
-    out.extend(Bubble(x(p.x), y(p.y), d, p.group) for p, d in sized)
+    out.extend(Bubble(x(p.x), y(p.y), d, p.group, category=number) for number, p, d in sized)
     out.extend(
-        Marker(x(p.x), y(p.y), p.group)
-        for p, d in zip(data.points, diameters, strict=True)
+        Marker(x(p.x), y(p.y), p.group, category=number)
+        for number, (p, d) in enumerate(zip(data.points, diameters, strict=True))
         if d == 0.0
     )
     for number, point in enumerate(data.points):
@@ -176,6 +216,38 @@ def layout_scatter(
                 notes.label(arrow, measured, tuple(point.x for point in data.points)),
             )
         )
+    for item in trends:
+        points = [(point.x, point.y) for point in data.points if point.group == item.series]
+        try:
+            fitted = trends_module.fit(points, item.kind)
+        except ValueError:
+            fitted = None
+        if fitted is None:
+            continue
+        first, last = min(x for x, _ in points), max(x for x, _ in points)
+        out.append(
+            Polyline(
+                ((x(first), y(fitted.value(first))), (x(last), y(fitted.value(last)))),
+                item.series,
+            )
+        )
+        end = (x(last), y(fitted.value(last)))
+        if item.forecast:
+            forecast = (x(last + item.forecast), y(fitted.value(last + item.forecast)))
+            out.append(Polyline((end, forecast), item.series, dashed=True))
+            end = forecast
+        if item.show_r2 or item.show_equation:
+            out.append(
+                Text(
+                    end[0] + 150.0,
+                    end[1] - LABEL_HEIGHT / 2,
+                    3000.0,
+                    LABEL_HEIGHT,
+                    trends_module.label(fitted, fmt, equation=item.show_equation),
+                    "left",
+                    "annotation",
+                )
+            )
     return tuple(out)
 
 
@@ -211,12 +283,24 @@ def scatter_at(
     measured = levels(data)
     lines = notes.value_lines(annotations, measured, "scatter")
     brackets, level_arrows = notes.arrows(annotations, measured, "scatter")
-    top = TOP_BAND + (LEGEND_HEIGHT if any(data.groups) else 0.0) + len(brackets) * LANE_HEIGHT
-    plot_left = AXIS_BAND
-    plot_width = (
-        width - plot_left - RIGHT_BAND - (len(lines) + len(level_arrows)) * LEVEL_LANE_WIDTH
+    inset_left, inset_top, inset_right, inset_bottom = legend_insets(fmt)
+    top = (
+        TOP_BAND
+        + inset_top
+        + (LEGEND_HEIGHT if any(data.groups) else 0.0)
+        + len(brackets) * LANE_HEIGHT
     )
-    plot_height = height - top - X_AXIS_BAND
+    title_band = AXIS_TITLE_BAND if fmt.axis_title else 0.0
+    category_band = AXIS_TITLE_BAND if fmt.category_axis_title else 0.0
+    plot_left = inset_left + title_band + AXIS_BAND
+    plot_width = (
+        width
+        - plot_left
+        - inset_right
+        - RIGHT_BAND
+        - (len(lines) + len(level_arrows)) * LEVEL_LANE_WIDTH
+    )
+    plot_height = height - top - inset_bottom - X_AXIS_BAND - category_band
     if not data.points or plot_width <= 0 or plot_height <= 0:
         return None
     if not plot_left <= x <= plot_left + plot_width or not top <= y <= top + plot_height:

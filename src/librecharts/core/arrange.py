@@ -56,6 +56,96 @@ def grid(rects: list[Rect], columns: int, gap: int) -> list[Rect]:
     return placed
 
 
+def distribute(rects: list[Rect], axis: str = "h", mode: str = "gaps") -> list[Rect]:
+    """Equal gaps or equal centres along ``axis``; the outermost shapes stay.
+
+    Shapes are ordered by their position, not by selection order. Fewer than three shapes (or two
+    for equal centres) are returned unchanged.
+    """
+    if axis not in ("h", "v") or mode not in ("gaps", "centres"):
+        raise ValueError("distribute needs axis h/v and mode gaps/centres")
+    if len(rects) < 3:
+        return list(rects)
+    start, size = (0, 2) if axis == "h" else (1, 3)
+    order = sorted(range(len(rects)), key=lambda i: (rects[i][start], i))
+    first, last = rects[order[0]], rects[order[-1]]
+    span = (last[start] + last[size]) - first[start]
+    sizes = sum(rects[i][size] for i in order)
+    placed = list(rects)
+    if mode == "gaps":
+        gap = (span - sizes) / (len(order) - 1)
+        position = first[start] + first[size] + gap
+        for index in order[1:-1]:
+            coordinates = list(rects[index])
+            coordinates[start] = round(position)
+            placed[index] = tuple(coordinates)  # type: ignore[assignment]
+            position += rects[index][size] + gap
+    else:
+        first_centre = first[start] + first[size] / 2
+        last_centre = last[start] + last[size] / 2
+        step = (last_centre - first_centre) / (len(order) - 1)
+        for rank, index in enumerate(order[1:-1], start=1):
+            coordinates = list(rects[index])
+            coordinates[start] = round(first_centre + rank * step - rects[index][size] / 2)
+            placed[index] = tuple(coordinates)  # type: ignore[assignment]
+    return placed
+
+
+def align(rects: list[Rect], edge: str) -> list[Rect]:
+    """Align every shape's ``left``, ``right``, ``top``, ``bottom``, ``hcenter`` or ``vcenter``.
+
+    The anchor is the selection's bounding box.
+    """
+    if not rects:
+        return []
+    if edge not in ("left", "right", "top", "bottom", "hcenter", "vcenter"):
+        raise ValueError(f"unknown align edge: {edge!r}")
+    left = min(x for x, _, _, _ in rects)
+    right = max(x + w for x, _, w, _ in rects)
+    top = min(y for _, y, _, _ in rects)
+    bottom = max(y + h for _, y, _, h in rects)
+    out: list[Rect] = []
+    for x, y, width, height in rects:
+        if edge == "left":
+            x = left
+        elif edge == "right":
+            x = right - width
+        elif edge == "hcenter":
+            x = round((left + right - width) / 2)
+        elif edge == "top":
+            y = top
+        elif edge == "bottom":
+            y = bottom - height
+        else:
+            y = round((top + bottom - height) / 2)
+        out.append((x, y, width, height))
+    return out
+
+
+def align_slide(
+    rects: list[Rect], edge: str, width: int, height: int, margin: int = 0
+) -> list[Rect]:
+    """Align shapes against the slide edges with an optional margin."""
+    if edge not in ("left", "right", "top", "bottom", "hcenter", "vcenter"):
+        raise ValueError(f"unknown align edge: {edge!r}")
+    out: list[Rect] = []
+    for x, y, w, h in rects:
+        if edge == "left":
+            x = margin
+        elif edge == "right":
+            x = width - w - margin
+        elif edge == "hcenter":
+            x = round((width - w) / 2)
+        elif edge == "top":
+            y = margin
+        elif edge == "bottom":
+            y = height - h - margin
+        else:
+            y = round((height - h) / 2)
+        out.append((x, y, w, h))
+    return out
+
+
 def swap(first: Rect, second: Rect) -> tuple[Rect, Rect]:
     """The two rectangles with their centres exchanged; sizes stay."""
     (x1, y1, w1, h1), (x2, y2, w2, h2) = first, second
