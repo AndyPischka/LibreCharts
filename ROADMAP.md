@@ -65,12 +65,46 @@ sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 f
 | M20 | Accessibility and export | Alternative text generated from the chart data, patterns as well as colours for colour-blind readers, exporting chart data as CSV (ADR 0030) | done |
 | M21 | Languages and platforms | Further UI languages through a translation platform (Weblate); macOS tested and supported (ADR 0031) | languages done; macOS supported, CI job pending |
 
-Both versions are sketches. Priorities are set from user feedback in the issue tracker.
-M21 changed the convention that every UI string is German and English (AGENTS.md): those two
-stay required, further languages come through Weblate (ADR 0031).
+Priorities are set from user feedback in the issue tracker. M21 changed the convention that every
+UI string is German and English (AGENTS.md): those two stay required, further languages come
+through Weblate (ADR 0031).
 
-Candidates without a milestone, feasibility open: map (choropleth) charts, which need bundled
-geodata of a suitable licence and size; chart templates or favourites.
+### 6.0: the message on the slide
+
+| | Milestone | Content | Status |
+|---|---|---|---|
+| M22 | Labels and emphasis | Hide, rewrite or reposition single labels; a focus mode that mutes the rest; callouts and a source line; font size and legend placement (builds on ADR 0023) | planned |
+| M23 | Axes and trends | Manual axis limits, tick interval and axis titles; a logarithmic axis; trendlines and forecasts with R² and an optional confidence band | planned |
+| M24 | Comparison and distribution charts | Dumbbell/slope, bullet, Pareto, funnel and box plot charts, reusing the scatter, floating-bar and column layouts | planned |
+| M25 | Table and matrix | A styled table element with Harvey balls, check marks, sparklines and heatmap cells; a data table under a chart; a 2×2 matrix with labelled axes and quadrants | planned |
+| M26 | Layout tools | Distribute shapes evenly, equal gaps, align edges and to the slide; process, pyramid and chevron graphics; a built-in icon set | planned |
+| M27 | Chart templates | Save a chart's kind, options, format, colours, annotations and sample data as a template; insert it from the sidebar or the command line | planned |
+
+Plans: [M22](docs/plans/labels-and-emphasis.md), [M23](docs/plans/axes-and-trends.md),
+[M24](docs/plans/comparison-charts.md), [M25](docs/plans/table-and-matrix.md),
+[M26](docs/plans/layout-tools.md), [M27](docs/plans/chart-templates.md).
+
+### 7.0: data, automation and governance
+
+| | Milestone | Content | Status |
+|---|---|---|---|
+| M28 | Data workflow | Import CSV, ODS or XLSX into any data sheet; insert a chart from copied cells; update data links on open; one shared source for several charts | planned |
+| M29 | Automation round-trip and audit | Export an existing deck as a deck specification; audit a deck (charts, links, stale sources, design deviations, support data) with jump-to-slide; batch format and data operations | planned |
+| M30 | Design and accessibility | Extend the corporate design check to master slides, layouts and pictures; a report dialog; theme colours and fonts; colour-blindness simulation; alternative text for every element; a palette editor | planned |
+
+Plans: [M28](docs/plans/data-workflow.md), [M29](docs/plans/automation-roundtrip.md),
+[M30](docs/plans/design-and-accessibility.md).
+
+### Research
+
+| | Topic | Content | Status |
+|---|---|---|---|
+| M31 | Flow, hierarchy and motion | Sankey and treemap charts; map (choropleth) charts, which need bundled geodata of a suitable licence and size; small multiples; a series-by-series build on a slide; diagnostics for large decks | open |
+
+Plan: [M31](docs/plans/research-flow-hierarchy-motion.md).
+
+6.0 and 7.0 are sketches like the versions before them: their order follows the value for a
+typical deck, not a delivery date. Each milestone gets a plan in `docs/plans/` before work starts.
 
 ## Non-goals
 
