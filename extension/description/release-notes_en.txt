@@ -1,6 +1,9 @@
-LibreCharts 4.0 - first public release.
+LibreCharts 5.0 - build, check and share decks.
 
-Charts for LibreOffice Impress in the style of think-cell: column, bar, waterfall,
-Marimekko, line, area, pie, scatter, butterfly and Gantt charts, drawn as native shapes
-and fed from a Calc data sheet. Annotations, data links, slide elements (Harvey balls,
-check marks, agenda) and label placement are included.
+New: build a deck from a template and a JSON file, or update all data links, on the command
+line or from a macro. Check a presentation against a corporate design file and fix every
+deviation in one undo step. Charts carry alternative text for screen readers, can show
+patterns beside their colours, and export their data as CSV. The interface is available in
+French, Spanish and Italian as well as English and German.
+
+Charts saved by 5.0 cannot be read by 4.0; 5.0 opens every older presentation unchanged.

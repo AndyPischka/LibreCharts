@@ -1,7 +1,11 @@
-LibreCharts 4.0 - erste öffentliche Version.
+LibreCharts 5.0 - Präsentationen bauen, prüfen und teilen.
 
-Diagramme für LibreOffice Impress im Stil von think-cell: Säulen-, Balken-, Wasserfall-,
-Marimekko-, Linien-, Flächen-, Kreis-, Streu-, Schmetterlings- und Gantt-Diagramme,
-gezeichnet als native Formen und gespeist aus einem Calc-Datenblatt. Annotationen,
-Datenverknüpfungen, Folienelemente (Harvey-Bälle, Häkchen, Agenda) und Label-Platzierung
-sind enthalten.
+Neu: eine Präsentation aus Vorlage und JSON-Datei bauen oder alle Datenverknüpfungen
+aktualisieren, auf der Kommandozeile oder per Makro. Eine Präsentation gegen eine
+Corporate-Design-Datei prüfen und alle Abweichungen in einem Rückgängig-Schritt korrigieren.
+Diagramme tragen Alternativtext für Screenreader, können Muster zusätzlich zu den Farben
+zeigen und ihre Daten als CSV exportieren. Die Oberfläche gibt es jetzt auch auf Französisch,
+Spanisch und Italienisch, neben Englisch und Deutsch.
+
+Mit 5.0 gespeicherte Diagramme kann 4.0 nicht lesen; 5.0 öffnet jede ältere Präsentation
+unverändert.

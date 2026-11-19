@@ -14,7 +14,7 @@ Single tasks live in the issue tracker, not here.
 | M4 | Annotations | Difference arrows (bracket and level), CAGR arrows, axis break, placed by clicking columns, on column, bar and waterfall charts (ADR 0010); total labels came with M1 | done |
 
 Order is deliberate: M1 builds the shared foundation (layout, data sheet, persistence) that M2-M4 reuse.
-The first release (4.0) shipped after M17.
+The first release (4.0) shipped after M17, 5.0 after M21.
 
 ## Later versions
 
