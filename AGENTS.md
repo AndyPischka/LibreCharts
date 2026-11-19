@@ -2,7 +2,7 @@
 
 LibreCharts is a think-cell-style chart extension (`.oxt`) for **LibreOffice Impress**, written in
 Python-UNO. Charts are drawn as native Draw shapes; chart data is edited in a Calc window.
-Status: M1-M21 done (charts, annotations, automation, corporate design check, accessibility, five UI languages). See [ROADMAP.md](ROADMAP.md) for milestones and non-goals.
+Status: M1-M20 done, M21 languages done (macOS CI pending): charts, annotations, automation, corporate design check, accessibility, five UI languages. See [ROADMAP.md](ROADMAP.md) for milestones and non-goals.
 
 ## Commands
 
@@ -23,7 +23,7 @@ Run everything through `uv run poe <task>` (uv installs Python 3.11 and the dev 
 `test-lo` needs LibreOffice installed (override discovery with `LIBREOFFICE_PROGRAM`). It uses a
 throwaway profile and LibreOffice's own Python, one LibreOffice per `tests/lo` module, see
 [CONTRIBUTING.md](CONTRIBUTING.md#testing). Runs on Windows and in CI on Linux against the minimum
-version 25.8.7; CI also runs `check` and `test-lo` on macOS.
+version 25.8.7. macOS is supported by the scripts (ADR 0031) but not yet tested in CI.
 
 ## Project map
 

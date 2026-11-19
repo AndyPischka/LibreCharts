@@ -36,8 +36,9 @@ macOS to be tested and supported. The menu and toolbar titles are a second copy 
   `30/06/2026` in French, Spanish and Italian, ISO otherwise). The date fields already read day-first
   dates in every language but English.
 - **macOS**: `scripts/loenv.py` finds LibreOffice in `/Applications` and `~/Applications` and its
-  Python in `Contents/Resources`. CI runs `poe check` on macOS and the integration tests against
-  the same minimum LibreOffice version as on Linux.
+  Python in `Contents/Resources`. CI is to run `poe check` on macOS and the integration tests
+  against the same minimum LibreOffice as on Linux (the official disk image, checksum pinned);
+  that workflow change waits for the maintainer (AGENTS.md: CI changes are agreed first).
 
 ## Alternatives considered
 
@@ -60,5 +61,5 @@ macOS to be tested and supported. The menu and toolbar titles are a second copy 
   marks them as needing review because the source changed.
 - The release notes and the extension description exist in the shipped languages; release notes
   of further versions are written in English and German and translated through the platform.
-- macOS is supported on the same terms as Linux: CI tests it, and headless-only limits (dialogs,
-  clipboard) apply alike.
+- macOS is supported by the scripts; it counts as tested once the CI job runs. Headless-only
+  limits (dialogs, clipboard) apply as on Linux.

@@ -7,7 +7,7 @@
 think-cell-style charts for **LibreOffice Impress**, as an open-source extension.
 Charts are drawn as native shapes and fed from a Calc data sheet.
 
-> **Status: M1 to M21 done.** Stacked, clustered and 100 % **column and bar charts**,
+> **Status: M1 to M20 done; M21 languages done, macOS CI pending.** Stacked, clustered and 100 % **column and bar charts**,
 > **line, stacked and 100 % area charts**, **pie, doughnut, scatter, bubble and butterfly
 > charts**, **waterfall**, **Marimekko** and **Gantt charts** work: edit the
 > data in a Calc window (formulas included), resize charts freely, undo everything, save as ODP or
@@ -35,7 +35,8 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 
 ## Requirements
 
-- LibreOffice **25.8 or newer** on Windows, Linux or macOS. The minimum is enforced by the package.
+- LibreOffice **25.8 or newer** (Windows and Linux tested; macOS supported, CI tests to follow).
+  The minimum is enforced by the package.
 - UI languages: English, German, French, Spanish and Italian; any other UI language shows English.
   Translations are welcome: [docs/translating.md](docs/translating.md).
 
