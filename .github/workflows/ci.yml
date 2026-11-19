@@ -101,6 +101,8 @@ jobs:
             echo "No core dumps."
             exit 0
           fi
+          # The runner's package index goes stale (404 for superseded debug packages): refresh it.
+          sudo apt-get update -qq
           sudo apt-get install -y -qq gdb > /dev/null
           bin="$LIBREOFFICE_PROGRAM/soffice.bin"
           for core in "${cores[@]}"; do
