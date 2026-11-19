@@ -16,6 +16,8 @@ FORMAT_STATE = Format(axis=True, gridlines=True, series_names="labels")
 
 EDIT = MenuItem("Edit chart data", PROTOCOL + "EditData")
 LINK = MenuItem("Link data...", PROTOCOL + "LinkData")
+EXPORT = MenuItem("Export chart data as CSV...", PROTOCOL + "ExportCsv")
+PATTERNS = MenuItem("Show patterns", PROTOCOL + "ChangeFormat?patterns=true")
 VARIANTS = (
     MenuItem("Show clustered", PROTOCOL + "ChangeChart?grouping=clustered"),
     MenuItem("Show as 100 %", PROTOCOL + "ChangeChart?percent=true"),
@@ -53,14 +55,19 @@ FORMAT = MenuItem(
     "Format",
     children=(
         MenuItem("Show value axis", PROTOCOL + "ChangeFormat?axis=true"),
+        PATTERNS,
         SERIES,
         NUMBER_FORMAT,
     ),
 )
-FORMAT_MEKKO = MenuItem("Format", children=(SERIES, NUMBER_FORMAT))
+FORMAT_MEKKO = MenuItem("Format", children=(PATTERNS, SERIES, NUMBER_FORMAT))
 FORMAT_WATERFALL = MenuItem(
     "Format",
-    children=(MenuItem("Show value axis", PROTOCOL + "ChangeFormat?axis=true"), NUMBER_FORMAT),
+    children=(
+        MenuItem("Show value axis", PROTOCOL + "ChangeFormat?axis=true"),
+        PATTERNS,
+        NUMBER_FORMAT,
+    ),
 )
 ARROWS = (
     MenuItem("Add difference arrow", PROTOCOL + "PickAnnotation?kind=difference"),
@@ -122,6 +129,7 @@ def test_column_chart_without_annotations_offers_data_variants_sort_format_and_a
         children=(
             EDIT,
             LINK,
+            EXPORT,
             *VARIANTS,
             LINES,
             colour_menu("Product A", "Product B", "Product C"),
@@ -137,6 +145,7 @@ def test_bar_charts_offer_the_same_variants_and_annotations() -> None:
     assert chart_menu(replace(sample_state(), kind="bar"), "en-US").children == (
         EDIT,
         LINK,
+        EXPORT,
         *VARIANTS,
         colour_menu("Product A", "Product B", "Product C"),
         SORT,
@@ -178,6 +187,7 @@ def test_waterfall_charts_offer_horizontal_and_stacked_but_no_sort() -> None:
     assert chart_menu(sample_waterfall_state(), "en-US").children == (
         EDIT,
         LINK,
+        EXPORT,
         *WATERFALL_VARIANTS,
         FORMAT_WATERFALL,
         *FORMAT_TOOLS,
@@ -201,6 +211,7 @@ def test_a_percent_mekko_offers_the_data_the_switch_to_units_and_the_format() ->
     assert chart_menu(sample_mekko_state(), "en-US").children == (
         EDIT,
         LINK,
+        EXPORT,
         units,
         colour_menu("Product A", "Product B", "Product C"),
         FORMAT_MEKKO,
@@ -223,7 +234,8 @@ def test_a_units_mekko_offers_the_switch_back_to_percent_and_an_axis() -> None:
     link = MenuItem("Daten verknüpfen...", LINK.command)
     items = chart_menu(state, "de-DE").children
     format_menu = next(item for item in items if item.title == "Format")
-    assert items[:3] == (edit, link, percent)
+    export = MenuItem("Diagrammdaten als CSV exportieren...", EXPORT.command)
+    assert items[:4] == (edit, link, export, percent)
     assert format_menu.title == "Format"
     assert "Wertachse anzeigen" in [child.title for child in format_menu.children]
 
@@ -236,6 +248,7 @@ def test_the_format_menu_hides_what_the_chart_already_shows() -> None:
     assert [child.title for child in format_menu.children] == [
         "Hide value axis",
         "Hide gridlines",
+        "Show patterns",
         "Series labels",
         "Number format...",
     ]

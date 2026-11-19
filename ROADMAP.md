@@ -61,8 +61,8 @@ sheet (one row per point, fixed columns) is the pattern the Gantt chart in M10 f
 | | Milestone | Content | Status |
 |---|---|---|---|
 | M18 | Automation | Python and macro API and a command line: build a deck from data and a template, update all data links of a presentation | done |
-| M19 | Corporate design check | Check a presentation against the corporate design file of M8 (colours, fonts, positions) and fix deviations in one step | open |
-| M20 | Accessibility and export | Alternative text generated from the chart data, patterns as well as colours for colour-blind readers, exporting chart data as CSV | open |
+| M19 | Corporate design check | Check a presentation against the corporate design file of M8 (colours, fonts, positions) and fix deviations in one step (ADR 0029) | done |
+| M20 | Accessibility and export | Alternative text generated from the chart data, patterns as well as colours for colour-blind readers, exporting chart data as CSV (ADR 0030) | done |
 | M21 | Languages and platforms | Further UI languages through a translation platform (Weblate); macOS tested and supported | open |
 
 Both versions are sketches. Priorities are set from user feedback in the issue tracker.

@@ -57,4 +57,4 @@ def save(doc: Any, scheme: style.Scheme) -> None:
 
 def look(doc: Any, state: ChartState, fallback: style.Scheme | None = None) -> render.Look:
     """The colours and font to draw ``state`` with: document scheme plus its series colours."""
-    return render.Look(load(doc, fallback), state.colors)
+    return render.Look(load(doc, fallback), state.colors, state.format.patterns)

@@ -12,12 +12,12 @@ from librecharts.core import annotations as notes
 from librecharts.core import format as formats
 from librecharts.core import labels as core_labels
 from librecharts.core import links, options, style
+from librecharts.core.alttext import kind_key
 from librecharts.core.calendar import active as calendar_active
 from librecharts.core.menu import GRID_COLUMNS, PROTOCOL, annotation_title, arrange_items
 from librecharts.core.messages import text
 from librecharts.core.model import AnnotationKind, ChartState
 from librecharts.core.picking import supports
-from librecharts.core.scatter import parse_scatter
 
 _ARRANGE_ICONS = {  # by the ``op`` of the Arrange command
     "width": "arrange_width",
@@ -62,7 +62,7 @@ class Row:
 class Panel:
     """Sections top to bottom: insert, selected chart (``status``, edit, data link with
     ``link_status``, ``options``, ``format``), annotations, list, document (``update_all``,
-    ``scheme``)."""
+    ``scheme``, ``design``: the corporate design check)."""
 
     insert: tuple[Button, ...]
     status: str
@@ -81,6 +81,7 @@ class Panel:
     elements: tuple[Button, ...] = ()
     arrange: tuple[Button, ...] = ()
     agenda: tuple[Button, ...] = ()
+    design: tuple[Button, ...] = ()
 
 
 def content(
@@ -108,17 +109,7 @@ def content(
         status = text("status_orphaned" if selected else "status_none", locale)
     else:
         data = notes.measured(state)
-        kind = state.kind
-        if kind == "mekko" and not state.percent:
-            kind = "mekko_units"
-        elif kind in ("column", "bar", "area") and state.percent:
-            kind += "_percent"
-        elif kind == "column" and state.lines:
-            kind = "column_lines"
-        elif kind == "pie" and state.doughnut:
-            kind = "doughnut"
-        elif kind == "scatter" and parse_scatter(state).bubbles:
-            kind = "bubble"
+        kind = kind_key(state)
         status_key = "status_chart"
         if kind == "gantt":
             status_key = (
@@ -174,6 +165,7 @@ def content(
                 if gantt
                 else ()
             ),
+            _button("menu_export_csv", "ExportCsv", "", locale, usable),
         ),
         link_status=links.status(state.link, locale) if state and state.link else "",
         link=_link(linked, usable, locale),
@@ -280,6 +272,7 @@ def content(
             _button("menu_start_chapter", "StartChapter", "", locale, has_agenda),
             _button("menu_update_agenda", "UpdateAgenda", "", locale, has_agenda),
         ),
+        design=(_button("menu_check_design", "CheckDesign", "", locale),),
     )
 
 

@@ -141,6 +141,11 @@ def _v14_to_v15(raw: _Raw) -> _Raw:
     }
 
 
+def _v15_to_v16(raw: _Raw) -> _Raw:
+    """Version 16 added patterns beside the colours (M20); existing charts stay plain colour."""
+    return {**raw, "format": {**_as_object(raw.get("format", {})), "patterns": False}}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -157,6 +162,7 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     12: _v12_to_v13,
     13: _v13_to_v14,
     14: _v14_to_v15,
+    15: _v15_to_v16,
 }
 
 
@@ -257,6 +263,7 @@ def _format_to_raw(fmt: Format) -> _Raw:
         "separator": fmt.separator,
         "language": fmt.language,
         "markers": fmt.markers,
+        "patterns": fmt.patterns,
     }
 
 
@@ -385,6 +392,7 @@ def _as_format(value: object) -> Format:
         separator=_get(raw, "separator"),
         language=_as_str(_get(raw, "language")),
         markers=_as_flag(_get(raw, "markers"), "markers"),
+        patterns=_as_flag(_get(raw, "patterns"), "patterns"),
     )
 
 

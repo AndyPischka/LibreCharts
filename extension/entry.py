@@ -136,6 +136,10 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.load_scheme(self.ctx, self.frame)
             elif url.Path == "SaveScheme":
                 commands.save_scheme(self.ctx, self.frame)
+            elif url.Path.startswith("ExportCsv"):
+                commands.export_csv(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("CheckDesign"):
+                commands.check_design(self.ctx, self.frame, _query(url))
             elif url.Path == "ValueLine":
                 commands.value_line(self.ctx, self.frame)
             elif url.Path == "TodayLine":

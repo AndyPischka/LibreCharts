@@ -80,3 +80,21 @@ def test_help_exits_without_a_libreoffice() -> None:
     with pytest.raises(SystemExit) as exit_code:
         cli.parser().parse_args(["--help"])
     assert exit_code.value.code == 0
+
+
+def test_check_takes_a_deck_and_a_corporate_design_and_only_reports_by_default() -> None:
+    args = cli.parser().parse_args(["check", "deck.odp", "--design", "cd.json"])
+    assert (args.command, args.deck, args.design, args.fix, args.out) == (
+        "check",
+        "deck.odp",
+        "cd.json",
+        False,
+        "",
+    )
+    fixed = cli.parser().parse_args(["check", "deck.odp", "--design", "cd.json", "--fix"])
+    assert fixed.fix
+
+
+def test_check_needs_the_corporate_design() -> None:
+    with pytest.raises(SystemExit):
+        cli.parser().parse_args(["check", "deck.odp"])

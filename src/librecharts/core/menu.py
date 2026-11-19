@@ -45,6 +45,7 @@ def chart_menu(
     data = notes.measured(state)
     items = [_command("menu_show_data" if state.link else "menu_edit_data", "EditData", locale)]
     items += _link_items(state, locale)
+    items.append(_command("menu_export_csv", "ExportCsv", locale))
     if state.kind == "gantt" and state.link is None:
         items.append(
             MenuItem(

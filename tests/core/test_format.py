@@ -158,13 +158,14 @@ def test_format_options_offer_the_axis_and_series_names() -> None:
         ("menu_series_none", "ChangeFormat?series_names=none"),
         ("menu_series_labels", "ChangeFormat?series_names=labels"),
         ("menu_series_legend", "ChangeFormat?series_names=legend"),
+        ("menu_patterns_show", "ChangeFormat?patterns=true"),
     ]
 
 
 def test_format_options_offer_the_marker_toggle_for_line_series() -> None:
     state = state_from_table("line", "stacked", [[None, "2024"], ["Sales", 10]])
     switches = format_options(state)
-    assert [(s.title, s.command) for s in switches[-1:]] == [
+    assert [(s.title, s.command) for s in switches[-2:-1]] == [
         ("menu_markers_hide", "ChangeFormat?markers=false"),
     ]
     hidden = format_options(replace(state, format=Format(markers=False)))

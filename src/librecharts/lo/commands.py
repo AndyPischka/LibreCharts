@@ -13,9 +13,10 @@ from urllib.parse import parse_qs
 import uno
 
 from librecharts import api
-from librecharts.core import annotations, elements, gantt, gantt_import, options, style
+from librecharts.core import annotations, csvexport, elements, gantt, gantt_import, options, style
 from librecharts.core import arrange as core_arrange
 from librecharts.core import calendar as working_calendar
+from librecharts.core import designcheck as core_design
 from librecharts.core import format as formats
 from librecharts.core import labels as core_labels
 from librecharts.core import links as core_links
@@ -32,6 +33,7 @@ from librecharts.lo import (
     calendardialog,
     chart,
     datasheet,
+    designcheck,
     formatdialog,
     labels,
     linkdialog,
@@ -768,6 +770,81 @@ def save_scheme(ctx: Any, frame: Any) -> None:
         ui.show_info(ctx, frame, text("scheme_save_failed", locale, detail=str(exc)))
         return
     ui.show_info(ctx, frame, text("scheme_saved", locale, path=path))
+
+
+def check_design(ctx: Any, frame: Any, query: str) -> None:
+    """Check the presentation against a corporate design file and offer to fix it (M19, ADR 0029).
+
+    ``CheckDesign?file=<url>`` skips the file picker; ``fix=true`` fixes without asking (macros,
+    tests) and ``fix=false`` only reports. Without ``fix`` the report asks whether to fix: one undo
+    step. Without a window (headless) the report is printed.
+    """
+    locale = ui.ui_locale(ctx)
+    doc = frame.getController().getModel()
+    location = _query_arg(query, "file")
+    if not location:
+        location = _pick_file(ctx, text("design_title_load", locale), save=False) or ""
+        if not location:
+            return
+    try:
+        rules = designcheck.read_rules(location)
+    except core_design.DesignError as exc:
+        ui.tell(ctx, frame, text("design_load_failed", locale, detail=str(exc)))
+        return
+    fix = _query_arg(query, "fix")
+    result = designcheck.inspect(doc, rules)
+    if result.clean:
+        ui.tell(ctx, frame, core_design.report(result, locale))
+        return
+    if fix == "false":
+        ui.tell(ctx, frame, core_design.report(result, locale))
+        return
+    if fix != "true":
+        question = core_design.report(result, locale) + "\n\n" + text("design_ask_fix", locale)
+        if not ui.ask(ctx, frame, question):
+            return
+    designcheck.check_and_fix(doc, rules)
+    ui.tell(ctx, frame, text("design_done", locale, count=str(len(result.findings))))
+
+
+def export_csv(ctx: Any, frame: Any, query: str) -> None:
+    """Write the selected chart's data sheet to a CSV file (M20, ADR 0030).
+
+    ``ExportCsv?url=<url>`` skips the file picker (macros, tests). Nothing in the presentation
+    changes, so there is no undo step.
+    """
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    _, state = found
+    locale = ui.ui_locale(ctx)
+    location = _query_arg(query, "url")
+    url = links.as_url(location) if location else _pick_csv_target(ctx, locale)
+    if not url:
+        return
+    try:
+        path = uno.fileUrlToSystemPath(url)
+        # A byte order mark makes spreadsheets read the file as UTF-8.
+        Path(path).write_text(csvexport.to_csv(state), encoding="utf-8-sig", newline="")
+    except Exception as exc:  # not a file URL, folder missing, not writable
+        ui.tell(ctx, frame, text("csv_export_failed", locale, detail=str(exc)))
+        return
+    if not location:
+        ui.tell(ctx, frame, text("csv_exported", locale, path=path))
+
+
+def _pick_csv_target(ctx: Any, locale: str) -> str | None:
+    picker = ctx.ServiceManager.createInstanceWithContext("com.sun.star.ui.dialogs.FilePicker", ctx)
+    picker.initialize((10,))  # TemplateDescription.FILESAVE_AUTOEXTENSION
+    picker.setTitle(text("csv_title_save", locale))
+    label = text("csv_filter", locale)
+    picker.appendFilter(label, "*.csv")
+    picker.setCurrentFilter(label)
+    picker.setDefaultName(csvexport.DEFAULT_NAME)
+    if picker.execute() != 1:  # com.sun.star.ui.dialogs.ExecutableDialogResults.OK
+        return None
+    files = picker.getFiles()
+    return str(files[0]) if files else None
 
 
 def _pick_file(ctx: Any, title: str, *, save: bool) -> str | None:

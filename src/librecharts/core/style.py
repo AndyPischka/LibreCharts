@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 # Series colours of the default scheme, indexed like ``ChartData.series``.
 PALETTE: tuple[int, ...] = (0x8FB4E3, 0x5E8AC7, 0xC9D8EE, 0xA6A6A6, 0xF4B183, 0xD9D9D9)
@@ -91,6 +91,64 @@ HIGH_CONTRAST = Scheme(
 )
 
 BUILT_INS: tuple[Scheme, ...] = (DEFAULT, GREY, HIGH_CONTRAST)
+
+
+@dataclass(frozen=True, slots=True)
+class Hatch:
+    """A fill pattern drawn over the series colour (M20, ADR 0030): parallel lines at ``angle``
+    (tenths of a degree, like Draw's ``Hatch.Angle``), crossed for ``double`` and ``triple``."""
+
+    style: Literal["single", "double", "triple"]
+    angle: int
+
+
+@dataclass(frozen=True, slots=True)
+class Dash:
+    """A line pattern for a line series: ``dots`` dots then ``dashes`` dashes, in 1/100 mm."""
+
+    dots: int
+    dot_length: int
+    dashes: int
+    dash_length: int
+    distance: int
+
+
+# Patterns by series index, so neighbouring series never share one; the first series stays plain.
+HATCHES: tuple[Hatch | None, ...] = (
+    None,
+    Hatch("single", 450),
+    Hatch("single", 1350),
+    Hatch("single", 0),
+    Hatch("double", 450),
+    Hatch("single", 900),
+    Hatch("double", 0),
+    Hatch("triple", 450),
+)
+HATCH_DISTANCE = 120  # 1/100 mm between the lines of a hatch
+DASHES: tuple[Dash | None, ...] = (
+    None,
+    Dash(0, 0, 1, 300, 150),
+    Dash(1, 30, 0, 0, 100),
+    Dash(1, 30, 1, 250, 100),
+    Dash(0, 0, 1, 600, 200),
+    Dash(2, 30, 1, 250, 100),
+)
+
+
+def hatch(series: int) -> Hatch | None:
+    """The fill pattern of a series index; ``None`` for plain colour and for special fills."""
+    return HATCHES[series % len(HATCHES)] if series >= 0 else None
+
+
+def dash(series: int) -> Dash | None:
+    """The line pattern of a line series; ``None`` for a solid line."""
+    return DASHES[series % len(DASHES)] if series >= 0 else None
+
+
+def hatch_color(fill: int) -> int:
+    """The colour of a hatch's lines on ``fill``: half way to the readable text colour, so the
+    pattern shows on every palette colour without drowning the labels on it."""
+    return mix(fill, text_color(fill), 0.55)
 
 
 def series_color(series: int) -> int:

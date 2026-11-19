@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
 
 ChartKind = Literal[
     "column", "bar", "waterfall", "mekko", "line", "area", "pie", "scatter", "butterfly", "gantt"
@@ -47,12 +47,15 @@ class Format:
     separator: Separator = "."
     language: str = "en"
     markers: bool = True  # point markers on line series
+    patterns: bool = False  # hatch fills and dashed lines beside the colours (M20, ADR 0030)
 
     def __post_init__(self) -> None:
         if self.series_names not in get_args(SeriesNames):
             raise ValueError(f"unknown series name mode: {self.series_names!r}")
         if not isinstance(self.markers, bool):  # pyright: ignore
             raise ValueError("markers must be true or false")
+        if not isinstance(self.patterns, bool):  # pyright: ignore
+            raise ValueError("patterns must be true or false")
         if not isinstance(self.axis, bool):  # pyright: ignore
             raise ValueError("axis must be true or false")
         if not isinstance(self.gridlines, bool):  # pyright: ignore

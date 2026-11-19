@@ -6,6 +6,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- **Corporate design check** (M19): *Check corporate design...* compares every slide with a
+  corporate design file and offers to fix what deviates, in one undo step. The file is the colour
+  scheme file of *Load scheme*, optionally with a `check` object: more allowed `colors` and `fonts`
+  and `margins_mm` that every shape keeps from the slide edges. Fills, lines and text in other
+  colours get the closest corporate colour, other fonts the scheme's font, shapes outside the
+  margins move inside, and charts switch to the corporate scheme. On the command line:
+  `uv run poe deck check deck.odp --design corporate.json [--fix]`.
+- **Alternative text** (M20): every chart carries a title (its type) and a description of its data
+  for screen readers and the PDF export, in the chart's language and number format. It follows
+  every data edit. LibreOffice's PPTX filter drops it; a chart from a PPTX file gets it back with
+  its next change.
+- **Patterns** (M20): *Format → Show patterns* hatches series fills and dashes line series beside
+  their colours, so charts stay readable for colour-blind readers and in black-and-white print.
+- **CSV export** (M20): *Export chart data as CSV...* writes a chart's data sheet to a CSV file; a
+  chart with a decimal comma writes semicolons between the fields, as spreadsheets expect.
 - **Automation** (M18): a presentation can be built from a template and a JSON deck specification.
   A template marks the place of each chart with a shape named `librecharts-placeholder:<key>`; the
   specification names the placeholder, the chart type, the data and any chart option, and the build

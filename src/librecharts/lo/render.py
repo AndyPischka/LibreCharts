@@ -48,6 +48,12 @@ NORMAL = 100.0  # com.sun.star.awt.FontWeight.NORMAL
 
 _FILL_NONE = uno.Enum("com.sun.star.drawing.FillStyle", "NONE")
 _FILL_SOLID = uno.Enum("com.sun.star.drawing.FillStyle", "SOLID")
+_FILL_HATCH = uno.Enum("com.sun.star.drawing.FillStyle", "HATCH")
+_HATCH_STYLES = {
+    "single": uno.Enum("com.sun.star.drawing.HatchStyle", "SINGLE"),
+    "double": uno.Enum("com.sun.star.drawing.HatchStyle", "DOUBLE"),
+    "triple": uno.Enum("com.sun.star.drawing.HatchStyle", "TRIPLE"),
+}
 _LINE_NONE = uno.Enum("com.sun.star.drawing.LineStyle", "NONE")
 _LINE_SOLID = uno.Enum("com.sun.star.drawing.LineStyle", "SOLID")
 _LINE_DASH = uno.Enum("com.sun.star.drawing.LineStyle", "DASH")
@@ -65,11 +71,13 @@ class Look:
     """How the shapes of a chart are coloured and lettered (ADR 0016).
 
     ``scheme`` is the document-wide colour scheme; ``colors`` holds the palette indices of single
-    series (ADR 0016, series colours), indexed like ``ChartState.colors``.
+    series (ADR 0016, series colours), indexed like ``ChartState.colors``. With ``patterns`` series
+    fills are hatched and line series dashed beside their colours (M20, ADR 0030).
     """
 
     scheme: style.Scheme = style.DEFAULT
     colors: tuple[int | None, ...] = ()
+    patterns: bool = False
 
     def color(self, series: int) -> int:
         """The fill colour of a series index."""
@@ -103,6 +111,16 @@ def render_group(
     for spec in _specs(primitives, x, y, width, height):
         _create(doc, group, spec, look)
     return group
+
+
+def describe(group: Any, title: str, description: str) -> None:
+    """Give the chart group its alternative text (M20, ADR 0030); unchanged values stay unwritten,
+    because every write fires a modify event. ODP keeps it; LibreOffice's PPTX filter drops it, so
+    a chart from a PPTX file gets it back with its next redraw."""
+    if group.Title != title:
+        group.Title = title
+    if group.Description != description:
+        group.Description = description
 
 
 def layout_box(group: Any) -> tuple[int, int, int, int]:
@@ -303,6 +321,57 @@ def _dash() -> Any:
     return dash
 
 
+def _hatch(pattern: style.Hatch, fill: int) -> Any:
+    hatch = uno.createUnoStruct("com.sun.star.drawing.Hatch")
+    hatch.Style = _HATCH_STYLES[pattern.style]
+    hatch.Color = style.hatch_color(fill)
+    hatch.Distance = style.HATCH_DISTANCE
+    hatch.Angle = pattern.angle
+    return hatch
+
+
+def _series_dash(pattern: style.Dash) -> Any:
+    dash = uno.createUnoStruct("com.sun.star.drawing.LineDash")
+    dash.Style = uno.Enum("com.sun.star.drawing.DashStyle", "RECT")
+    dash.Dots, dash.DotLen = pattern.dots, pattern.dot_length
+    dash.Dashes, dash.DashLen = pattern.dashes, pattern.dash_length
+    dash.Distance = pattern.distance
+    return dash
+
+
+def _same_struct(current: Any, wanted: Any, names: tuple[str, ...]) -> bool:
+    try:
+        return all(getattr(current, name) == getattr(wanted, name) for name in names)
+    except Exception:
+        return False
+
+
+_HATCH_FIELDS = ("Style", "Color", "Distance", "Angle")
+_DASH_FIELDS = ("Style", "Dots", "DotLen", "Dashes", "DashLen", "Distance")
+
+
+def _series_fill(ops: _Style, series: int, color: int, look: Look) -> None:
+    """A series fill: plain colour, or the colour under a hatch when the chart shows patterns."""
+    pattern = style.hatch(series) if look.patterns else None
+    ops.set("FillColor", color)
+    if pattern is None:
+        ops.set("FillStyle", _FILL_SOLID)
+        return
+    ops.set("FillStyle", _FILL_HATCH)
+    ops.set("FillBackground", True)
+    ops.set_struct("FillHatch", _hatch(pattern, color), _HATCH_FIELDS)
+
+
+def _series_line(ops: _Style, series: int, look: Look) -> None:
+    """A line series: solid, or dashed by its index when the chart shows patterns."""
+    pattern = style.dash(series) if look.patterns else None
+    if pattern is None:
+        ops.set("LineStyle", _LINE_SOLID)
+        return
+    ops.set("LineStyle", _LINE_DASH)
+    ops.set_struct("LineDash", _series_dash(pattern), _DASH_FIELDS)
+
+
 def _text_color(label: Text, look: Look) -> int:
     return look.text_on(look.color(label.fill)) if label.fill is not None else look.scheme.text
 
@@ -332,6 +401,12 @@ class _Style:
     def set(self, name: str, value: Any) -> None:
         """Add a property unless it already has ``value``."""
         if self.update and getattr(self.shape, name) == value:
+            return
+        self.put(name, value)
+
+    def set_struct(self, name: str, value: Any, names: tuple[str, ...]) -> None:
+        """Add a struct property unless its fields ``names`` already have these values."""
+        if self.update and _same_struct(getattr(self.shape, name), value, names):
             return
         self.put(name, value)
 
@@ -404,8 +479,7 @@ def _style(shape: Any, spec: _Spec, look: Look, *, update: bool = False) -> None
             style.set("LineColor", look.color(p.series))
             style.set("LineWidth", LINE_WIDTH)
         elif isinstance(p, Polygon):
-            style.set("FillStyle", _FILL_SOLID)
-            style.set("FillColor", look.color(p.series))
+            _series_fill(style, p.series, look.color(p.series), look)
             style.set("LineStyle", _LINE_NONE)
         elif isinstance(p, Polyline) and p.series in (POSITIVE, NEGATIVE):
             style.set("FillStyle", _FILL_NONE)
@@ -414,7 +488,7 @@ def _style(shape: Any, spec: _Spec, look: Look, *, update: bool = False) -> None
             style.set("LineWidth", ELEMENT_LINE_WIDTH)
         elif isinstance(p, Polyline):
             style.set("FillStyle", _FILL_NONE)
-            style.set("LineStyle", _LINE_SOLID)
+            _series_line(style, p.series, look)
             style.set("LineColor", look.color(p.series))
             style.set("LineWidth", LINE_WIDTH)
         style.apply()
@@ -430,14 +504,17 @@ def _style(shape: Any, spec: _Spec, look: Look, *, update: bool = False) -> None
             color = look.scheme.shade()
         else:
             color = look.color(p.series)
-        style.set("FillStyle", _FILL_SOLID)
-        style.set("FillColor", color)
+        _series_fill(style, p.series, color, look)
         style.set("LineStyle", _LINE_NONE)
-    elif isinstance(p, (Marker, Bubble)):
+    elif isinstance(p, Bubble):
+        _series_fill(style, p.series, look.color(p.series), look)
+        style.set("LineStyle", _LINE_NONE)
+        style.set("FillTransparence", BUBBLE_TRANSPARENCY)
+    elif isinstance(p, Marker):
         style.set("FillStyle", _FILL_SOLID)
         style.set("FillColor", look.color(p.series))
         style.set("LineStyle", _LINE_NONE)
-        style.set("FillTransparence", BUBBLE_TRANSPARENCY if isinstance(p, Bubble) else 0)
+        style.set("FillTransparence", 0)
     elif isinstance(p, Line):
         line_style = _LINE_DASH if p.role == "helper" else _LINE_SOLID
         if p.role == "grid":

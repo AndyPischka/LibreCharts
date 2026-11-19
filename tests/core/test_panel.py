@@ -77,6 +77,7 @@ def test_a_gantt_chart_with_a_calendar_says_so_and_offers_working_days() -> None
         PROTOCOL + "EditData",
         PROTOCOL + "ImportGanttCsv",
         PROTOCOL + "ImportGanttProject",
+        PROTOCOL + "ExportCsv",
     ]
     linked = content(
         replace(
@@ -86,7 +87,7 @@ def test_a_gantt_chart_with_a_calendar_says_so_and_offers_working_days() -> None
         True,
         "en-US",
     )
-    assert [b.enabled for b in linked.edit] == [True, False, False]
+    assert [b.enabled for b in linked.edit] == [True, False, False, True]
     working = content(
         replace(sample_gantt_state(), calendar=Calendar((0, 1, 2, 3, 4))), True, "en-US"
     )

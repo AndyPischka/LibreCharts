@@ -199,6 +199,8 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         layout.label(f"{text('panel_scheme', self.locale)}: {panel.scheme}")
         layout.flow(panel.schemes)
         layout.flow(panel.scheme_files)
+        for button in panel.design:
+            layout.button(button)
         return layout.y + MARGIN
 
     def _add_scrollbar(self, content_height: int) -> None:

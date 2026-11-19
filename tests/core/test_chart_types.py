@@ -172,18 +172,22 @@ def test_which_new_kinds_have_which_format_option() -> None:
 
 def test_a_scatter_chart_offers_gridlines_without_an_axis_switch() -> None:
     commands = [s.command for s in format_options(sample_scatter_state())]
-    assert commands == ["ChangeFormat?gridlines=true"]
+    assert commands == ["ChangeFormat?gridlines=true", "ChangeFormat?patterns=true"]
     with pytest.raises(ValueError, match="no axis option"):
         settled(sample_scatter_state(), Format(), "axis=true")
 
 
 def test_a_butterfly_chart_offers_gridlines_only_with_its_axis() -> None:
     state = sample_butterfly_state()
-    assert [s.command for s in format_options(state)] == ["ChangeFormat?axis=true"]
+    assert [s.command for s in format_options(state)] == [
+        "ChangeFormat?axis=true",
+        "ChangeFormat?patterns=true",
+    ]
     shown = replace(state, format=Format(axis=True))
     assert [s.command for s in format_options(shown)] == [
         "ChangeFormat?axis=false",
         "ChangeFormat?gridlines=true",
+        "ChangeFormat?patterns=true",
     ]
 
 

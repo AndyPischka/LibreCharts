@@ -105,6 +105,8 @@ def supports(state: ChartState, option: str) -> bool:
         return state.kind in ("column", "bar", "mekko", "line", "area", "pie")
     if option == "markers":
         return state.kind == "line" or (state.kind == "column" and bool(state.lines))
+    if option == "patterns":  # every chart fills or draws series in colours
+        return True
     if option == "number_format":  # a Gantt chart shows dates, no numbers
         return state.kind != "gantt"
     return False
@@ -134,7 +136,7 @@ def changed(current: Format, query: str) -> Format:
     if len(args) != 1:
         raise ValueError(f"expected exactly one format option, got {sorted(args)}")
     key, value = next(iter(args.items()))
-    if key in ("axis", "gridlines", "markers"):
+    if key in ("axis", "gridlines", "markers", "patterns"):
         flag = {"true": True, "false": False}.get(value)
         if flag is None:
             raise ValueError(f"{key} must be true or false, not {value!r}")
@@ -195,6 +197,12 @@ def format_options(state: ChartState) -> tuple[Switch, ...]:
                 f"ChangeFormat?markers={'false' if state.format.markers else 'true'}",
             )
         )
+    switches.append(
+        Switch(
+            "menu_patterns_hide" if state.format.patterns else "menu_patterns_show",
+            f"ChangeFormat?patterns={'false' if state.format.patterns else 'true'}",
+        )
+    )
     return tuple(switches)
 
 

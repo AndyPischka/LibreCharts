@@ -21,7 +21,8 @@ src/librecharts/core/       Pure Python. Chart models, layout, axis scaling. Inp
 
 Dependencies point downward only: `core` knows nothing about `lo` or `extension`.
 
-`src/librecharts/api.py` is the automation surface (build a deck, update links, insert a chart): it
+`src/librecharts/api.py` is the automation surface (build a deck, update links, insert a chart,
+check a corporate design): it
 only names the functions and delegates to `lo/`. `cli.py` and `lo/worker.py` are the command line of
 [ADR 0028](docs/adr/0028-automation.md); `scripts/deck.py` starts LibreOffice for them.
 
@@ -31,7 +32,7 @@ only names the functions and delegates to `lo/`. `cli.py` and `lo/worker.py` are
 |---|---|
 | `model.py` | `ChartState`: the persisted description of a chart (raw cells, evaluated values, kind, grouping, annotations with their end series and bracket text, Mekko/100 % option `percent`, category `sort`, `format`, Gantt working `calendar`, line series `lines`/`secondary`, series palette overrides `colors`, same-scale group `scale_group`, data `link`, moved-label offsets `labels`, schema version) |
 | `format.py` | Chart format options: defaults for a new chart, `ChangeFormat` arguments, which chart kind supports what, number-format parsing and validation, locale rules, `apply` for "copy chart format" (ADR 0014) |
-| `style.py` | Colour schemes (palette, text, line, background, font), the built-ins, scheme JSON and the black/white text colour for a fill by WCAG relative luminance (ADRs 0014, 0016) |
+| `style.py` | Colour schemes (palette, text, line, background, font), the built-ins, scheme JSON and the black/white text colour for a fill by WCAG relative luminance; hatch and dash patterns by series index (ADRs 0014, 0016, 0030) |
 | `samescale.py` | Same-scale groups: orientation, joinability, the natural length per value unit of every layout and the smallest common one (ADR 0017) |
 | `value_line.py` | Value lines: the average of a chart, the level a line marks, validation of the dialog's value or date (Gantt date lines) |
 | `annotations.py` | Which annotations a chart kind supports, the values and labels of arrows (between series, in percentage points on share charts), the bracket label check, command arguments (ADRs 0010, 0024) |
@@ -46,7 +47,10 @@ only names the functions and delegates to `lo/`. `cli.py` and `lo/worker.py` are
 | `panel.py` | Contents of the sidebar panel (buttons, status, annotation list) as plain data |
 | `state_io.py` | `ChartState` <-> JSON with schema migrations; malformed input raises `StateError` |
 | `deck.py` | Deck specification: one JSON file describing a chart per placeholder (kind, data grid, options, format), placeholder shape names, validation with message keys (ADR 0028) |
-| `cli.py` | The command line's arguments (`argparse`, localized): `build` and `update`, so `--help` needs no LibreOffice (ADR 0028) |
+| `cli.py` | The command line's arguments (`argparse`, localized): `build`, `update` and `check`, so `--help` needs no LibreOffice (ADRs 0028, 0029) |
+| `designcheck.py` | Corporate design check: the check rules of a scheme file (allowed colours and fonts, margins), the deviations of a presentation's shapes and its scheme, their fixes (closest allowed colour, the scheme's font, a box inside the margins) and the report (ADR 0029) |
+| `alttext.py` | Alternative text of a chart: its type as the title and its data as sentences, in the chart's language and number format (ADR 0030) |
+| `csvexport.py` | A chart's data sheet as CSV: evaluated values, the dialect of the chart's decimal separator, ISO dates for Gantt date columns (ADR 0030) |
 | `messages.py` | All user-visible strings in English and German (a test enforces both) |
 | `datasheet.py` | Data sheet conventions: cell grid -> `ChartData` (categories, series), row-paired grids for floating bars and error bars (`ranged`/`errored`); sample data |
 | `scale.py` | "Nice" value axis ranges |
@@ -98,8 +102,9 @@ so every released schema version must stay readable (`state_io.py`).
 | Module | Role |
 |---|---|
 | `store.py` | Chart id anchor (group name `librecharts:<id>`), state in a document custom property, the document-wide scheme and agenda properties, `claim` forks renamed copies; no `uno` import, unit-tested with fakes |
-| `render.py` | Primitives -> shapes in a group with a `Look` (scheme plus series colours); `layout_box` reads a chart's position and size from its frame; `rerender` updates the shapes in place when the structure is unchanged and replaces them otherwise; `sync_geometry` moves them for a resize or label move (poly shapes through `PolyPolygon`) |
+| `render.py` | Primitives -> shapes in a group with a `Look` (scheme, series colours, patterns); `describe` writes the group's alternative text; `layout_box` reads a chart's position and size from its frame; `rerender` updates the shapes in place when the structure is unchanged and replaces them otherwise; `sync_geometry` moves them for a resize or label move (poly shapes through `PolyPolygon`) |
 | `scheme.py` | Reads and writes the document's colour scheme; the configured default for new documents; builds the renderer's `Look` (ADR 0016) |
+| `designcheck.py` | Corporate design check: reads every slide into `ShapeInfo` records (charts by their frame, groups entered), writes the fixes and the scheme as one undo action (ADR 0029) |
 | `samescale.py` | Collects a scale group's charts and sizes, redraws every affected chart in one lock and marks the document busy meanwhile (ADRs 0017, 0023) |
 | `undo.py` | One explicit undo action per chart operation |
 | `elements.py` | Harvey balls and check marks: find, insert, change state (one undo step), re-lay out after a resize; the state is the group name (ADR 0021) |
@@ -109,9 +114,9 @@ so every released schema version must stay readable (`state_io.py`).
 | `datasheet.py` | Calc window as a transient view: write stored cells (Gantt date columns in a date format), sync every committed edit back; a protected read-only view for linked charts |
 | `links.py` | Data links: find, open (hidden, read-only, no macros) and read the sources of linked charts, each once per update; the info bar when sources changed (ADR 0020) |
 | `deck.py` | A deck from a template: find the placeholder shapes, insert the charts of a specification at their boxes (without undo actions), save as `.odp` or `.pptx` (ADR 0028) |
-| `worker.py` | The command line's UNO side: connect to a headless LibreOffice on a pipe, build or update, save, shut down (ADR 0028) |
+| `worker.py` | The command line's UNO side: connect to a headless LibreOffice on a pipe, build, update or check, save, shut down (ADRs 0028, 0029) |
 | `linkdialog.py` | The link dialog (modal, built in code): file, sheet, range or name; reads the range before it links |
-| `commands.py` | Menu commands (selection handling, messages, same scale, copy format, scheme files, data links, Gantt import, `BuildDeck`); called by `extension/entry.py` |
+| `commands.py` | Menu commands (selection handling, messages, same scale, copy format, scheme files, data links, Gantt import, `BuildDeck`, `CheckDesign`, `ExportCsv`); called by `extension/entry.py` |
 | `resize.py` | One watcher per presentation: after a resize, re-lays charts out in place, including their scale group (ADRs 0007, 0017); looks for moved labels where one can have moved (ADR 0023) |
 | `labels.py` | Moved labels: reads the shapes' boxes, stores the offsets `core/labels.moved` finds (no undo action) and puts other dragged shapes back; the *Move labels* session (ADR 0023) |
 | `doubleclick.py` | One mouse click handler per presentation: double-click on a chart opens its data sheet |

@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from librecharts.core import annotations, style
+from librecharts.core import alttext, annotations, style
 from librecharts.core.datasheet import (
     sample_area_state,
     sample_butterfly_state,
@@ -126,6 +126,7 @@ def _insert(
         group = render.render_group(doc, page, primitives, x, y, width, height, look)
         chart_id = store.new_chart_id()
         group.Name = store.anchor_name(chart_id)
+        render.describe(group, alttext.title(state), alttext.description(state))
     # The state stays in the document after an undo; unused states are cleaned up separately.
     store.write_state(doc, chart_id, state)
     if undo_action:
@@ -241,17 +242,19 @@ def set_scheme(doc: Any, new: style.Scheme) -> bool:
     previous = scheme.load(doc)
     if previous == new:
         return False
-    _apply_scheme(doc, new)
+    apply_scheme(doc, new)
     undo.add_action(
         doc,
         "Change LibreCharts colour scheme",
-        undo=lambda: _apply_scheme(doc, previous),
-        redo=lambda: _apply_scheme(doc, new),
+        undo=lambda: apply_scheme(doc, previous),
+        redo=lambda: apply_scheme(doc, new),
     )
     return True
 
 
-def _apply_scheme(doc: Any, new: style.Scheme) -> None:
+def apply_scheme(doc: Any, new: style.Scheme) -> None:
+    """Store ``new`` as the document's scheme and redraw every chart; the caller adds the undo
+    action (``set_scheme``, the corporate design check)."""
     scheme.save(doc, new)
     states: dict[str, ChartState] = {}
     for _, chart_id in store.all_charts(doc):

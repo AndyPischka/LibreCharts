@@ -13,7 +13,8 @@ from librecharts.core.messages import text
 
 
 def parser(locale: str = "", prog: str = "librecharts") -> argparse.ArgumentParser:
-    """The command line: ``build`` fills a template, ``update`` refreshes a deck's data links."""
+    """The command line: ``build`` fills a template, ``update`` refreshes a deck's data links,
+    ``check`` compares a deck with a corporate design file and fixes it on request (M19)."""
     root = argparse.ArgumentParser(prog=prog, description=text("cli_description", locale))
     root.add_argument("--pipe", default="", help=argparse.SUPPRESS)  # set by scripts/deck.py
     root.add_argument("--locale", default="", help=text("cli_locale", locale))
@@ -28,8 +29,14 @@ def parser(locale: str = "", prog: str = "librecharts") -> argparse.ArgumentPars
     update.add_argument("deck", help=text("cli_deck", locale))
     update.add_argument("--out", default="", help=text("cli_out", locale))
 
+    check = commands.add_parser("check", help=text("cli_check", locale))
+    check.add_argument("deck", help=text("cli_check_deck", locale))
+    check.add_argument("--design", required=True, help=text("cli_design", locale))
+    check.add_argument("--fix", action="store_true", help=text("cli_fix", locale))
+    check.add_argument("--out", default="", help=text("cli_out", locale))
+
     # A subcommand's default would overwrite the root's value, so leave it alone when not given.
-    for command in (build, update):
+    for command in (build, update, check):
         command.add_argument("--locale", default=argparse.SUPPRESS, help=text("cli_locale", locale))
     return root
 

@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 
-from librecharts.core import samescale
+from librecharts.core import alttext, samescale
 from librecharts.core.layout.chart import layout_chart
 from librecharts.core.model import ChartState
 from librecharts.core.state_io import StateError
@@ -118,6 +118,9 @@ def _store_and_draw(doc: Any, updates: dict[str, ChartState]) -> None:
             except ValueError:
                 continue
             render.rerender(doc, chart.group, primitives, scheme.look(doc, chart.state))
+            render.describe(
+                chart.group, alttext.title(chart.state), alttext.description(chart.state)
+            )
 
 
 def group_length_per_unit(doc: Any, chart_id: str, state: ChartState) -> float | None:

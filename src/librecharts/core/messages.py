@@ -1350,6 +1350,150 @@ MESSAGES: dict[str, dict[str, str]] = {
             "program-Verzeichnis setzen."
         ),
     },
+    "menu_check_design": {
+        "en": "Check corporate design...",
+        "de": "Corporate Design prüfen...",
+    },
+    "design_title_load": {
+        "en": "Corporate design file to check against",
+        "de": "Corporate-Design-Datei für die Prüfung",
+    },
+    "design_load_failed": {
+        "en": "The corporate design file cannot be read: {detail}",
+        "de": "Die Corporate-Design-Datei lässt sich nicht lesen: {detail}",
+    },
+    "design_clean": {
+        "en": "The presentation follows the corporate design.",
+        "de": "Die Präsentation hält das Corporate Design ein.",
+    },
+    "design_found": {
+        "en": "Deviations from the corporate design: {count}",
+        "de": "Abweichungen vom Corporate Design: {count}",
+    },
+    "design_fixed": {
+        "en": "Deviations from the corporate design fixed: {count}",
+        "de": "Abweichungen vom Corporate Design korrigiert: {count}",
+    },
+    "design_more": {
+        "en": "... and {count} more.",
+        "de": "... und {count} weitere.",
+    },
+    "design_where": {
+        "en": "Slide {slide}, {shape}",
+        "de": "Folie {slide}, {shape}",
+    },
+    "design_issue_scheme": {
+        "en": "charts use the colour scheme {actual} instead of {expected}",
+        "de": "Diagramme nutzen das Farbschema {actual} statt {expected}",
+    },
+    "design_issue_fill": {
+        "en": "fill colour {actual} instead of {expected}",
+        "de": "Füllfarbe {actual} statt {expected}",
+    },
+    "design_issue_line": {
+        "en": "line colour {actual} instead of {expected}",
+        "de": "Linienfarbe {actual} statt {expected}",
+    },
+    "design_issue_font": {
+        "en": "font {actual} instead of {expected}",
+        "de": "Schrift {actual} statt {expected}",
+    },
+    "design_issue_text_color": {
+        "en": "text colour {actual} instead of {expected}",
+        "de": "Textfarbe {actual} statt {expected}",
+    },
+    "design_issue_position": {
+        "en": "outside the margins at {actual}, belongs at {expected}",
+        "de": "außerhalb der Ränder bei {actual}, gehört nach {expected}",
+    },
+    "design_ask_fix": {
+        "en": "Fix every deviation now? This is one undo step.",
+        "de": "Alle Abweichungen jetzt korrigieren? Das ist ein Rückgängig-Schritt.",
+    },
+    "design_done": {
+        "en": "{count} deviations fixed.",
+        "de": "{count} Abweichungen korrigiert.",
+    },
+    "cli_check": {
+        "en": "check a presentation against a corporate design file",
+        "de": "eine Präsentation gegen eine Corporate-Design-Datei prüfen",
+    },
+    "cli_check_deck": {
+        "en": "presentation to check",
+        "de": "zu prüfende Präsentation",
+    },
+    "cli_design": {
+        "en": "corporate design file (colour scheme JSON with check rules)",
+        "de": "Corporate-Design-Datei (Farbschema-JSON mit Prüfregeln)",
+    },
+    "cli_fix": {
+        "en": "fix every deviation and save the presentation",
+        "de": "alle Abweichungen korrigieren und die Präsentation speichern",
+    },
+    "menu_export_csv": {
+        "en": "Export chart data as CSV...",
+        "de": "Diagrammdaten als CSV exportieren...",
+    },
+    "csv_title_save": {
+        "en": "Export chart data",
+        "de": "Diagrammdaten exportieren",
+    },
+    "csv_filter": {
+        "en": "CSV file",
+        "de": "CSV-Datei",
+    },
+    "csv_exported": {
+        "en": "Chart data exported to {path}.",
+        "de": "Diagrammdaten nach {path} exportiert.",
+    },
+    "csv_export_failed": {
+        "en": "The chart data cannot be exported: {detail}",
+        "de": "Die Diagrammdaten lassen sich nicht exportieren: {detail}",
+    },
+    "menu_patterns_show": {
+        "en": "Show patterns",
+        "de": "Muster zeigen",
+    },
+    "menu_patterns_hide": {
+        "en": "Hide patterns",
+        "de": "Muster ausblenden",
+    },
+    "alt_summary": {
+        "en": "{kind} with {categories} categories and {series} series.",
+        "de": "{kind} mit {categories} Kategorien und {series} Datenreihen.",
+    },
+    "alt_steps": {
+        "en": "{kind} with {count} steps.",
+        "de": "{kind} mit {count} Schritten.",
+    },
+    "alt_points": {
+        "en": "{kind} with {count} points.",
+        "de": "{kind} mit {count} Punkten.",
+    },
+    "alt_rows": {
+        "en": "{kind} with {count} rows.",
+        "de": "{kind} mit {count} Zeilen.",
+    },
+    "alt_size": {
+        "en": "size {size}",
+        "de": "Größe {size}",
+    },
+    "alt_milestone": {
+        "en": "milestone on {date}",
+        "de": "Meilenstein am {date}",
+    },
+    "alt_range": {
+        "en": "{start} to {end}",
+        "de": "{start} bis {end}",
+    },
+    "alt_empty": {
+        "en": "no value",
+        "de": "kein Wert",
+    },
+    "alt_no_data": {
+        "en": "{kind} without data.",
+        "de": "{kind} ohne Daten.",
+    },
 }
 
 

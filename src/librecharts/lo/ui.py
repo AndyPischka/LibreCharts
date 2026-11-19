@@ -10,7 +10,10 @@ import uno
 from com.sun.star.beans import PropertyValue
 
 _INFOBOX = uno.Enum("com.sun.star.awt.MessageBoxType", "INFOBOX")
+_QUERYBOX = uno.Enum("com.sun.star.awt.MessageBoxType", "QUERYBOX")
 _BUTTONS_OK = 1  # com.sun.star.awt.MessageBoxButtons.BUTTONS_OK
+_BUTTONS_YES_NO = 3  # com.sun.star.awt.MessageBoxButtons.BUTTONS_YES_NO
+_RESULT_YES = 2  # com.sun.star.awt.MessageBoxResults.YES
 
 
 def prop(name: str, value: Any) -> PropertyValue:
@@ -56,3 +59,19 @@ def tell(ctx: Any, frame: Any, message: str) -> None:
         print(message)
         return
     show_info(ctx, frame, message)
+
+
+def ask(ctx: Any, frame: Any, message: str) -> bool:
+    """Ask a yes/no question; ``False`` where there is no window to ask in (headless)."""
+    window = None
+    with contextlib.suppress(Exception):
+        window = frame.getContainerWindow()
+    if window is None or not window.isVisible():
+        print(message)
+        return False
+    toolkit = ctx.ServiceManager.createInstanceWithContext("com.sun.star.awt.Toolkit", ctx)
+    box = toolkit.createMessageBox(window, _QUERYBOX, _BUTTONS_YES_NO, "LibreCharts", message)
+    try:
+        return box.execute() == _RESULT_YES
+    finally:
+        box.dispose()

@@ -41,6 +41,8 @@ SHARED = {
     "InsertAgenda": "menu_insert_agenda",
     "StartChapter": "menu_start_chapter",
     "UpdateAgenda": "menu_update_agenda",
+    "ExportCsv": "menu_export_csv",
+    "CheckDesign": "menu_check_design",
 }
 GRID = {f"Arrange?op=grid&columns={columns}": columns for columns in (2, 3, 4)}
 

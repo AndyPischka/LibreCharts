@@ -56,7 +56,10 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
    *Document* section switches the document-wide colour scheme (*Default*, *Grey*, *High contrast*)
    or loads/saves a scheme file. Select several charts and choose *Use the same scale* to compare
    their values across slides; *Copy chart format* / *Apply chart format* transfer the look of one
-   chart to others.
+   chart to others. *Show patterns* adds hatches and dashes beside the colours for colour-blind
+   readers and black-and-white print; every chart carries alternative text generated from its
+   data. *Export chart data as CSV...* writes a chart's data to a file, and *Check corporate
+   design...* checks every slide against a corporate design file and fixes what deviates.
    A Gantt chart's data sheet has one row per activity (Activity, Start, End, Remark, Phase): two
    dates give a bar, one date a milestone, text in *Phase* makes a phase over the rows below it.
    Further start/end pairs in F/G, H/I, ... give the same row more bars. *Working days* hides
@@ -84,10 +87,20 @@ colour scheme.
 ```
 uv run poe deck build --template template.odp --data charts.json --out deck.odp
 uv run poe deck update deck.odp            # refresh every data link, save in place
+uv run poe deck check deck.odp --design corporate.json [--fix]   # corporate design check
 ```
 
 `poe deck` finds LibreOffice itself and runs headless; `--locale de` switches the messages, `--out`
-lets `update` write another file.
+lets `update` and `check --fix` write another file. `check` exits with code 3 when it found
+deviations and did not fix them, so a build pipeline can stop there.
+
+A corporate design file is a colour-scheme file with an optional `check` object:
+
+```json
+{"v": 1, "name": "Corporate", "palette": [13158, 16750848], "font_name": "Calibri",
+ "check": {"colors": [43520], "fonts": ["Calibri Light"],
+           "margins_mm": {"left": 12, "top": 10, "right": 12, "bottom": 10}}}
+```
 
 ```json
 {
@@ -109,7 +122,8 @@ placeholder stops the build before anything is written; a placeholder without a 
 reported.
 
 From a Python script inside LibreOffice, `librecharts.api` offers `build_deck(...)`,
-`update_links(ctx, doc)` and `insert_chart(ctx, doc, slide, spec_json)`. A Basic macro dispatches
+`update_links(ctx, doc)`, `insert_chart(ctx, doc, slide, spec_json)` and
+`check_design(doc, design_file, fix=False)`. A Basic macro dispatches
 the command:
 
 ```basic
@@ -119,7 +133,9 @@ oDispatcher.executeDispatch(ThisComponent.getCurrentController().getFrame(), _
   "&out=file:///…/deck.odp", "", 0, Array())
 ```
 
-*Update all links* is the command `org.librecharts:UpdateAllLinks`.
+*Update all links* is the command `org.librecharts:UpdateAllLinks`;
+`org.librecharts:CheckDesign?file=...&fix=true` checks and fixes a deck,
+`org.librecharts:ExportCsv?url=...` writes the selected chart's data.
 
 ## Develop
 

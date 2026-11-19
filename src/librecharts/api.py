@@ -1,4 +1,5 @@
-"""Public API for scripts and macros: build a deck, update links, insert a chart (M18, ADR 0028).
+"""Public API for scripts and macros: build a deck, update links, insert a chart (M18, ADR 0028),
+check a deck against a corporate design (M19, ADR 0029) and export chart data (M20, ADR 0030).
 
 The same functions serve a Python script inside LibreOffice and the UNO service
 ``org.librecharts.Automation`` (``lo/automation.py``), which Basic macros call. Everything that
@@ -13,9 +14,10 @@ from __future__ import annotations
 from typing import Any
 
 from librecharts.core import deck as core_deck
+from librecharts.core import designcheck as core_design
 from librecharts.core import links as core_links
 from librecharts.core.deck import DeckError
-from librecharts.lo import chart, datasheet, deck, links, store
+from librecharts.lo import chart, datasheet, deck, designcheck, links, store
 
 
 def build_deck(
@@ -81,3 +83,16 @@ def insert_chart(ctx: Any, doc: Any, page_index: int, spec_json: str, locale: st
     if not isinstance(page_index, int) or not 0 <= page_index < pages.getCount():
         raise DeckError("deck_bad_slide", str(page_index))
     return store.chart_id_of(chart.insert_at(doc, pages.getByIndex(page_index), spec.state)) or ""
+
+
+def check_design(doc: Any, rules_location: str, *, fix: bool = False) -> core_design.Result:
+    """Check ``doc`` against the corporate design file at ``rules_location`` (URL or path).
+
+    With ``fix`` every deviation is corrected as one undo step. The result lists what was found
+    (before the fix); ``core.designcheck.report`` turns it into text. Raises ``DesignError`` for a
+    file that cannot be read.
+    """
+    rules = designcheck.read_rules(rules_location)
+    if fix:
+        return designcheck.check_and_fix(doc, rules)
+    return designcheck.inspect(doc, rules)

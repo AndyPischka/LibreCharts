@@ -16,7 +16,7 @@ Run everything through `uv run poe <task>` (uv installs Python 3.11 and the dev 
 | `uv run poe lint` / `format` | ruff check / ruff format (in place) |
 | `uv run poe typecheck` | pyright (strict for `core/`, basic elsewhere) |
 | `uv run poe build` | build `dist/LibreCharts-<version>.oxt` |
-| `uv run poe deck` | build a deck from a template and a JSON specification, or update its data links (M18) |
+| `uv run poe deck` | build a deck from a template and a JSON specification, update its data links (M18), or check it against a corporate design (M19) |
 | `uv run poe test-lo` | UNO integration tests against a real LibreOffice (not in `check`; CI job `integration`) |
 
 `test-lo` needs LibreOffice installed (override discovery with `LIBREOFFICE_PROGRAM`). It uses a

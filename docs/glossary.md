@@ -5,6 +5,10 @@ Use these terms consistently in code, UI strings and docs.
 | Term | Meaning |
 |---|---|
 | **Chart** | One LibreCharts object on a slide: a group of shapes plus its data. |
+| **Corporate design file** | A colour-scheme file (ADR 0016) with optional check rules: further allowed colours and fonts and the slide margins every shape keeps (ADR 0029). |
+| **Corporate design check** | Comparing every shape of a presentation, and its colour scheme, with a corporate design file; each mismatch is a *deviation*, and *fixing* corrects all of them in one undo step (ADR 0029). |
+| **Alternative text** | The title (chart type) and description (data as sentences) a chart group carries for screen readers and exports; generated from the data on every redraw (ADR 0030). |
+| **Pattern** | A hatch over a series fill or a dash pattern on a line series, chosen by series index, so series differ without colour (ADR 0030). |
 | **Chart state** | The persisted description of a chart: raw data sheet cells (incl. formulas), their evaluated values, chart kind, grouping and a schema version. Stored as JSON in the document. |
 | **Chart id** | Short random id of a chart. The chart's group shape is named `librecharts:<id>` (its *anchor*); the chart state is stored under the same key in the document. |
 | **Fork** | Giving a copied chart its own id and its own copy of the state before editing it. |

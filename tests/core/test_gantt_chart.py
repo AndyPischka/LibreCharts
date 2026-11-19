@@ -82,7 +82,10 @@ def test_a_gantt_chart_has_gridlines_but_no_axis_series_names_or_number_format()
     for option in ("axis", "series_names", "markers", "number_format"):
         assert not supports(state, option), option
     assert supports(sample_state(), "number_format")
-    assert [s.command for s in format_options(state)] == ["ChangeFormat?gridlines=true"]
+    assert [s.command for s in format_options(state)] == [
+        "ChangeFormat?gridlines=true",
+        "ChangeFormat?patterns=true",
+    ]
 
 
 def test_a_new_gantt_chart_starts_in_the_ui_language_without_gridlines() -> None:
@@ -115,7 +118,10 @@ def test_the_menu_offers_date_lines_and_a_today_line() -> None:
 def test_the_menu_sorts_by_start_date_and_formats_without_number_format() -> None:
     state = sample_gantt_state()
     assert commands(submenu(state, "Sort categories")) == [PROTOCOL + "ChangeChart?sort=ascending"]
-    assert [c.title for c in submenu(state, "Format").children] == ["Show gridlines"]
+    assert [c.title for c in submenu(state, "Format").children] == [
+        "Show gridlines",
+        "Show patterns",
+    ]
 
 
 def test_series_colours_are_per_phase() -> None:
