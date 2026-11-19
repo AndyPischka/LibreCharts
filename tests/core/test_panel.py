@@ -294,3 +294,15 @@ def test_agenda_buttons_follow_the_agenda() -> None:
     # Start chapter is enabled on the agenda slide too: the panel does not learn of a slide
     # change (no selection or modify event), so the current slide is stale; the command refuses.
     assert [b.enabled for b in content_slide.agenda] == [True, True, True]
+
+
+def test_the_document_section_checks_the_corporate_design_and_a_chart_exports_csv() -> None:
+    panel = content(sample_state(), True, "en-US")
+    assert [(b.title, b.command, b.enabled) for b in panel.design] == [
+        ("Check corporate design...", PROTOCOL + "CheckDesign", True)
+    ]
+    export = next(b for b in panel.edit if b.command == PROTOCOL + "ExportCsv")
+    assert export.enabled
+    assert not next(
+        b for b in content(None, False, "en").edit if b.command.endswith("ExportCsv")
+    ).enabled
