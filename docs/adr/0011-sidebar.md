@@ -1,6 +1,6 @@
 # 0011. Sidebar: one deck with one panel that mirrors the commands
 
-- Status: accepted
+- Status: accepted (the single deck was split in two by [0041](0041-two-sidebar-decks.md))
 - Date: 2026-10-28
 
 ## Context

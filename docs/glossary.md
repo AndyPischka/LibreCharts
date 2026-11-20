@@ -96,7 +96,7 @@ Use these terms consistently in code, UI strings and docs.
 | **CAGR arrow** | Annotation that shows the compound annual growth rate between two columns, over the years named by the categories (else the number of columns between them); on a scatter chart over the x distance of the two points (ADR 0024). |
 | **Category gap** | The wider empty space between two adjacent categories of a column or bar chart; stored like an annotation and hidden while sorting separates its categories (ADR 0024). |
 | **Group bracket** | A bracket over a range of categories with a text label, in a lane above the plot (right of the outside labels on a bar chart); its text is asked for after the picks (ADR 0024). |
-| **Sidebar deck** | The LibreCharts tab of the Impress sidebar; its one panel mirrors the menu commands and lists the selected chart's annotations. |
+| **Sidebar deck** | A LibreCharts tab of the Impress sidebar, with one panel each: *LibreCharts* (insert, selected chart, annotations) and *LibreCharts Presentation* (elements, arrange, agenda, document); the buttons mirror the menu commands (ADR 0041). |
 | **Axis break** | Removes a value range from the scale of the whole axis (automatic, or a lower and an upper value from a dialog): columns reaching beyond it get a white gap with slanted lines and continue above it; labels keep the real values. |
 | **Lane** | The strip one arrow occupies: above the plot for brackets, right of it for level differences. |
 | **Pick mode** | After choosing an annotation command, the user clicks the columns, segments or points it connects; the chart group is entered meanwhile. |

@@ -73,9 +73,11 @@ class Row:
 
 @dataclass(frozen=True, slots=True)
 class Panel:
-    """Sections top to bottom: insert, selected chart (``status``, edit, data link with
-    ``link_status``, ``options``, ``format``), annotations, list, document (``update_all``,
-    ``scheme``, ``design``: the corporate design check)."""
+    """What both sidebar panels show. The charts panel: insert, selected chart (``status``,
+    edit, data link with ``link_status``, ``options``, ``format``), annotations (``add``,
+    ``rows``, ``remove_all``). The presentation panel: ``elements``, ``arrange``, ``agenda``,
+    document (``update_all``, ``schemes``, ``scheme``, ``templates``, ``design``: the corporate
+    design check)."""
 
     insert: tuple[Button, ...]
     status: str

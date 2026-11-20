@@ -5,10 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Changed
+- The sidebar is split into two decks: *LibreCharts* (insert, selected chart, annotations) and
+  *LibreCharts Presentation* (elements, arrange, agenda, document).
+
 ### Added
 - An *Inverted pyramid* button in the sidebar, next to the upright pyramid.
 
 ### Fixed
+- In a vertical dumbbell chart, the label of the lower point now sits below that point instead of
+  between the two points; the plot reserves the room it needs above the category names.
 - The icons of *Category gap* and *Group bracket* were solid black squares; they now show two
   column groups with a gap marker and three columns under a bracket.
 - The sidebar's *Pyramid* button inserts an upright pyramid instead of reporting that it cannot be

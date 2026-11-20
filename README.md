@@ -57,7 +57,8 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
    pie, scatter, butterfly, waterfall, Marimekko or Gantt chart; double-click a chart (or select it and choose *Edit chart data*)
    to change its data in Calc. The **LibreCharts** deck in the sidebar (icon with the difference
    arrow; *View → Sidebar*) offers the same commands, shows the selected chart and lists its
-   annotations.
+   annotations; the **LibreCharts Presentation** deck (align icon) holds elements, arrange, agenda
+   and document commands.
    A Marimekko chart can be switched between percent (every column 100 % high) and units (column
    heights follow their sums) from its context menu or the sidebar. Column and bar charts switch
    between stacked, clustered and 100 % the same way, and sort their categories by value; area

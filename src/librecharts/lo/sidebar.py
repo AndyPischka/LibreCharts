@@ -1,9 +1,11 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
-"""The LibreCharts panel in the Impress sidebar (contents: core/panel.py).
+"""The LibreCharts panels in the Impress sidebar (contents: core/panel.py).
 
-Registered by ``Sidebar.xcu`` (deck and panel) and ``Factories.xcu`` (the factory, which
-``extension/entry.py`` implements with ``create``). The panel is a plain window container with
-buttons and labels. It follows the selection and the document, redrawing only when its content
+Two decks with one panel each, registered by ``Sidebar.xcu`` (decks and panels) and
+``Factories.xcu`` (the factory, which ``extension/entry.py`` implements with ``create``): the
+*charts* panel (``.../Panel``: insert, selected chart, annotations) and the *presentation* panel
+(``.../Presentation``: elements, arrange, agenda, document). A panel is a plain window container
+with buttons and labels. It follows the selection and the document, redrawing only when its content
 changed. Nothing here may raise into LibreOffice's listener handling.
 """
 
@@ -28,6 +30,7 @@ from librecharts.lo import elements as lo_elements
 _TOOLPANEL = 7  # com.sun.star.ui.UIElementType.TOOLPANEL
 _POSSIZE = 15  # com.sun.star.awt.PosSize.POSSIZE
 _EXTENSION_ID = "org.librecharts.extension"
+CHARTS, PRESENTATION = "Panel", "Presentation"  # the last part of the resource URL
 
 MARGIN, GAP, BUTTON_HEIGHT, LABEL_HEIGHT, HEADING_HEIGHT = 8, 4, 26, 18, 20
 ICON_SIZE, FLOW_MIN_WIDTH = 30, 100
@@ -40,17 +43,23 @@ Rect = tuple[int, int, int, int]
 
 
 def create(ctx: Any, resource_url: str, args: Any) -> Any:
-    """The panel for ``private:resource/toolpanel/org.librecharts/Panel``; ``args`` as passed by
-    LibreOffice's sidebar (``Frame``, ``ParentWindow``, ``Sidebar``)."""
+    """The panel for ``private:resource/toolpanel/org.librecharts/Panel`` (charts) or
+    ``.../Presentation``; ``args`` as passed by LibreOffice's sidebar (``Frame``,
+    ``ParentWindow``, ``Sidebar``)."""
     values = {a.Name: a.Value for a in args}
-    return _Panel(ctx, resource_url, values["Frame"], values["ParentWindow"], values.get("Sidebar"))
+    part = PRESENTATION if resource_url.rstrip("/").endswith("/" + PRESENTATION) else CHARTS
+    return _Panel(
+        ctx, resource_url, values["Frame"], values["ParentWindow"], values.get("Sidebar"), part
+    )
 
 
 class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
-    def __init__(self, ctx: Any, url: str, frame: Any, parent: Any, sidebar: Any) -> None:
+    def __init__(
+        self, ctx: Any, url: str, frame: Any, parent: Any, sidebar: Any, part: str = CHARTS
+    ) -> None:
         # the attributes of XUIElement
         self.Frame, self.ResourceURL, self.Type = frame, url, _TOOLPANEL
-        self.ctx, self.sidebar = ctx, sidebar
+        self.ctx, self.sidebar, self.part = ctx, sidebar, part
         self.locale = ui.ui_locale(ctx)
         self.shown: Panel | None = None
         self.width, self.height = DEFAULT_WIDTH, 200  # of the container; of the content
@@ -166,6 +175,13 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
     def _fill(self, panel: Panel, width: int) -> int:
         """Create the controls for ``width``; the height of the content."""
         layout = _Layout(self, width)
+        if self.part == PRESENTATION:
+            self._fill_presentation(layout, panel)
+        else:
+            self._fill_charts(layout, panel)
+        return layout.y + MARGIN
+
+    def _fill_charts(self, layout: _Layout, panel: Panel) -> None:
         layout.heading("panel_insert")
         layout.icons(panel.insert)
         layout.heading("panel_chart")
@@ -181,12 +197,6 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
             layout.heading("panel_format")
             for button in panel.format:
                 layout.button(button)
-        layout.heading("panel_elements")
-        layout.icons(panel.elements)
-        layout.heading("panel_arrange")
-        layout.icons(panel.arrange)
-        layout.heading("panel_agenda")
-        layout.flow(panel.agenda)
         layout.heading("panel_annotations")
         layout.icons(panel.add)
         layout.heading("panel_list")
@@ -195,6 +205,14 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
         for row in panel.rows:
             layout.row(row.title, row.remove)
         layout.button(panel.remove_all)
+
+    def _fill_presentation(self, layout: _Layout, panel: Panel) -> None:
+        layout.heading("panel_elements")
+        layout.icons(panel.elements)
+        layout.heading("panel_arrange")
+        layout.icons(panel.arrange)
+        layout.heading("panel_agenda")
+        layout.flow(panel.agenda)
         layout.heading("panel_document")
         layout.button(panel.update_all)
         layout.label(f"{text('panel_scheme', self.locale)}: {panel.scheme}")
@@ -205,7 +223,6 @@ class _Panel(unohelper.Base, XUIElement, XToolPanel, XSidebarPanel):
             layout.flow(panel.templates)
         for button in panel.design:
             layout.button(button)
-        return layout.y + MARGIN
 
     def _add_scrollbar(self, content_height: int) -> None:
         bar = self._create("ScrollBar", Orientation=1, ScrollValueMax=content_height)

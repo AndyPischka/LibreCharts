@@ -145,7 +145,7 @@ so every released schema version must stay readable (`state_io.py`).
 | `textdialog.py` | The group bracket label dialog (modal, built in code); asks for the text after the picks and for *Change text...* |
 | `formatdialog.py` | The number-format and value-line dialogs (modal, built in code); validation lives in `core/format.py` and `core/value_line.py` |
 | `pick.py` | Pick mode: enters the chart group, turns selected shapes into an annotation; a group bracket asks for its label (ADRs 0010, 0024) |
-| `sidebar.py` | The LibreCharts sidebar panel: window with buttons, follows selection and document (ADR 0011) |
+| `sidebar.py` | The two LibreCharts sidebar panels (charts, presentation): window with buttons, follows selection and document (ADR 0011, 0041) |
 | `contextmenu.py` | One interceptor per presentation: the LibreCharts submenu in a chart's context menu |
 | `ui.py` | UI locale and message boxes; texts come from `core/messages.py` |
 

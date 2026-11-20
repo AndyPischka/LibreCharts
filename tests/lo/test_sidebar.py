@@ -1,5 +1,5 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
-"""The sidebar deck is registered and its panel follows the selection.
+"""The two sidebar decks are registered and the chart panel follows the selection.
 
 The panel is created like the sidebar does it, but without one (headless LibreOffice has none);
 what it looks like and the clicks are checked by hand. Its contents are tested in
@@ -16,6 +16,7 @@ from librecharts.core.messages import text
 from librecharts.lo import store, ui
 
 PANEL_URL = "private:resource/toolpanel/org.librecharts/Panel"
+PRESENTATION_URL = "private:resource/toolpanel/org.librecharts/Presentation"
 
 
 def _configuration(ctx, path):
@@ -25,13 +26,13 @@ def _configuration(ctx, path):
     )
 
 
-def _panel(ctx, doc):
+def _panel(ctx, doc, url=PANEL_URL):
     frame = doc.getCurrentController().getFrame()
     manager = ctx.ServiceManager.createInstanceWithContext(
         "com.sun.star.ui.UIElementFactoryManager", ctx
     )
     args = (prop("Frame", frame), prop("ParentWindow", frame.getContainerWindow()))
-    return manager.createUIElement(PANEL_URL, args)
+    return manager.createUIElement(url, args)
 
 
 def _controls(element):
@@ -54,6 +55,31 @@ def test_deck_and_panel_are_registered(ctx):
     panel = content.getByName("PanelList").getByName("org.librecharts.panel")
     assert panel.DeckId == "org.librecharts.deck"
     assert panel.ImplementationURL == PANEL_URL
+    deck = content.getByName("DeckList").getByName("org.librecharts.deck.presentation")
+    assert deck.IconURL.endswith("/images/arrange_align_hcenter_26.png")
+    panel = content.getByName("PanelList").getByName("org.librecharts.panel.presentation")
+    assert panel.DeckId == "org.librecharts.deck.presentation"
+    assert panel.ImplementationURL == PRESENTATION_URL
+
+
+def test_the_decks_split_the_sections(ctx):
+    doc = new_impress(ctx)
+    try:
+        say = lambda key: text(key, ui.ui_locale(ctx))  # noqa: E731 - the profile's language varies
+        charts = dict(_controls(_panel(ctx, doc)))
+        presentation_element = _panel(ctx, doc, PRESENTATION_URL)
+        assert presentation_element is not None, "factory not found for the presentation URL"
+        presentation = dict(_controls(presentation_element))
+        assert say("menu_edit_data") in charts
+        assert say("menu_add_break") in charts
+        assert say("menu_edit_data") not in presentation
+        assert say("menu_insert_agenda") in presentation
+        assert say("menu_insert_agenda") not in charts
+        assert say("menu_update_all_links") in presentation
+        assert say("insert_harvey") in presentation
+        assert say("insert_harvey") not in charts
+    finally:
+        doc.close(True)
 
 
 def test_panel_follows_the_selected_chart(ctx):
@@ -67,7 +93,6 @@ def test_panel_follows_the_selected_chart(ctx):
         assert labels[say("menu_edit_data")] is False
         assert labels[say("menu_add_break")] is False
         assert labels[say("menu_link_data")] is False
-        assert labels[say("menu_update_all_links")] is True
 
         dispatch(ctx, doc, "org.librecharts:InsertColumnChart")  # selects the new chart
         labels = dict(_controls(element))
@@ -131,7 +156,7 @@ def test_start_chapter_is_pressable_without_updating_the_agenda_first(ctx):
     try:
         say = lambda key: text(key, ui.ui_locale(ctx))  # noqa: E731 - the profile's language varies
         dispatch(ctx, doc, "org.librecharts:InsertAgenda")  # shows the main agenda slide
-        element = _panel(ctx, doc)
+        element = _panel(ctx, doc, PRESENTATION_URL)
         labels = dict(_controls(element))
         assert labels[say("menu_start_chapter")] is True
         assert labels[say("menu_update_agenda")] is True

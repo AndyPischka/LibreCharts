@@ -18,6 +18,8 @@ from librecharts.core.scale import nice_axis
 
 TOP_BAND = 800.0
 CATEGORY_BAND = 1000.0
+LABEL_GAP = 50.0  # between a marker and its value label
+LABEL_BAND = LABEL_HEIGHT + LABEL_GAP  # room below a vertical plot for the lower labels
 LABEL_WIDTH = 1800.0
 
 
@@ -49,8 +51,9 @@ def layout_dumbbell(
     title_band = AXIS_BAND if fmt.axis_title else 0.0
     plot_left = inset_left + title_band + (AXIS_BAND if show_axis else 0.0)
     plot_top = inset_top + TOP_BAND
+    label_band = 0.0 if horizontal else LABEL_BAND
     plot_width = width - plot_left - inset_right
-    plot_height = height - plot_top - inset_bottom - CATEGORY_BAND
+    plot_height = height - plot_top - inset_bottom - CATEGORY_BAND - label_band
     if plot_width <= 0 or plot_height <= 0:
         raise ValueError("chart area too small")
 
@@ -86,7 +89,7 @@ def layout_dumbbell(
                 out.append(
                     Text(
                         min(max(x - LABEL_WIDTH / 2, 0.0), width - LABEL_WIDTH),
-                        max(centre - LABEL_HEIGHT - 50, 0.0),
+                        max(centre - LABEL_HEIGHT - LABEL_GAP, 0.0),
                         LABEL_WIDTH,
                         LABEL_HEIGHT,
                         format_value(value, fmt),
@@ -134,7 +137,7 @@ def layout_dumbbell(
             out.append(
                 Text(
                     centre - slot / 2,
-                    plot_top + plot_height,
+                    plot_top + plot_height + label_band,
                     slot,
                     CATEGORY_BAND,
                     category,
@@ -149,12 +152,14 @@ def layout_dumbbell(
             ]
             if len(plotted) == 2:
                 out.append(Line(centre, plotted[0][1], centre, plotted[1][1], "connector"))
+            lowest = max((y for _, y in plotted), default=0.0)
             for value, y in plotted:
                 out.append(Marker(centre, y, 0))
+                below = len(plotted) == 2 and y == lowest
                 out.append(
                     Text(
                         centre - slot / 2,
-                        max(y - LABEL_HEIGHT - 50, 0.0),
+                        y + LABEL_GAP if below else max(y - LABEL_HEIGHT - LABEL_GAP, 0.0),
                         slot,
                         LABEL_HEIGHT,
                         format_value(value, fmt),

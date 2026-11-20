@@ -74,6 +74,21 @@ def test_a_dumbbell_chart_connects_two_points_per_category() -> None:
     assert len([p for p in primitives if isinstance(p, Text) and p.role == "value"]) == 8
 
 
+def test_a_vertical_dumbbell_puts_the_lower_label_below_its_point() -> None:
+    primitives = layout_dumbbell(parse(sample_dumbbell_state()), 8000, 6000, horizontal=False)
+    markers = [p for p in primitives if isinstance(p, Marker)]
+    labels = [p for p in primitives if isinstance(p, Text) and p.role == "value"]
+    categories = [p for p in primitives if isinstance(p, Text) and p.role == "category"]
+    assert len(markers) == len(labels) == 8
+    for number in range(0, len(markers), 2):
+        upper, lower = sorted(markers[number : number + 2], key=lambda p: p.y)
+        upper_label, lower_label = sorted(labels[number : number + 2], key=lambda p: p.y)
+        assert upper_label.y + upper_label.height < upper.y
+        assert lower_label.y > lower.y
+        # the label hangs below the plot, but stops above the category names
+        assert lower_label.y + lower_label.height <= categories[number // 2].y
+
+
 def test_a_bullet_chart_has_a_bar_and_a_target_tick_per_row() -> None:
     data = bullet.parse(sample_bullet_state())
     primitives = layout_bullet(data, 8000, 6000)

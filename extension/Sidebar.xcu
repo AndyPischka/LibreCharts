@@ -26,6 +26,28 @@
           <value>450</value>
         </prop>
       </node>
+      <node oor:name="org.librecharts.deck.presentation" oor:op="replace">
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">LibreCharts Presentation</value>
+          <value xml:lang="de">LibreCharts Präsentation</value>
+        </prop>
+        <prop oor:name="Id" oor:type="xs:string">
+          <value>org.librecharts.deck.presentation</value>
+        </prop>
+        <prop oor:name="IconURL" oor:type="xs:string">
+          <value>vnd.sun.star.extension://org.librecharts.extension/images/arrange_align_hcenter_26.png</value>
+        </prop>
+        <prop oor:name="HighContrastIconURL" oor:type="xs:string">
+          <value>vnd.sun.star.extension://org.librecharts.extension/images/arrange_align_hcenter_26.png</value>
+        </prop>
+        <prop oor:name="ContextList">
+          <value oor:separator=";">Impress, any, visible ;</value>
+        </prop>
+        <prop oor:name="OrderIndex" oor:type="xs:int">
+          <value>460</value>
+        </prop>
+      </node>
     </node>
     <node oor:name="PanelList">
       <node oor:name="org.librecharts.panel" oor:op="replace">
@@ -45,6 +67,31 @@
         </prop>
         <prop oor:name="ImplementationURL" oor:type="xs:string">
           <value>private:resource/toolpanel/org.librecharts/Panel</value>
+        </prop>
+        <prop oor:name="OrderIndex" oor:type="xs:int">
+          <value>100</value>
+        </prop>
+        <prop oor:name="ShowForReadOnlyDocuments" oor:type="xs:boolean">
+          <value>true</value>
+        </prop>
+      </node>
+      <node oor:name="org.librecharts.panel.presentation" oor:op="replace">
+        <prop oor:name="Title" oor:type="xs:string">
+          <value/>
+          <value xml:lang="en-US">Presentation</value>
+          <value xml:lang="de">Präsentation</value>
+        </prop>
+        <prop oor:name="Id" oor:type="xs:string">
+          <value>org.librecharts.panel.presentation</value>
+        </prop>
+        <prop oor:name="DeckId" oor:type="xs:string">
+          <value>org.librecharts.deck.presentation</value>
+        </prop>
+        <prop oor:name="ContextList">
+          <value oor:separator=";">Impress, any, visible ;</value>
+        </prop>
+        <prop oor:name="ImplementationURL" oor:type="xs:string">
+          <value>private:resource/toolpanel/org.librecharts/Presentation</value>
         </prop>
         <prop oor:name="OrderIndex" oor:type="xs:int">
           <value>100</value>
