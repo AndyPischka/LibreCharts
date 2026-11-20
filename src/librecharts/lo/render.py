@@ -590,5 +590,6 @@ def _style(shape: Any, spec: _Spec, look: Look, *, update: bool = False) -> None
         style.set("CharColor", _text_color(label, look))
         style.set("ParaAdjust", _PARA_ADJUST[label.align])
         style.set_float("CharWeight", BOLD if label.role == "heading" else NORMAL)
-        style.set("TextRotation", label.rotation * 100)
+        if hasattr(shape, "TextRotation"):
+            style.set("TextRotation", label.rotation * 100)
     style.apply()

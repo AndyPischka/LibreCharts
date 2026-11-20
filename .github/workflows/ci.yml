@@ -27,7 +27,7 @@ jobs:
 
   # The UNO integration tests against the oldest supported LibreOffice (see README: 25.8).
   integration:
-    if: ${{ github.event_name != 'workflow_call' || inputs.integration }}
+    if: ${{ github.event_name != 'workflow_call' || inputs.integration == true }}
     runs-on: ubuntu-latest
     env:
       LO_VERSION: "25.8.7"
