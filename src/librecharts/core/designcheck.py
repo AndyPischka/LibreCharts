@@ -189,7 +189,7 @@ def _check_shape(
             if font.strip() and not rules.font_allowed(font):
                 fonts[font] = rules.scheme.font_name
                 found("font", font, rules.scheme.font_name)
-    if rules.margins is not None and shape.box is not None:
+    if rules.margins is not None and shape.box is not None and shape.slide >= 0:
         inside = fit_inside(shape.box, rules.margins, slide_size)
         if inside != shape.box:
             box = inside
