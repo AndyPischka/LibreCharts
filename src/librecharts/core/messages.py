@@ -886,6 +886,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "High contrast",
         "de": "Hoher Kontrast",
     },
+    "panel_templates": {
+        "en": "Templates",
+        "de": "Vorlagen",
+    },
     "panel_scheme_load": {
         "en": "Load scheme...",
         "de": "Schema laden...",
@@ -1205,6 +1209,118 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "This arrangement does not exist.",
         "de": "Diese Anordnung gibt es nicht.",
     },
+    "theme_title": {
+        "en": "Palette and font",
+        "de": "Palette und Schrift",
+    },
+    "theme_index": {
+        "en": "Palette entry",
+        "de": "Paletteneintrag",
+    },
+    "theme_colour": {
+        "en": "Colour (RRGGBB)",
+        "de": "Farbe (RRGGBB)",
+    },
+    "theme_font": {
+        "en": "Font",
+        "de": "Schrift",
+    },
+    "theme_size": {
+        "en": "Font size",
+        "de": "Schriftgröße",
+    },
+    "theme_invalid": {
+        "en": "The palette values are not valid.",
+        "de": "Die Palettenwerte sind ungültig.",
+    },
+    "table_options_title": {
+        "en": "Table options",
+        "de": "Tabellenoptionen",
+    },
+    "table_header": {
+        "en": "First row is a header",
+        "de": "Erste Zeile ist eine Kopfzeile",
+    },
+    "table_first_column": {
+        "en": "First column is a header",
+        "de": "Erste Spalte ist eine Kopfspalte",
+    },
+    "table_zebra": {
+        "en": "Zebra stripes",
+        "de": "Zebra-Streifen",
+    },
+    "table_borders": {
+        "en": "Borders",
+        "de": "Rahmen",
+    },
+    "table_heatmap": {
+        "en": "Heatmap",
+        "de": "Heatmap",
+    },
+    "table_widths": {
+        "en": "Column widths",
+        "de": "Spaltenbreiten",
+    },
+    "table_row_height": {
+        "en": "Row height",
+        "de": "Zeilenhöhe",
+    },
+    "table_options_invalid": {
+        "en": "The table options are invalid.",
+        "de": "Die Tabellenoptionen sind ungültig.",
+    },
+    "matrix_options_title": {
+        "en": "Matrix options",
+        "de": "Matrixoptionen",
+    },
+    "matrix_x_title": {
+        "en": "X title",
+        "de": "X-Titel",
+    },
+    "matrix_y_title": {
+        "en": "Y title",
+        "de": "Y-Titel",
+    },
+    "matrix_x_low": {
+        "en": "X low label",
+        "de": "X-Label unten",
+    },
+    "matrix_x_high": {
+        "en": "X high label",
+        "de": "X-Label oben",
+    },
+    "matrix_y_low": {
+        "en": "Y low label",
+        "de": "Y-Label unten",
+    },
+    "matrix_y_high": {
+        "en": "Y high label",
+        "de": "Y-Label oben",
+    },
+    "matrix_quadrants": {
+        "en": "Quadrants (TL|TR|BL|BR)",
+        "de": "Quadranten (OL|OR|UL|UR)",
+    },
+    "matrix_x_split": {
+        "en": "X split",
+        "de": "X-Trennlinie",
+    },
+    "matrix_y_split": {
+        "en": "Y split",
+        "de": "Y-Trennlinie",
+    },
+    "matrix_bubbles": {
+        "en": "Bubbles",
+        "de": "Blasen",
+    },
+    "matrix_labels": {
+        "en": "Point labels",
+        "de": "Punktbeschriftungen",
+    },
+    "matrix_options_invalid": {
+        "en": "The matrix options are invalid.",
+        "de": "Die Matrixoptionen sind ungültig.",
+    },
     "graphic_unsupported": {
         "en": "That graphic cannot be inserted.",
         "de": "Diese Grafik kann nicht eingefügt werden.",
@@ -1224,6 +1340,10 @@ MESSAGES: dict[str, dict[str, str]] = {
     "menu_insert_chevron": {
         "en": "Chevron",
         "de": "Pfeilband",
+    },
+    "insert_icon": {
+        "en": "Icon",
+        "de": "Symbol",
     },
     "menu_insert_pyramid": {
         "en": "Pyramid",
@@ -1713,6 +1833,14 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Slide {slide}: {message}",
         "de": "Folie {slide}: {message}",
     },
+    "audit_list_item": {
+        "en": "Slide {slide}: {message}",
+        "de": "Folie {slide}: {message}",
+    },
+    "audit_go": {
+        "en": "Go to slide",
+        "de": "Zu Folie springen",
+    },
     "audit_corrupt_chart": {
         "en": "The chart data are unreadable. {detail}",
         "de": "Die Diagrammdaten sind unlesbar. {detail}",
@@ -1728,6 +1856,18 @@ MESSAGES: dict[str, dict[str, str]] = {
     "audit_design": {
         "en": "Corporate design deviation: {detail}",
         "de": "Abweichung vom Corporate Design: {detail}",
+    },
+    "alt_shape": {
+        "en": "Shape: {kind}",
+        "de": "Form: {kind}",
+    },
+    "alt_text_all": {
+        "en": "Alternative text for every element",
+        "de": "Alternativtext für jedes Element",
+    },
+    "alt_text_done": {
+        "en": "Alternative text added to {count} shapes.",
+        "de": "Alternativtext zu {count} Objekten hinzugefügt.",
     },
     "alt_graphic": {
         "en": "LibreCharts graphic: {kind} {name}",
@@ -2158,6 +2298,14 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Insert table",
         "de": "Tabelle einfügen",
     },
+    "addon_insert_icon": {
+        "en": "Insert icon...",
+        "de": "Symbol einfügen...",
+    },
+    "addon_theme": {
+        "en": "Palette and font...",
+        "de": "Palette und Schrift...",
+    },
     "addon_insert_matrix": {
         "en": "Insert 2x2 matrix",
         "de": "2x2-Matrix einfügen",
@@ -2229,6 +2377,8 @@ ADDON_KEYS: dict[str, str] = {
     "InsertBoxplotChart": "addon_insert_boxplot",
     "InsertTableChart": "addon_insert_table",
     "InsertMatrixChart": "addon_insert_matrix",
+    "InsertIcon": "addon_insert_icon",
+    "Theme": "addon_theme",
     "WorkingDays": "addon_working_days",
     "ImportGanttCsv": "addon_import_csv",
     "ImportGanttProject": "addon_import_project",

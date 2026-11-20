@@ -182,6 +182,26 @@ def mix(first: int, second: int, share: float) -> int:
     return (channels[0] << 16) | (channels[1] << 8) | channels[2]
 
 
+def with_palette(scheme: Scheme, index: int, colour: int) -> Scheme:
+    """``scheme`` with palette entry ``index`` replaced; out of range raises ``ValueError``."""
+    if not 0 <= index < len(scheme.palette):
+        raise ValueError(f"palette index out of range: {index}")
+    if isinstance(colour, bool) or not 0 <= colour <= 0xFFFFFF:
+        raise ValueError(f"colour out of range: {colour!r}")
+    from dataclasses import replace
+
+    palette = list(scheme.palette)
+    palette[index] = colour
+    return replace(scheme, palette=tuple(palette))
+
+
+def with_font(scheme: Scheme, name: str, size: float) -> Scheme:
+    """``scheme`` with another font name and size; validation is :class:`Scheme`'s."""
+    from dataclasses import replace
+
+    return replace(scheme, font_name=name, font_size=size)
+
+
 def built_in(name: str) -> Scheme | None:
     """The built-in scheme called ``name`` (case-insensitive), or ``None``."""
     wanted = name.strip().lower()

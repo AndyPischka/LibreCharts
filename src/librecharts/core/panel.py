@@ -82,6 +82,7 @@ class Panel:
     arrange: tuple[Button, ...] = ()
     agenda: tuple[Button, ...] = ()
     design: tuple[Button, ...] = ()
+    templates: tuple[Button, ...] = ()
 
 
 def content(
@@ -92,6 +93,7 @@ def content(
     element_selected: bool = False,
     shapes_selected: int = 0,
     has_agenda: bool = False,
+    templates: tuple[str, ...] = (),
 ) -> Panel:
     """The panel for a selection: ``selected`` is whether a LibreCharts chart is selected and
     ``state`` its stored state (``None`` if the chart is orphaned or nothing is selected).
@@ -265,6 +267,7 @@ def content(
             _button("menu_insert_process", "InsertGraphic?kind=process", "", locale),
             _button("menu_insert_chevron", "InsertGraphic?kind=chevron", "", locale),
             _button("menu_insert_pyramid", "InsertGraphic?kind=pyramid", "", locale),
+            _button("insert_icon", "InsertIcon", "", locale),
         ),
         arrange=tuple(
             Button(
@@ -290,10 +293,15 @@ def content(
             _button("menu_update_agenda", "UpdateAgenda", "", locale, has_agenda),
         ),
         design=(
+            _button("theme_title", "Theme", "", locale),
+            _button("alt_text_all", "AltTextAll", "", locale),
             _button("menu_check_design", "CheckDesign", "", locale),
             _button("menu_audit", "AuditDeck", "", locale),
             _button("menu_export_spec", "ExportDeckSpec", "", locale),
             _button("menu_deuteranopia", "SimulateColorblind?kind=deuteranopia", "", locale),
+        ),
+        templates=tuple(
+            _button("", f"InsertTemplate?name={name}", "", locale, title=name) for name in templates
         ),
     )
 
@@ -362,6 +370,10 @@ def _format(state: ChartState | None, usable: bool, locale: str) -> tuple[Button
         buttons += (_button("menu_focus_clear", "ClearFocus", "", locale, usable),)
     if formats.supports(state, "number_format"):
         buttons += (_button("menu_number_format", "NumberFormat", "", locale, usable),)
+    if state.kind == "table":
+        buttons += (_button("table_options_title", "TableOptions", "", locale, usable),)
+    if state.kind == "matrix":
+        buttons += (_button("matrix_options_title", "MatrixOptions", "", locale, usable),)
     return buttons
 
 

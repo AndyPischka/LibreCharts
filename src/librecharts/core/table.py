@@ -72,6 +72,39 @@ def _cell(text: str, number: float | None) -> Cell:
     return Cell("empty" if not text else "text", text=text)
 
 
+def changed(spec: TableSpec, values: dict[str, str]) -> TableSpec:
+    """The table options after the dialog's fields; invalid values raise ``ValueError``."""
+    from dataclasses import replace
+
+    fields: dict[str, object] = {}
+    for key in ("header", "first_column", "zebra", "borders", "heatmap"):
+        if key in values:
+            fields[key] = _flag(values[key])
+    if "widths" in values:
+        text = values["widths"].strip()
+        if text:
+            try:
+                widths = tuple(float(part.replace(",", ".")) for part in text.split(","))
+            except ValueError as exc:
+                raise ValueError("column widths must be numbers") from exc
+            if any(width <= 0 for width in widths):
+                raise ValueError("column widths must be positive")
+            fields["widths"] = widths
+        else:
+            fields["widths"] = ()
+    if "row_height" in values:
+        text = values["row_height"].strip()
+        fields["row_height"] = None if not text else float(text.replace(",", "."))
+    return replace(spec, **fields)  # type: ignore[arg-type]
+
+
+def _flag(value: str) -> bool:
+    flag = {"true": True, "false": False}.get(value.strip().lower())
+    if flag is None:
+        raise ValueError(f"not a flag: {value!r}")
+    return flag
+
+
 def column_widths(spec: TableSpec, columns: int) -> tuple[float, ...]:
     """Relative column widths, normalised to ``columns`` entries (equal when unspecified)."""
     if columns <= 0:

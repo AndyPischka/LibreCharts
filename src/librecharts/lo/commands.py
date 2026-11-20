@@ -33,19 +33,28 @@ from librecharts.core import graphics as core_graphics
 from librecharts.core import importdata as core_import
 from librecharts.core import labels as core_labels
 from librecharts.core import links as core_links
+from librecharts.core import matrix as core_matrix
 from librecharts.core import notes as core_notes
 from librecharts.core import samescale as core_samescale
+from librecharts.core import table as core_table
 from librecharts.core import templates as core_templates
 from librecharts.core.deck import DeckError
 from librecharts.core.layout.chart import layout_chart
 from librecharts.core.messages import text
-from librecharts.core.model import Annotation, AnnotationKind, ChartState, Trend
+from librecharts.core.model import (
+    Annotation,
+    AnnotationKind,
+    ChartState,
+    MatrixSpec,
+    TableSpec,
+    Trend,
+)
 from librecharts.core.picking import PickSession, annotation_kind, supports
 from librecharts.core.state_io import StateError
 from librecharts.lo import agenda as lo_agenda
-from librecharts.lo import arrange as lo_arrange
-from librecharts.lo import audit as lo_audit
 from librecharts.lo import (
+    alttextall,
+    auditdialog,
     axisdialog,
     calendardialog,
     chart,
@@ -53,19 +62,25 @@ from librecharts.lo import (
     datasheet,
     designcheck,
     formatdialog,
+    icondialog,
     labelpick,
     labels,
     linkdialog,
     links,
+    matrixdialog,
     pick,
     resize,
     samescale,
     scheme,
     store,
+    tabledialog,
     textdialog,
+    themedialog,
     trenddialog,
     ui,
 )
+from librecharts.lo import arrange as lo_arrange
+from librecharts.lo import audit as lo_audit
 from librecharts.lo import elements as lo_elements
 from librecharts.lo import (
     graphics as lo_graphics,
@@ -177,6 +192,23 @@ def insert_graphic(ctx: Any, frame: Any, query: str) -> None:
         labels = ()
     controller.select(lo_graphics.insert(doc, controller.getCurrentPage(), graphic, labels))
     resize.watch(doc)
+
+
+def insert_icon(ctx: Any, frame: Any, query: str) -> None:
+    """Pick one built-in icon and insert it (M26); one undo step."""
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    name = args.get("name", "") or icondialog.ask(ctx, frame)
+    if not name:
+        return
+    try:
+        graphic = core_graphics.Graphic("icon", icon=name)
+    except ValueError:
+        ui.show_info(ctx, frame, text("graphic_unsupported", ui.ui_locale(ctx)))
+        return
+    controller = frame.getController()
+    controller.select(
+        lo_graphics.insert(controller.getModel(), controller.getCurrentPage(), graphic)
+    )
 
 
 def change_graphic(ctx: Any, frame: Any, query: str) -> None:
@@ -1167,11 +1199,132 @@ def simulate_colorblind(ctx: Any, frame: Any, query: str) -> None:
     chart.set_scheme(doc, simulated)
 
 
-def audit_deck(ctx: Any, frame: Any) -> None:
-    """Report unreadable charts, links and stale sources with their slides (M29)."""
+def alt_text_all(ctx: Any, frame: Any) -> None:
+    """Give every shape without alternative text a short description (M30)."""
     locale = ui.ui_locale(ctx)
-    findings = lo_audit.inspect(frame.getController().getModel())
-    ui.tell(ctx, frame, core_audit.report(findings, locale))
+    count = alttextall.apply(ctx, frame.getController().getModel())
+    ui.tell(ctx, frame, text("alt_text_done", locale, count=str(count)))
+
+
+def theme_editor(ctx: Any, frame: Any) -> None:
+    """Open the palette and font dialog (M30); one undo step on OK."""
+    themedialog.request(ctx, frame)
+
+
+def table_options(ctx: Any, frame: Any, query: str) -> None:
+    """Open the table options dialog, or apply its fields from ``query`` (M25)."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    locale = ui.ui_locale(ctx)
+    if state.kind != "table":
+        ui.show_info(ctx, frame, text("option_unsupported", locale))
+        return
+    if not query:
+        tabledialog.request(ctx, frame, group, state)
+        return
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    try:
+        changed = core_table.changed(state.table or TableSpec(), args)
+    except ValueError:
+        ui.show_info(ctx, frame, text("table_options_invalid", locale))
+        return
+    chart.redraw(frame.getController().getModel(), group, replace(state, table=changed))
+
+
+def matrix_options(ctx: Any, frame: Any, query: str) -> None:
+    """Open the matrix options dialog, or apply its fields from ``query`` (M25)."""
+    found = _annotatable_chart(ctx, frame, None)
+    if found is None:
+        return
+    group, state = found
+    locale = ui.ui_locale(ctx)
+    if state.kind != "matrix":
+        ui.show_info(ctx, frame, text("option_unsupported", locale))
+        return
+    if not query:
+        matrixdialog.request(ctx, frame, group, state)
+        return
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    try:
+        changed = core_matrix.changed(state.matrix or MatrixSpec(), args)
+    except ValueError:
+        ui.show_info(ctx, frame, text("matrix_options_invalid", locale))
+        return
+    chart.redraw(frame.getController().getModel(), group, replace(state, matrix=changed))
+
+
+def audit_deck(ctx: Any, frame: Any, query: str) -> None:
+    """Report unreadable charts, links, stale sources and design deviations (M29)."""
+    locale = ui.ui_locale(ctx)
+    doc = frame.getController().getModel()
+    findings = list(lo_audit.inspect(doc))
+    location = _query_arg(query, "file")
+    if location:
+        try:
+            rules = designcheck.read_rules(location)
+        except core_design.DesignError as exc:
+            ui.show_info(ctx, frame, text("design_load_failed", locale, detail=str(exc)))
+            return
+        result = designcheck.inspect(doc, rules)
+        findings += [
+            core_audit.Finding(
+                (finding.slide + 1) if finding.slide is not None and finding.slide >= 0 else 0,
+                "audit_design",
+                f"{finding.issue}: {finding.actual} -> {finding.expected}",
+            )
+            for finding in result.findings
+        ]
+    if findings:
+        auditdialog.request(ctx, frame, tuple(findings), locale)
+    else:
+        ui.tell(ctx, frame, core_audit.report((), locale))
+
+
+def batch_format(ctx: Any, frame: Any, query: str) -> None:
+    """Apply one format option to every selected chart (M29); one undo step."""
+    controller = frame.getController()
+    locale = ui.ui_locale(ctx)
+    states = _claimed_states(ctx, frame, controller.getModel(), selected_charts(controller), locale)
+    if states is None:
+        return
+    changes: dict[Any, ChartState] = {}
+    for group, state in states:
+        try:
+            fmt = formats.settled(state, state.format, query)
+        except ValueError:
+            ui.show_info(ctx, frame, text("option_unsupported", locale))
+            return
+        if fmt != state.format:
+            changes[group] = replace(state, format=fmt)
+    chart.apply_changes(controller.getModel(), changes)
+
+
+def batch_import(ctx: Any, frame: Any, query: str) -> None:
+    """Import the same table into every selected chart (M29); one undo step."""
+    controller = frame.getController()
+    locale = ui.ui_locale(ctx)
+    states = _claimed_states(ctx, frame, controller.getModel(), selected_charts(controller), locale)
+    if states is None:
+        return
+    location = _query_arg(query, "url")
+    if not location:
+        ui.show_info(ctx, frame, text("import_invalid", locale))
+        return
+    try:
+        rows = dataimport.read_file(ctx, location, _query_arg(query, "sheet"))
+    except (OSError, core_import.ImportError) as exc:
+        ui.show_info(ctx, frame, text("import_data_failed", locale, detail=str(exc)))
+        return
+    changes: dict[Any, ChartState] = {}
+    for group, state in states:
+        try:
+            changes[group] = core_import.state_with_table(state, rows)
+        except core_import.ImportError:
+            ui.show_info(ctx, frame, text("import_invalid", locale))
+            return
+    chart.apply_changes(controller.getModel(), changes)
 
 
 def export_deck_spec(ctx: Any, frame: Any, query: str) -> None:

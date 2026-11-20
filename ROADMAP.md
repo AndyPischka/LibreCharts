@@ -89,8 +89,8 @@ Plans: [M22](docs/plans/labels-and-emphasis.md), [M23](docs/plans/axes-and-trend
 | | Milestone | Content | Status |
 |---|---|---|---|
 | M28 | Data workflow | Import CSV, ODS or XLSX into any data sheet; insert a chart from copied cells; update data links on open; one shared source for several charts | done |
-| M29 | Automation round-trip and audit | Export an existing deck as a deck specification; audit a deck (charts, links, stale sources, design deviations, support data) with jump-to-slide; batch format and data operations | started |
-| M30 | Design and accessibility | Extend the corporate design check to master slides, layouts and pictures; a report dialog; theme colours and fonts; colour-blindness simulation; alternative text for every element; a palette editor | started |
+| M29 | Automation round-trip and audit | Export an existing deck as a deck specification; audit a deck (charts, links, stale sources, design deviations, support data) with jump-to-slide; batch format and data operations | done |
+| M30 | Design and accessibility | Extend the corporate design check to master slides, layouts and pictures; a report dialog; theme colours and fonts; colour-blindness simulation; alternative text for every element; a palette editor | done |
 
 Plans: [M28](docs/plans/data-workflow.md), [M29](docs/plans/automation-roundtrip.md),
 [M30](docs/plans/design-and-accessibility.md).

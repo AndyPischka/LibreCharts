@@ -424,6 +424,10 @@ def _format_menu(state: ChartState, locale: str) -> MenuItem:
         )
     if formats.supports(state, "number_format"):
         entries.append(_command("menu_number_format", "NumberFormat", locale))
+    if state.kind == "table":
+        entries.append(_command("table_options_title", "TableOptions", locale))
+    if state.kind == "matrix":
+        entries.append(_command("matrix_options_title", "MatrixOptions", locale))
     if formats.supports(state, "axis_min"):
         entries.append(_command("menu_axis_dialog", "Axes", locale))
     if state.kind in ("line", "scatter", "column") and not state.percent:

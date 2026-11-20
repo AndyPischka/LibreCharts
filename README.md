@@ -7,7 +7,7 @@
 think-cell-style charts for **LibreOffice Impress**, as an open-source extension.
 Charts are drawn as native shapes and fed from a Calc data sheet.
 
-> **Status: M1 to M27 done; 7.0 started; M21 languages done, macOS CI pending.** Stacked, clustered and 100 % **column and bar charts**,
+> **Status: M1 to M30 done; M21 languages done, macOS CI pending.** Stacked, clustered and 100 % **column and bar charts**,
 > **line, stacked and 100 % area charts**, **pie, doughnut, scatter, bubble and butterfly
 > charts**, **waterfall**, **Marimekko** and **Gantt charts** work: edit the
 > data in a Calc window (formulas included), resize charts freely, undo everything, save as ODP or
@@ -33,9 +33,11 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
 > per-chart font size and legend position, **manual axes and axis titles**, a **logarithmic axis**
 > and **trendlines with forecasts**, **dumbbell, bullet, Pareto, funnel and box plot** charts,
 > **tables and 2x2 matrices**, **distribute/align** commands, **process, chevron and pyramid
-> graphics**, an **icon set** and **chart templates**. **7.0** starts with **CSV/ODS/XLSX import**,
-> charts from the clipboard, auto-updating links, a **deck audit**, deck-specification export and a
-> **colour-blindness simulation**. Further work is listed in [ROADMAP.md](ROADMAP.md).
+> graphics**, an **icon set** and **chart templates**. **7.0** adds **CSV/ODS/XLSX import**, charts
+> from the clipboard, auto-updating links, a **deck audit with jump-to-slide**, deck-specification
+> export, batch format and data operations, a **palette and font dialog**, a **colour-blindness
+> simulation**, alternative text for every element and design checks over master slides.
+> Further work is listed in [ROADMAP.md](ROADMAP.md).
 > LibreCharts is inspired by think-cell and empower charts but is not affiliated with them and
 > does not read or write their files.
 

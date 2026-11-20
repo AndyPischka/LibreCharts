@@ -225,6 +225,32 @@
               <value>_self</value>
             </prop>
           </node>
+          <node oor:name="m1q" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Insert icon...</value>
+              <value xml:lang="de">Symbol einfügen...</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:InsertIcon</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
+          <node oor:name="m1r" oor:op="replace">
+            <prop oor:name="Title" oor:type="xs:string">
+              <value/>
+              <value xml:lang="en-US">Palette and font...</value>
+              <value xml:lang="de">Palette und Schrift...</value>
+            </prop>
+            <prop oor:name="URL" oor:type="xs:string">
+              <value>org.librecharts:Theme</value>
+            </prop>
+            <prop oor:name="Target" oor:type="xs:string">
+              <value>_self</value>
+            </prop>
+          </node>
           <node oor:name="m2" oor:op="replace">
             <prop oor:name="Title" oor:type="xs:string">
               <value/>

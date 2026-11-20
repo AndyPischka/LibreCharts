@@ -92,6 +92,8 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.import_gantt_csv(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ImportGanttProject"):
                 commands.import_gantt_project(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("InsertIcon"):
+                commands.insert_icon(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("InsertGraphic"):
                 commands.insert_graphic(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ChangeGraphic"):
@@ -158,6 +160,14 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.reset_labels(self.ctx, self.frame)
             elif url.Path == "NumberFormat":
                 commands.number_format(self.ctx, self.frame)
+            elif url.Path == "AltTextAll":
+                commands.alt_text_all(self.ctx, self.frame)
+            elif url.Path == "Theme":
+                commands.theme_editor(self.ctx, self.frame)
+            elif url.Path.startswith("TableOptions"):
+                commands.table_options(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("MatrixOptions"):
+                commands.matrix_options(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("Axes"):
                 commands.axes(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("AddTrendline"):
@@ -180,8 +190,12 @@ class ProtocolHandler(unohelper.Base, XInitialization, XDispatchProvider, XDispa
                 commands.save_scheme(self.ctx, self.frame)
             elif url.Path.startswith("SimulateColorblind"):
                 commands.simulate_colorblind(self.ctx, self.frame, _query(url))
-            elif url.Path == "AuditDeck":
-                commands.audit_deck(self.ctx, self.frame)
+            elif url.Path.startswith("AuditDeck"):
+                commands.audit_deck(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("BatchFormat"):
+                commands.batch_format(self.ctx, self.frame, _query(url))
+            elif url.Path.startswith("BatchImport"):
+                commands.batch_import(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ExportDeckSpec"):
                 commands.export_deck_spec(self.ctx, self.frame, _query(url))
             elif url.Path.startswith("ImportData"):

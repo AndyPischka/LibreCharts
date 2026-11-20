@@ -78,6 +78,39 @@ def test_a_matrix_draws_quadrant_lines_and_points() -> None:
     assert "Cost" in texts
 
 
+def test_table_and_matrix_dialog_fields_are_parsed() -> None:
+    spec = table.changed(
+        TableSpec(),
+        {
+            "header": "false",
+            "zebra": "true",
+            "widths": "1,3",
+            "row_height": "250",
+        },
+    )
+    assert spec.header is False
+    assert spec.zebra is True
+    assert spec.widths == (1.0, 3.0)
+    assert spec.row_height == 250
+    with pytest.raises(ValueError, match="widths"):
+        table.changed(TableSpec(), {"widths": "a"})
+    matrix_spec = matrix.changed(
+        MatrixSpec(),
+        {
+            "x_title": "Cost",
+            "quadrants": "TL|TR|BL|BR",
+            "x_split": "4",
+            "bubbles": "true",
+        },
+    )
+    assert matrix_spec.x_title == "Cost"
+    assert matrix_spec.quadrants == ("TL", "TR", "BL", "BR")
+    assert matrix_spec.x_split == 4
+    assert matrix_spec.bubbles
+    with pytest.raises(ValueError, match="four"):
+        matrix.changed(MatrixSpec(), {"quadrants": "one"})
+
+
 def test_table_and_matrix_specs_round_trip_and_validate() -> None:
     table_state = replace(sample_table_state(), table=TableSpec(zebra=True, widths=(1, 2, 3, 4)))
     assert from_json(to_json(table_state)).table == table_state.table

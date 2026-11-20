@@ -23,6 +23,32 @@ class MatrixData:
     spec: MatrixSpec
 
 
+def changed(spec: MatrixSpec, values: dict[str, str]) -> MatrixSpec:
+    """The matrix options after the dialog's fields; invalid values raise ``ValueError``."""
+    from dataclasses import replace
+
+    fields: dict[str, object] = {}
+    for key in ("x_title", "y_title", "x_low", "x_high", "y_low", "y_high"):
+        if key in values:
+            fields[key] = values[key]
+    if "quadrants" in values:
+        parts = tuple(part.strip() for part in values["quadrants"].split("|"))
+        if len(parts) != 4:
+            raise ValueError("a matrix needs four quadrant labels")
+        fields["quadrants"] = parts
+    for key in ("x_split", "y_split"):
+        if key in values:
+            text = values[key].strip()
+            fields[key] = None if not text else float(text.replace(",", "."))
+    for key in ("bubbles", "labels"):
+        if key in values:
+            flag = {"true": True, "false": False}.get(values[key].strip().lower())
+            if flag is None:
+                raise ValueError(f"not a flag: {values[key]!r}")
+            fields[key] = flag
+    return replace(spec, **fields)  # type: ignore[arg-type]
+
+
 def parse(state: ChartState) -> MatrixData:
     """Read ``Label | X | Y | Size | Group`` by column position."""
     spec = state.matrix or MatrixSpec()

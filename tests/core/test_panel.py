@@ -275,7 +275,15 @@ def test_update_all_links_is_always_offered() -> None:
 
 def test_element_and_arrange_buttons_follow_the_selection() -> None:
     none = content(None, False, "en-US")
-    assert [b.enabled for b in none.elements] == [True, True, False, True, True, True]
+    assert [b.enabled for b in none.elements] == [
+        True,
+        True,
+        False,
+        True,
+        True,
+        True,
+        True,
+    ]
     assert not any(b.enabled for b in none.arrange)
 
     two = content(None, False, "en-US", element_selected=True, shapes_selected=2)
@@ -319,6 +327,8 @@ def test_agenda_buttons_follow_the_agenda() -> None:
 def test_the_document_section_checks_the_corporate_design_and_a_chart_exports_csv() -> None:
     panel = content(sample_state(), True, "en-US")
     assert [(b.title, b.command, b.enabled) for b in panel.design] == [
+        ("Palette and font", PROTOCOL + "Theme", True),
+        ("Alternative text for every element", PROTOCOL + "AltTextAll", True),
         ("Check corporate design...", PROTOCOL + "CheckDesign", True),
         ("Audit presentation...", PROTOCOL + "AuditDeck", True),
         ("Export deck specification...", PROTOCOL + "ExportDeckSpec", True),

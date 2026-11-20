@@ -25,9 +25,10 @@ The 7.0 work has started with data import, a deck audit and colour-blindness sim
   use `"template"` in a deck specification.
 - **Data import** (M28): CSV, ODS and XLSX files into any data sheet, and a chart from clipboard
   cells.
-- **Audit** (M29): report unreadable charts, links and stale sources by slide; export a deck
-  specification.
-- **Colour-blindness simulation** (M30): show a deck as deuteranopia, protanopia or tritanopia.
+- **Audit** (M29): report unreadable charts, links, stale sources and design deviations by slide,
+  jump to a finding, export a deck specification and apply format or data operations in batch.
+- **Design and accessibility** (M30): palette and font dialog, colour-blindness simulation,
+  alternative text for every element, and design checks over master slides and layouts.
 
 Existing presentations open unchanged; the schema moved to version 20.
 
