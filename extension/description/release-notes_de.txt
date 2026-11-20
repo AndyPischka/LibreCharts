@@ -1,11 +1,16 @@
-LibreCharts 5.0 - Präsentationen bauen, prüfen und teilen.
+LibreCharts 7.0 - die Botschaft auf der Folie und der Workflow drumherum.
 
-Neu: eine Präsentation aus Vorlage und JSON-Datei bauen oder alle Datenverknüpfungen
-aktualisieren, auf der Kommandozeile oder per Makro. Eine Präsentation gegen eine
-Corporate-Design-Datei prüfen und alle Abweichungen in einem Rückgängig-Schritt korrigieren.
-Diagramme tragen Alternativtext für Screenreader, können Muster zusätzlich zu den Farben
-zeigen und ihre Daten als CSV exportieren. Die Oberfläche gibt es jetzt auch auf Französisch,
-Spanisch und Italienisch, neben Englisch und Deutsch.
+Neu in 7.0: einzelne Beschriftungen ausblenden, umschreiben oder zurücksetzen; ein Diagramm auf
+ausgewählte Datenreihen oder Kategorien fokussieren; eine Quellenzeile und freie Hinweise
+hinzufügen; Schriftgröße und Legendenposition pro Diagramm setzen. Manuelle Werteachsen,
+Achsentitel, eine logarithmische Achse und Trendlinien mit Prognose, R2 und Gleichung.
+Hantel-, Bullet-, Pareto-, Trichter- und Boxplot-Diagramme, gestaltete Tabellen mit Harvey Balls,
+Häkchen, Sparklines und Heatmap sowie 2x2-Matrizen. Befehle zum Verteilen und Ausrichten,
+Prozess-, Pfeilband- und Pyramiden-Grafiken, ein Symbolsatz und Diagrammvorlagen. CSV-, ODS- und
+XLSX-Daten importieren, ein Diagramm aus Zwischenablage-Zellen bauen, Datenverknüpfungen aktuell
+halten, eine Präsentation mit Sprung zur Folie prüfen und ihre Spezifikation exportieren. Ein
+Paletten- und Schriftdialog, Farbsehschwäche-Simulation, Alternativtext für jede Form und
+Designprüfungen über Masterfolien und Layouts.
 
-Mit 5.0 gespeicherte Diagramme kann 4.0 nicht lesen; 5.0 öffnet jede ältere Präsentation
-unverändert.
+Mit 7.0 gespeicherte Diagramme kann 6.0 oder älter nicht lesen; 7.0 öffnet jede ältere
+Präsentation unverändert.

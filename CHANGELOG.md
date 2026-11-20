@@ -5,9 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
-LibreCharts 6.0 adds the message on the slide: label overrides and focus, manual axes and
-trendlines, five comparison charts, tables and matrices, layout graphics and chart templates.
-The 7.0 work has started with data import, a deck audit and colour-blindness simulation.
+## [7.0.0] - 2026-11-20
+
+LibreCharts 7.0 combines the 6.0 depth of analysis with the 7.0 workflow: labels, focus and chart
+notes; manual axes and trendlines; five comparison charts; tables and matrices; layout graphics and
+chart templates; data import, a deck audit and accessibility tools.
 
 ### Added
 - **Labels and emphasis** (M22): hide, retitle or reset single labels; a focus mode that mutes
@@ -30,7 +32,8 @@ The 7.0 work has started with data import, a deck audit and colour-blindness sim
 - **Design and accessibility** (M30): palette and font dialog, colour-blindness simulation,
   alternative text for every element, and design checks over master slides and layouts.
 
-Existing presentations open unchanged; the schema moved to version 20.
+Existing presentations open unchanged; the schema moved to version 21. Charts saved by 7.0 cannot
+be read by 6.0 or older.
 
 ## [5.0.0] - 2026-11-19
 

@@ -1,9 +1,13 @@
-LibreCharts 5.0 - build, check and share decks.
+LibreCharts 7.0 - the message on the slide, and the workflow around it.
 
-New: build a deck from a template and a JSON file, or update all data links, on the command
-line or from a macro. Check a presentation against a corporate design file and fix every
-deviation in one undo step. Charts carry alternative text for screen readers, can show
-patterns beside their colours, and export their data as CSV. The interface is available in
-French, Spanish and Italian as well as English and German.
+New in 7.0: hide, rewrite or reset single labels; focus a chart on chosen series or categories;
+add a source line and free callouts; set a per-chart font size and legend position. Manual value
+axes, axis titles, a logarithmic axis and trendlines with forecasts, R2 and equations. Dumbbell,
+bullet, Pareto, funnel and box plot charts, styled tables with Harvey balls, check marks,
+sparklines and a heatmap, and 2x2 matrices. Distribute and align commands, process, chevron and
+pyramid graphics, an icon set and chart templates. Import CSV, ODS and XLSX data, build a chart
+from clipboard cells, keep data links up to date, audit a deck with jump-to-slide and export its
+specification. A palette and font dialog, colour-blindness simulation, alternative text for every
+shape and design checks over master slides and layouts.
 
-Charts saved by 5.0 cannot be read by 4.0; 5.0 opens every older presentation unchanged.
+Charts saved by 7.0 cannot be read by 6.0 or older; 7.0 opens every older presentation unchanged.
