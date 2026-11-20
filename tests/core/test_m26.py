@@ -7,7 +7,7 @@ import pytest
 from librecharts.core import arrange, graphics, icons
 from librecharts.core.arrange import Rect
 from librecharts.core.menu import arrange_items
-from librecharts.core.primitives import Text, bounds
+from librecharts.core.primitives import Polygon, Text, bounds
 
 
 def test_distribute_equal_gaps_keeps_the_outer_shapes() -> None:
@@ -48,9 +48,16 @@ def test_a_graphic_name_round_trips() -> None:
         graphics.Graphic("process", 4, True),
         graphics.Graphic("chevron", 3, False),
         graphics.Graphic("pyramid", 2, False),
+        graphics.Graphic("pyramid", 2, False, inverted=True),
         graphics.Graphic("icon", icon="target"),
     ):
         assert graphics.parse(graphics.name(item)) == item
+    assert graphics.name(graphics.Graphic("pyramid", 4, False)) == (
+        "librecharts-graphic:pyramid:4:vertical"
+    )
+    assert graphics.name(graphics.Graphic("pyramid", 4, False, inverted=True)) == (
+        "librecharts-graphic:pyramid:4:inverted"
+    )
     assert graphics.parse("librecharts:chart") is None
     assert graphics.parse("librecharts-graphic:nope") is None
 
@@ -62,8 +69,58 @@ def test_graphic_validation() -> None:
         graphics.Graphic("process", 9)
     with pytest.raises(ValueError, match="vertical"):
         graphics.Graphic("pyramid", 3, True)
+    with pytest.raises(ValueError, match="inverted"):
+        graphics.Graphic("process", 3, True, inverted=True)
     with pytest.raises(ValueError, match="icon"):
         graphics.Graphic("icon", icon="nope")
+
+
+def test_insert_graphic_arguments_default_a_pyramid_to_vertical() -> None:
+    assert graphics.from_query("kind=pyramid") == (
+        graphics.Graphic("pyramid", 4, False),
+        (),
+    )
+    assert graphics.from_query("kind=pyramid&inverted=true") == (
+        graphics.Graphic("pyramid", 4, False, inverted=True),
+        (),
+    )
+    assert graphics.from_query("kind=process&steps=3&horizontal=false") == (
+        graphics.Graphic("process", 3, False),
+        (),
+    )
+    assert graphics.from_query("kind=icon&name=target") == (
+        graphics.Graphic("icon", icon="target"),
+        (),
+    )
+
+
+def test_insert_graphic_arguments_read_labels_and_reject_bad_ones() -> None:
+    assert graphics.from_query("kind=chevron&steps=2&text1=A&text2=B")[1] == ("A", "B")
+    assert graphics.from_query("kind=chevron&steps=3&text1=A")[1] == ()  # incomplete: placeholders
+    with pytest.raises(ValueError, match="unknown graphic kind"):
+        graphics.from_query("kind=nope")
+    with pytest.raises(ValueError, match="1 to 8 steps"):
+        graphics.from_query("kind=pyramid&steps=9")
+    with pytest.raises(ValueError, match="invalid literal"):
+        graphics.from_query("kind=process&steps=many")
+    with pytest.raises(ValueError, match="unknown icon"):
+        graphics.from_query("kind=icon&name=nope")
+
+
+def test_a_pyramid_is_upright_unless_it_is_inverted() -> None:
+    def widths(item: graphics.Graphic) -> list[tuple[float, float]]:
+        polygons = [p for p in graphics.layout(item, 200, 100) if isinstance(p, Polygon)]
+        return [
+            (p.points[1][0] - p.points[0][0], p.points[2][0] - p.points[3][0]) for p in polygons
+        ]
+
+    upright = widths(graphics.Graphic("pyramid", 4, False))
+    assert upright[0] == (0, 50)
+    assert upright[-1] == (150, 200)
+
+    inverted = widths(graphics.Graphic("pyramid", 4, False, inverted=True))
+    assert inverted[0] == (200, 150)
+    assert inverted[-1] == (50, 0)
 
 
 def test_every_graphic_layout_stays_in_its_box() -> None:
@@ -71,6 +128,7 @@ def test_every_graphic_layout_stays_in_its_box() -> None:
         graphics.Graphic("process", 4, True),
         graphics.Graphic("chevron", 4, True),
         graphics.Graphic("pyramid", 4, False),
+        graphics.Graphic("pyramid", 4, False, inverted=True),
         graphics.Graphic("icon", icon="calendar"),
     ):
         for width, height in ((2000, 1000), (8000, 4000)):

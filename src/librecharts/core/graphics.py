@@ -1,14 +1,16 @@
 """Process, chevron and pyramid graphics and icons (M26).
 
-The graphic's state lives in its group name (``librecharts-graphic:process:4:horizontal``); the
-step texts are child shapes, so no document property is needed. :func:`layout` returns the
-primitives for a box; the labels are the text primitives in reading order.
+The graphic's state lives in its group name (``librecharts-graphic:process:4:horizontal``,
+``librecharts-graphic:pyramid:4:inverted``); the step texts are child shapes, so no document
+property is needed. :func:`layout` returns the primitives for a box; the labels are the text
+primitives in reading order.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
+from urllib.parse import parse_qs
 
 from librecharts.core import icons
 from librecharts.core.primitives import Polygon, Primitive, Rect, Text
@@ -24,6 +26,7 @@ class Graphic:
     steps: int = 4
     horizontal: bool = True
     icon: str = ""
+    inverted: bool = False
 
     def __post_init__(self) -> None:
         if self.kind not in ("process", "chevron", "pyramid", "icon"):
@@ -34,14 +37,20 @@ class Graphic:
             return
         if not 1 <= self.steps <= MAX_STEPS:
             raise ValueError(f"a graphic has 1 to {MAX_STEPS} steps")
-        if self.kind == "pyramid" and self.horizontal:
-            raise ValueError("a pyramid is vertical")
+        if self.kind == "pyramid":
+            if self.horizontal:
+                raise ValueError("a pyramid is vertical")
+        elif self.inverted:
+            raise ValueError("only a pyramid can be inverted")
 
 
 def name(graphic: Graphic) -> str:
     if graphic.kind == "icon":
         return f"{PREFIX}icon:{graphic.icon}"
-    orientation = "horizontal" if graphic.horizontal else "vertical"
+    if graphic.kind == "pyramid":
+        orientation = "inverted" if graphic.inverted else "vertical"
+    else:
+        orientation = "horizontal" if graphic.horizontal else "vertical"
     return f"{PREFIX}{graphic.kind}:{graphic.steps}:{orientation}"
 
 
@@ -58,10 +67,34 @@ def parse(group_name: str) -> Graphic | None:
                 parts[0],  # pyright: ignore[reportArgumentType]
                 int(parts[1]),
                 parts[2] == "horizontal",
+                inverted=parts[0] == "pyramid" and parts[2] == "inverted",
             )
     except ValueError:
         return None
     return None
+
+
+def from_query(query: str) -> tuple[Graphic, tuple[str, ...]]:
+    """Parse ``InsertGraphic`` arguments into a graphic and its step labels.
+
+    A pyramid has no horizontal form and is upright unless ``inverted=true``. ``steps``
+    defaults to 4; ``text1``, ``text2``, ... are the step labels. Raises ``ValueError`` for
+    an unknown kind or bad arguments.
+    """
+    args = {key: values[-1] for key, values in parse_qs(query).items()}
+    kind = args.get("kind", "process")
+    if kind == "icon":
+        graphic = Graphic("icon", icon=args.get("name", ""))
+    else:
+        horizontal = args.get("horizontal", "true") != "false" and kind != "pyramid"
+        graphic = Graphic(
+            kind,  # pyright: ignore[reportArgumentType]  # validated by Graphic
+            int(args.get("steps", "4")),
+            horizontal,
+            inverted=args.get("inverted", "false") == "true",
+        )
+    labels = tuple(args[key] for key in sorted(args) if key.startswith("text"))
+    return graphic, labels if len(labels) >= graphic.steps else ()
 
 
 def layout(
@@ -75,7 +108,7 @@ def layout(
         return _process(graphic.steps, width, height, labels, graphic.horizontal)
     if graphic.kind == "chevron":
         return _chevron(graphic.steps, width, height, labels, graphic.horizontal)
-    return _pyramid(graphic.steps, width, height, labels)
+    return _pyramid(graphic.steps, width, height, labels, graphic.inverted)
 
 
 def _process(
@@ -137,19 +170,23 @@ def _chevron(
 
 
 def _pyramid(
-    steps: int, width: float, height: float, labels: tuple[str, ...]
+    steps: int, width: float, height: float, labels: tuple[str, ...], inverted: bool
 ) -> tuple[Primitive, ...]:
     out: list[Primitive] = []
     cell = height / steps
     for index in range(steps):
         top, bottom = index * cell, (index + 1) * cell
-        narrow = width * index / (steps * 2)
-        wide = width * (index + 1) / (steps * 2)
+        if inverted:
+            upper = width * index / (steps * 2)
+            lower = width * (index + 1) / (steps * 2)
+        else:
+            upper = width * (steps - index) / (steps * 2)
+            lower = width * (steps - index - 1) / (steps * 2)
         points = (
-            (narrow, top),
-            (width - narrow, top),
-            (width - wide, bottom),
-            (wide, bottom),
+            (upper, top),
+            (width - upper, top),
+            (width - lower, bottom),
+            (lower, bottom),
         )
         out.append(Polygon(tuple(points), index % 6))
         out.append(Text(width * 0.2, top, width * 0.6, cell, labels[index], "center", "value"))

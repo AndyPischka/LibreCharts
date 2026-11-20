@@ -170,26 +170,14 @@ def _insert(ctx: Any, frame: Any, insert: Any) -> None:
 
 def insert_graphic(ctx: Any, frame: Any, query: str) -> None:
     """Insert a process, chevron, pyramid or icon graphic (M26); one undo step."""
-    args = {key: values[-1] for key, values in parse_qs(query).items()}
-    kind = args.get("kind", "process")
     locale = ui.ui_locale(ctx)
     try:
-        if kind == "icon":
-            graphic = core_graphics.Graphic("icon", icon=args.get("name", ""))
-        else:
-            graphic = core_graphics.Graphic(
-                kind,  # pyright: ignore[reportArgumentType]
-                int(args.get("steps", "4")),
-                args.get("horizontal", "true") != "false",
-            )
+        graphic, labels = core_graphics.from_query(query)
     except ValueError:
         ui.show_info(ctx, frame, text("graphic_unsupported", locale))
         return
     controller = frame.getController()
     doc = controller.getModel()
-    labels = tuple(args[key] for key in sorted(args) if key.startswith("text"))
-    if len(labels) < graphic.steps:
-        labels = ()
     controller.select(lo_graphics.insert(doc, controller.getCurrentPage(), graphic, labels))
     resize.watch(doc)
 
@@ -224,7 +212,10 @@ def change_graphic(ctx: Any, frame: Any, query: str) -> None:
     args = {key: values[-1] for key, values in parse_qs(query).items()}
     try:
         if args.get("op") == "direction":
-            changed = replace(graphic, horizontal=not graphic.horizontal)
+            if graphic.kind == "pyramid":
+                changed = replace(graphic, inverted=not graphic.inverted)
+            else:
+                changed = replace(graphic, horizontal=not graphic.horizontal)
         elif args.get("op") in ("add", "remove"):
             step = 1 if args["op"] == "add" else -1
             changed = replace(graphic, steps=graphic.steps + step)

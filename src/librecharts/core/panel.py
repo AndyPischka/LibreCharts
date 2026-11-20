@@ -25,6 +25,19 @@ _ARRANGE_ICONS = {  # by the ``op`` of the Arrange command
     "size": "arrange_size",
     "swap": "arrange_swap",
     **{f"grid&columns={columns}": f"arrange_grid_{columns}" for columns in GRID_COLUMNS},
+    **{
+        f"distribute&axis={axis}&mode={mode}": f"arrange_distribute_{axis}_{mode}"
+        for axis in ("h", "v")
+        for mode in ("gaps", "centres")
+    },
+    **{
+        f"align&edge={edge}": f"arrange_align_{edge}"
+        for edge in ("left", "right", "top", "bottom", "hcenter", "vcenter")
+    },
+    **{
+        f"align-slide&edge={edge}": f"arrange_align_slide_{edge}"
+        for edge in ("left", "right", "top", "bottom", "hcenter", "vcenter")
+    },
 }
 
 _SCHEME_KEYS = {  # built-in schemes are shown under a translated name
@@ -264,10 +277,16 @@ def content(
             _button(
                 "menu_element_next", "SetElement?next=1", "element_next", locale, element_selected
             ),
-            _button("menu_insert_process", "InsertGraphic?kind=process", "", locale),
-            _button("menu_insert_chevron", "InsertGraphic?kind=chevron", "", locale),
-            _button("menu_insert_pyramid", "InsertGraphic?kind=pyramid", "", locale),
-            _button("insert_icon", "InsertIcon", "", locale),
+            _button("menu_insert_process", "InsertGraphic?kind=process", "insert_process", locale),
+            _button("menu_insert_chevron", "InsertGraphic?kind=chevron", "insert_chevron", locale),
+            _button("menu_insert_pyramid", "InsertGraphic?kind=pyramid", "insert_pyramid", locale),
+            _button(
+                "menu_insert_pyramid_inverted",
+                "InsertGraphic?kind=pyramid&inverted=true",
+                "insert_pyramid_inverted",
+                locale,
+            ),
+            _button("insert_icon", "InsertIcon", "insert_icon", locale),
         ),
         arrange=tuple(
             Button(

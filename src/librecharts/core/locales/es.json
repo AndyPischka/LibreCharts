@@ -468,6 +468,7 @@
   "menu_insert_process": "Process",
   "menu_insert_chevron": "Chevron",
   "menu_insert_pyramid": "Pyramid",
+  "menu_insert_pyramid_inverted": "Inverted pyramid",
   "menu_arrange_distribute": "Distribute",
   "menu_distribute_h_gaps": "Equal gaps horizontally",
   "menu_distribute_h_centres": "Equal centres horizontally",

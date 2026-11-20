@@ -283,6 +283,7 @@ def test_element_and_arrange_buttons_follow_the_selection() -> None:
         True,
         True,
         True,
+        True,
     ]
     assert not any(b.enabled for b in none.arrange)
 
@@ -296,11 +297,29 @@ def test_element_and_arrange_buttons_follow_the_selection() -> None:
     assert sum(b.enabled for b in three.arrange) == len(three.arrange) - 1
 
 
+def test_the_two_pyramid_buttons_insert_upright_and_inverted() -> None:
+    panel = content(None, False, "en-US")
+    pyramids = [b for b in panel.elements if b.command.startswith(PROTOCOL + "InsertGraphic")]
+    assert [b.command for b in pyramids] == [
+        PROTOCOL + "InsertGraphic?kind=process",
+        PROTOCOL + "InsertGraphic?kind=chevron",
+        PROTOCOL + "InsertGraphic?kind=pyramid",
+        PROTOCOL + "InsertGraphic?kind=pyramid&inverted=true",
+    ]
+    assert [b.icon for b in pyramids] == [
+        "insert_process",
+        "insert_chevron",
+        "insert_pyramid",
+        "insert_pyramid_inverted",
+    ]
+
+
 def test_element_and_arrange_buttons_have_icons() -> None:
     panel = content(None, False, "en-US")
     images = Path(__file__).parents[2] / "extension" / "images"
-    icons = [b.icon for b in (*panel.elements, *panel.arrange) if b.icon]
-    assert len(icons) == 3 + 7
+    buttons = (*panel.insert, *panel.elements, *panel.arrange)
+    assert all(b.icon for b in buttons), [b.title for b in buttons if not b.icon]
+    icons = [b.icon for b in buttons]
     assert len(set(icons)) == len(icons)
     for icon in icons:
         for size in (16, 26):

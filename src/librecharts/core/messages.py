@@ -1349,6 +1349,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Pyramid",
         "de": "Pyramide",
     },
+    "menu_insert_pyramid_inverted": {
+        "en": "Inverted pyramid",
+        "de": "Umgekehrte Pyramide",
+    },
     "menu_arrange_distribute": {
         "en": "Distribute",
         "de": "Verteilen",

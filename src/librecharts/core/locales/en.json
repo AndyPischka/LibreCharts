@@ -395,6 +395,7 @@
   "menu_insert_graphic": "Insert graphic",
   "menu_insert_process": "Process",
   "menu_insert_pyramid": "Pyramid",
+  "menu_insert_pyramid_inverted": "Inverted pyramid",
   "menu_insert_template": "Insert from template",
   "menu_labels": "Labels",
   "menu_legend": "Legend position",

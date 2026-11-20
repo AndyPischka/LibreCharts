@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Added
+- An *Inverted pyramid* button in the sidebar, next to the upright pyramid.
+
+### Fixed
+- The icons of *Category gap* and *Group bracket* were solid black squares; they now show two
+  column groups with a gap marker and three columns under a bracket.
+- The sidebar's *Pyramid* button inserts an upright pyramid instead of reporting that it cannot be
+  inserted; the graphic used to be laid out upside down.
+
 ## [7.0.0] - 2026-11-20
 
 LibreCharts 7.0 combines the 6.0 depth of analysis with the 7.0 workflow: labels, focus and chart
