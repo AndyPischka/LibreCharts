@@ -38,7 +38,7 @@ expected effort and helps pick the next item.
 | Stacked and horizontal waterfall | yes | M15 | M | done |
 | Marimekko (percent and unit axis) | yes | M3 | L | done |
 | Combine small Mekko segments into "Other" | yes | — | M | open |
-| Line charts, missing values (linear interpolation) | yes | lines with gaps on empty values M7 | S | partial |
+| Line charts, missing values (linear interpolation) | yes | gaps by default M7, interpolate switch M32 | S | done |
 | Area and area 100 % | yes | M7 | M | done |
 | Combination column + line, secondary axis | yes | M7 | L | done |
 | Pie and doughnut | yes | M9 | M | done |
@@ -62,7 +62,7 @@ expected effort and helps pick the next item.
 | CAGR arrows | yes | M4, M14 | S | done |
 | Axis breaks (automatic or range) | yes | M4 | M | done |
 | Value lines: target, average | yes | M6 | S | done |
-| Value lines: median, net lines | yes | — | S | open |
+| Value lines: median, net lines | yes | median M32; net lines — | S | partial |
 | Category gaps and group brackets | yes | M14 | M | done |
 | Move single labels by hand (persistent offsets) | yes | M13, M22 | L | done |
 | Hide / rewrite / reset single labels, focus mode | yes (newer versions) | M22 | M | done |

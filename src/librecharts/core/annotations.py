@@ -9,13 +9,20 @@ computed.
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 from urllib.parse import parse_qs
 
 from librecharts.core.datasheet import ChartData, errored, parse, ranged
 from librecharts.core.gantt import parse_gantt, starts
 from librecharts.core.mekko import levels as mekko_levels
 from librecharts.core.mekko import parse_mekko
-from librecharts.core.model import AXIS_ANNOTATIONS, Annotation, ChartKind, ChartState
+from librecharts.core.model import (
+    AXIS_ANNOTATIONS,
+    Annotation,
+    ChartKind,
+    ChartState,
+    ValueLineMode,
+)
 from librecharts.core.percent import shares
 from librecharts.core.scatter import levels as scatter_levels
 from librecharts.core.scatter import parse_scatter
@@ -202,8 +209,9 @@ def check_bracket_text(label: str) -> str | None:
 
 
 def changed(annotations: tuple[Annotation, ...], query: str) -> tuple[Annotation, ...]:
-    """Apply ``index=1&label=absolute`` (or ``style=...``, ``text=...``, ``lower=..&upper=..``) to
-    the annotation at that index; ``lower=&upper=`` (empty) makes an axis break automatic.
+    """Apply ``index=1&label=absolute`` (or ``style=...``, ``text=...``, ``lower=..&upper=..``,
+    ``mode=median``) to the annotation at that index; ``lower=&upper=`` (empty) makes an axis break
+    automatic, ``mode=`` (empty) a value line the average again.
 
     Raises ``ValueError`` for a missing or invalid index or value.
     """
@@ -218,6 +226,7 @@ def changed(annotations: tuple[Annotation, ...], query: str) -> tuple[Annotation
         upper=_optional_float(args["upper"]) if "upper" in args else old.upper,
         value=_optional_float(args["value"]) if "value" in args else old.value,
         text=args.get("text", old.text),
+        value_line_mode=_mode(args["mode"]) if "mode" in args else old.value_line_mode,
     )
     return (*annotations[:index], annotation, *annotations[index + 1 :])
 
@@ -243,14 +252,22 @@ def _optional_float(text: str) -> float | None:
     return float(text) if text else None
 
 
+def _mode(text: str) -> ValueLineMode | None:
+    """The value line's statistic ``mode=median``; empty or "average" resets to the default."""
+    if not text or text == "average":
+        return None
+    return cast("ValueLineMode", text)  # validated by Annotation
+
+
 def from_query(query: str) -> Annotation:
     """Parse command arguments like ``kind=difference&start=0&end=2&label=absolute``.
 
     An axis break needs no ``start``: ``kind=axis_break`` (automatic) or with
     ``&lower=10&upper=50``. A category gap needs adjacent categories
     (``kind=category_gap&start=1&end=2``), a group bracket a range and may carry its label
-    (``kind=group_bracket&start=0&end=2&text=Phase%201``). Raises ``ValueError`` for missing or
-    invalid arguments.
+    (``kind=group_bracket&start=0&end=2&text=Phase%201``). A value line may name the statistic it
+    shows (``kind=value_line&mode=median``). Raises ``ValueError`` for missing or invalid
+    arguments.
     """
     args = {key: values[-1] for key, values in parse_qs(query, strict_parsing=True).items()}
     try:
@@ -274,4 +291,5 @@ def from_query(query: str) -> Annotation:
         value=_optional_float(args.get("value", "")),
         series_end=None if series_end is None else int(series_end),
         text=args.get("text", ""),
+        value_line_mode=_mode(args.get("mode", "")),
     )

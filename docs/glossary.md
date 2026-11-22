@@ -37,7 +37,8 @@ Use these terms consistently in code, UI strings and docs.
 | **Chart option** | A per-chart switch the user can change after inserting, via the context menu or the sidebar (`ChangeChart` command, `core/options.py`). |
 | **Stacked / Clustered** | The two ways to place the segments of one category: on top of each other in one column, or side by side as one bar per series. |
 | **100 % chart** | A stacked column or bar chart whose columns are all 100 % high; segments show their share, the absolute column sum stays above (right of, for bars) the column. Negative values count as empty (ADR 0013). A percent Mekko is the same idea with variable column widths. |
-| **Line chart** | One line per series through the category centres, with a marker and a value label at every point and the series name right of the last point; an empty value splits the line (ADR 0015). |
+| **Line chart** | One line per series through the category centres, with a marker and a value label at every point and the series name right of the last point; an empty value splits the line, unless the chart interpolates (ADR 0015, M32). |
+| **Interpolation** | Bridging the empty values of a line chart with straight lines between the neighbouring known points (`ChartState.interpolate`, M32); bridged points get no marker and no label, the ends of a series are never extrapolated. |
 | **Area chart** | Stacked areas: every series is one filled area between its cumulative edges. The 100 % variant shows shares of the column sums. Negative values count as empty, empty values as zero (ADR 0015). |
 | **Pie chart / Doughnut** | One pie per category with one segment per series, clockwise from 12 o'clock; shares are labelled inside wide segments and outside narrow ones. A doughnut has a hole that shows the category sum (ADR 0018). |
 | **Scatter chart / Bubble chart** | Points on two numeric axes read from a data sheet with one row per point (label, x, y, size, group). A point with a size is a bubble whose area is proportional to it (ADR 0018). |
@@ -85,7 +86,7 @@ Use these terms consistently in code, UI strings and docs.
 | **Legend** | The series names with a colour swatch above the plot. |
 | **Number format** | Decimals, magnitude and unit suffix applied to every value label; shares use decimals and separator only (ADR 0014). |
 | **Magnitude** | The power of ten values are divided by (thousands, millions, billions) with a localized suffix such as "Tsd." or "k" (ADR 0014). |
-| **Value line** | A dashed line across the plot at a target value or at the average of the column sums, with its label; a chart may have several (ADR 0014). |
+| **Value line** | A dashed line across the plot at a target value or at a statistic of the column sums — the average by default, the median with `value_line_mode="median"` (M32) — with its label; a chart may have several (ADR 0014). |
 | **Width row** | Optional Mekko data sheet row named "Width"/"Breite" right below the category names; sets column widths. |
 | **Label key** | Names a movable label (a value label or a total) by its role and data sheet indices, independent of size and sort order (ADR 0023). |
 | **Label offset** | How far the user moved a label's centre from where the layout puts it, in 1/100 mm; stored in the chart state under its label key and applied after the layout (ADR 0023). |

@@ -260,6 +260,31 @@ def test_version_13_state_gets_no_floating_bars_error_bars_or_waterfall_variants
     assert restored.stacked is False
 
 
+def test_round_trip_preserves_the_value_line_mode_and_interpolation() -> None:
+    annotations = (
+        Annotation("value_line", 0, 0),
+        Annotation("value_line", 0, 0, value_line_mode="median"),
+        Annotation("value_line", 0, 0, value=42.0),
+    )
+    state = make_state(kind="line", annotations=annotations, interpolate=True)
+    restored = from_json(to_json(state))
+    assert restored == state
+    assert restored.annotations[1].value_line_mode == "median"
+    assert restored.interpolate is True
+
+
+def test_version_21_states_get_no_median_and_no_interpolation() -> None:
+    raw = valid_raw()
+    raw["annotations"] = [ARROW]
+    del raw["interpolate"]
+    raw["v"] = 21
+    restored = from_json(json.dumps(raw))
+    assert restored.version == SCHEMA_VERSION
+    assert restored.annotations == (Annotation("difference", 0, 1),)
+    assert restored.annotations[0].value_line_mode is None
+    assert restored.interpolate is False
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [

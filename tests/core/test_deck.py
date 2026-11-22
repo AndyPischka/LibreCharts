@@ -102,6 +102,17 @@ def test_line_series_and_secondary_axis() -> None:
     assert (state.lines, state.secondary) == ((2, 3), (3,))
 
 
+def test_a_line_chart_can_interpolate_missing_values() -> None:
+    state = deck.parse(text(spec(kind="line", interpolate=True))).charts[0].state
+    assert state.interpolate is True
+    assert deck.parse(text(spec(kind="line"))).charts[0].state.interpolate is False
+
+
+def test_interpolation_is_rejected_for_other_charts_and_bad_values() -> None:
+    assert key_of(spec(interpolate=True)) == "deck_invalid_chart"  # a column chart
+    assert key_of(spec(kind="line", interpolate="yes")) == "deck_invalid_chart"
+
+
 def test_a_gantt_calendar_is_read() -> None:
     raw = spec(kind="gantt", calendar={"working_days": [0, 1, 2], "holidays": ["2026-12-25"]})
     state = deck.parse(text(raw)).charts[0].state

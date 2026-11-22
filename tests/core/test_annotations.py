@@ -199,6 +199,29 @@ def test_changed_sets_the_text_of_a_group_bracket() -> None:
     )
 
 
+def test_from_query_parses_the_mode_of_a_value_line() -> None:
+    assert from_query("kind=value_line") == Annotation("value_line", 0, 0)
+    assert from_query("kind=value_line&mode=median") == Annotation(
+        "value_line", 0, 0, value_line_mode="median"
+    )
+    assert from_query("kind=value_line&mode=average") == Annotation("value_line", 0, 0)
+    assert from_query("kind=value_line&value=42&mode=median") == Annotation(
+        "value_line", 0, 0, value=42.0, value_line_mode="median"
+    )
+    with pytest.raises(ValueError, match="only a value line has a mode"):
+        from_query("kind=difference&start=0&end=1&mode=median")
+    with pytest.raises(ValueError, match="unknown value line mode"):
+        from_query("kind=value_line&mode=mean")
+
+
+def test_changed_switches_a_value_line_between_the_average_and_the_median() -> None:
+    notes = (Annotation("value_line", 0, 0),)
+    median = changed(notes, "index=0&mode=median")
+    assert median == (Annotation("value_line", 0, 0, value_line_mode="median"),)
+    assert changed(median, "index=0&mode=") == notes  # empty resets to the average
+    assert changed(median, "index=0&value=7")[0].value == 7.0  # the mode stays
+
+
 def test_between_series_arrows_compare_two_series_of_one_category() -> None:
     assert label(Annotation("difference", 0, 0, series=0, series_end=1), YEARS) == "0%"
     assert (

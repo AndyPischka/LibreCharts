@@ -469,11 +469,12 @@ def annotation_title(
         )
         return text("menu_date_line", locale, value=value)
     if annotation.kind == "value_line":
-        value = (
-            text("menu_value_line_average", locale)
-            if annotation.value is None
-            else format_value(annotation.value, fmt)
-        )
+        if annotation.value_line_mode == "median":
+            value = text("menu_value_line_median", locale)
+        elif annotation.value is None:
+            value = text("menu_value_line_average", locale)
+        else:
+            value = format_value(annotation.value, fmt)
         return text("menu_value_line", locale, value=value)
     if annotation.kind == "category_gap":
         return text(

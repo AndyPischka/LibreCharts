@@ -21,7 +21,7 @@ from librecharts.core.format import number_format
 from librecharts.core.gantt import serial
 from librecharts.core.layout.common import format_value
 from librecharts.core.messages import text
-from librecharts.core.model import Annotation, ChartState
+from librecharts.core.model import Annotation, ChartState, ValueLineMode
 from librecharts.core.value_line import check, check_date, date_input
 from librecharts.lo import chart, store, ui
 
@@ -122,13 +122,18 @@ class _ValueLineRequest(_Request):
         choice = ask_value_line(self.ctx, self.frame, state, current, locale)
         if isinstance(choice, _Cancelled):
             return
+        mode, value = choice
         doc = self.frame.getController().getModel()
         if self.index is None:
-            chart.add_annotation(doc, self.group, Annotation("value_line", 0, 0, value=choice))
+            chart.add_annotation(
+                doc,
+                self.group,
+                Annotation("value_line", 0, 0, value=value, value_line_mode=mode),
+            )
         else:
             notes = (
                 *state.annotations[: self.index],
-                replace(state.annotations[self.index], value=choice),
+                replace(state.annotations[self.index], value=value, value_line_mode=mode),
                 *state.annotations[self.index + 1 :],
             )
             chart.redraw(doc, self.group, replace(state, annotations=notes))
@@ -168,20 +173,24 @@ def ask_value_line(
     state: ChartState,
     current: Annotation | None,
     locale: str,
-) -> float | _Cancelled | None:
-    """Show the value-line dialog; ``None`` for the average, a number, or ``CANCELLED``.
+) -> tuple[ValueLineMode | None, float | None] | _Cancelled:
+    """Show the value-line dialog; the outcome ``(mode, value)``, or ``CANCELLED``.
 
-    A Gantt chart asks for a date instead (a date line), today's date filled in for a new one.
+    ``mode`` is ``"median"`` for a median line and ``None`` for the average or a manual ``value``
+    (M32). A Gantt chart asks for a date instead (a date line), today's date filled in for a new
+    one.
     """
     if state.kind == "gantt":
-        return _ask_date_line(ctx, frame, state, current, locale)
+        date_outcome = _ask_date_line(ctx, frame, state, current, locale)
+        return date_outcome if isinstance(date_outcome, _Cancelled) else (None, date_outcome)
     manual = current is not None and current.value is not None
+    mode = current.value_line_mode if current is not None else None
     shown = (
         ""
         if current is None or current.value is None
         else format_value(current.value, state.format)
     )
-    dialog = _build_value_line(ctx, frame, locale, manual=manual, value=shown)
+    dialog = _build_value_line(ctx, frame, locale, mode=mode, manual=manual, value=shown)
     outcome: list[Any] = []
     dialog.getControl("ok").addActionListener(
         _OkListener(dialog, locale, outcome, lambda: _value_line_outcome(dialog))
@@ -229,10 +238,14 @@ class _Cancelled:
 CANCELLED = _Cancelled()
 
 
-def _value_line_outcome(dialog: Any) -> float | str | None:
+def _value_line_outcome(dialog: Any) -> tuple[ValueLineMode | None, float | None] | str:
+    """The dialog's answer as ``(mode, value)``; an error message key if the value field is bad."""
+    if dialog.getControl("median").getState():
+        return "median", None
     if dialog.getControl("average").getState():
-        return None
-    return check(dialog.getControl("value").getText())
+        return None, None
+    checked = check(dialog.getControl("value").getText())
+    return checked if isinstance(checked, str) else (None, checked)
 
 
 class _OkListener(unohelper.Base, XActionListener):
@@ -313,14 +326,24 @@ def _build_number(ctx: Any, frame: Any, locale: str, fmt: Any) -> Any:
     return builder.finish("number")
 
 
-def _build_value_line(ctx: Any, frame: Any, locale: str, *, manual: bool, value: str) -> Any:
-    builder = _Builder(ctx, frame, text("value_line_title", locale), 190, 112, locale)
-    builder.radio("average", 10, 10, 170, 10, "value_line_average", not manual)
-    builder.radio("value_choice", 10, 25, 170, 10, "value_line_value", manual)
-    builder.edit("value", 100, 40, 70, 12, value)
-    dialog = builder.finish("value_line", top=70)
+def _build_value_line(
+    ctx: Any,
+    frame: Any,
+    locale: str,
+    *,
+    mode: ValueLineMode | None,
+    manual: bool,
+    value: str,
+) -> Any:
+    builder = _Builder(ctx, frame, text("value_line_title", locale), 190, 128, locale)
+    builder.radio("average", 10, 10, 170, 10, "value_line_average", not manual and mode is None)
+    builder.radio("median", 10, 25, 170, 10, "value_line_median", mode == "median")
+    builder.radio("value_choice", 10, 40, 170, 10, "value_line_value", manual)
+    builder.edit("value", 100, 55, 70, 12, value)
+    dialog = builder.finish("value_line", top=84)
     dialog.getModel().getByName("value").Enabled = manual
     dialog.getControl("average").addItemListener(_RadioListener(dialog))
+    dialog.getControl("median").addItemListener(_RadioListener(dialog))
     dialog.getControl("value_choice").addItemListener(_RadioListener(dialog))
     return dialog
 

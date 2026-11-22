@@ -2,7 +2,11 @@
 
 One line per series through the category slots, with point markers, a value label at every point
 and the series name right of its last point. An empty value splits a series into several lines, so
-the primitive structure depends on the data and the format only, never on the size.
+the primitive structure depends on the data and the format only, never on the size. With
+``interpolate`` an empty value is bridged linearly between its neighbouring known points instead:
+the series stays one polyline, the bridged points get no marker and no label, and leading or
+trailing gaps are never extrapolated. Interpolation changes only coordinates, never which
+primitives exist for a given data set, so the structure still never depends on the size.
 
 As in the column layout, a value axis is optional; arrows (difference, CAGR) run in lanes above the
 plot, level arrows and value lines in lanes right of it. An axis break shortens the value scale.
@@ -10,8 +14,10 @@ plot, level arrows and value lines in lanes right of it. An axis break shortens 
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from itertools import pairwise
+from typing import cast
 
 from librecharts.core import annotations as notes
 from librecharts.core import trend as trends_module
@@ -81,11 +87,12 @@ def layout_line(
     length_per_unit: float | None = None,
     errors: tuple[tuple[float | None, ...], ...] | None = None,
     trends: tuple[Trend, ...] = (),
+    interpolate: bool = False,
 ) -> tuple[Primitive, ...]:
     """Lay out ``data`` into a ``width`` x ``height`` box.
 
     With ``errors`` every point gets a whisker with caps at value ± ``errors[i][c]``; the scale
-    covers value ± error as well.
+    covers value ± error as well. With ``interpolate`` empty values are bridged linearly (M32).
 
     ``length_per_unit`` (same-scale group, ADR 0017) draws one value unit as that many 1/100 mm and
     anchors the scale at the plot bottom; an axis break is then ignored.
@@ -151,18 +158,20 @@ def layout_line(
 
     above: dict[int, list[tuple[float, int, str]]] = {}
     for index, series in enumerate(data.series):
+        drawn = _interpolated(series.values) if interpolate else series.values
         points = [
             (plot.plot_left + (c + 0.5) * slot, y(fold(v)))
-            for c, v in enumerate(series.values)
+            for c, v in enumerate(drawn)
             if v is not None
         ]
-        categories = [c for c, v in enumerate(series.values) if v is not None]
-        for run in point_runs(points, series.values):
+        for run in point_runs(points, drawn):
             out.append(Polyline(tuple(run), index))
+        real = [(c, v) for c, v in enumerate(series.values) if v is not None]
         if fmt.markers:
+            # only real points get a marker, never a bridged gap (M32)
             out.extend(
-                Marker(x, py, index, category=c)
-                for (x, py), c in zip(points, categories, strict=True)
+                Marker(plot.plot_left + (c + 0.5) * slot, y(fold(v)), index, category=c)
+                for c, v in real
             )
         for c, value in enumerate(series.values):
             if value is None:
@@ -462,6 +471,22 @@ def _series_names(data: ChartData, y: _YScale, fold: _YScale, band_x: float) -> 
         )
         for top, (_, name) in zip(tops, labelled, strict=True)
     ]
+
+
+def _interpolated(values: Sequence[float | None]) -> list[float | None]:
+    """``values`` with every interior gap filled linearly between its known neighbours (M32).
+
+    Leading and trailing gaps stay empty: the line is never extrapolated. The result drives only
+    the polyline's points; markers, labels, error bars and trendlines keep the real values.
+    """
+    filled = list(values)
+    known = [c for c, value in enumerate(values) if value is not None]
+    for left, right in pairwise(known):
+        if right > left + 1:
+            start, end = cast("float", values[left]), cast("float", values[right])
+            for c in range(left + 1, right):
+                filled[c] = start + (end - start) * (c - left) / (right - left)
+    return filled
 
 
 def _same(value: float) -> float:

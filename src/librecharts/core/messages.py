@@ -282,6 +282,14 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "No error bars",
         "de": "Keine Fehlerbalken",
     },
+    "menu_interpolate": {
+        "en": "Interpolate missing values",
+        "de": "Fehlende Werte interpolieren",
+    },
+    "menu_no_interpolate": {
+        "en": "No interpolation",
+        "de": "Keine Interpolation",
+    },
     "menu_waterfall_vertical": {
         "en": "Vertical",
         "de": "Vertikal",
@@ -386,6 +394,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "average",
         "de": "Durchschnitt",
     },
+    "menu_value_line_median": {
+        "en": "median",
+        "de": "Median",
+    },
     "menu_change_value_line": {
         "en": "Change value line...",
         "de": "Wertlinie ändern...",
@@ -461,6 +473,10 @@ MESSAGES: dict[str, dict[str, str]] = {
     "value_line_average": {
         "en": "Average",
         "de": "Durchschnitt",
+    },
+    "value_line_median": {
+        "en": "Median",
+        "de": "Median",
     },
     "value_line_value": {
         "en": "Value:",

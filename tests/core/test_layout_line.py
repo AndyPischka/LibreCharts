@@ -70,6 +70,70 @@ def test_a_gap_splits_the_line_and_drops_its_marker_and_label() -> None:
     ]
 
 
+def test_interpolation_bridges_a_gap_with_one_line_and_no_marker_or_label_there() -> None:
+    chart = data(("S", (1.0, None, 3.0, 4.0)), categories=("A", "B", "C", "D"))
+    bridged = layout_line(chart, 4000, 10000, interpolate=True)
+    lines = [p for p in bridged if isinstance(p, Polyline)]
+    assert [len(p.points) for p in lines] == [4]  # one continuous line
+    # the bridged point sits half way between its neighbours
+    assert lines[0].points[1][1] == pytest.approx(
+        (lines[0].points[0][1] + lines[0].points[2][1]) / 2
+    )
+    assert lines[0].points[1][0] == pytest.approx(
+        (lines[0].points[0][0] + lines[0].points[2][0]) / 2
+    )
+    assert len([p for p in bridged if isinstance(p, Marker)]) == 3  # no marker at the gap
+    assert [p.text for p in bridged if isinstance(p, Text) and p.role == "value"] == ["1", "3", "4"]
+
+
+def test_interpolation_bridges_a_multi_point_gap_linearly() -> None:
+    chart = data(("S", (0.0, None, None, 6.0)), categories=("A", "B", "C", "D"))
+    lines = [
+        p for p in layout_line(chart, 4000, 10000, interpolate=True) if isinstance(p, Polyline)
+    ]
+    assert len(lines) == 1
+    ys = [point[1] for point in lines[0].points]
+    assert ys[1] - ys[0] == pytest.approx(ys[2] - ys[1]) == pytest.approx(ys[3] - ys[2])
+
+
+def test_interpolation_never_extrapolates_the_ends() -> None:
+    chart = data(("S", (None, 2.0, 4.0, None)), categories=("A", "B", "C", "D"))
+    primitives = layout_line(chart, 4000, 10000, interpolate=True)
+    lines = [p for p in primitives if isinstance(p, Polyline)]
+    assert [len(p.points) for p in lines] == [2]  # one run over B and C only
+    assert len([p for p in primitives if isinstance(p, Marker)]) == 2
+    assert [p.text for p in primitives if isinstance(p, Text) and p.role == "value"] == ["2", "4"]
+
+
+def test_a_series_of_only_gaps_draws_nothing_even_with_interpolation() -> None:
+    chart = data(("S", (None, None)), ("T", (1.0, 2.0)), categories=("A", "B"))
+    lines = [
+        p for p in layout_line(chart, 2000, 10000, interpolate=True) if isinstance(p, Polyline)
+    ]
+    assert len(lines) == 1  # only T's line
+
+
+def test_interpolation_keeps_the_structure_independent_of_the_size() -> None:
+    chart = data(
+        ("S", (1.0, None, 3.0, 4.0)),
+        ("T", (None, 5.0, None, 2.0)),
+        categories=("A", "B", "C", "D"),
+    )
+
+    def shape(width: float, height: float, interpolate: bool) -> list[tuple[str, str]]:
+        return [
+            (type(p).__name__, getattr(p, "role", ""))
+            for p in layout_line(chart, width, height, interpolate=interpolate)
+        ]
+
+    for interpolate in (False, True):
+        assert (
+            shape(20000, 6000, interpolate)
+            == shape(60000, 30000, interpolate)
+            == shape(20000, 4500, interpolate)
+        )
+
+
 def test_markers_can_be_switched_off() -> None:
     chart = data(("S", (10.0, 20.0)), categories=("A", "B"))
     primitives = layout_line(chart, 2000, 10000, fmt=Format(markers=False))

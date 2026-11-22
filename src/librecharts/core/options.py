@@ -6,9 +6,10 @@ value (a butterfly chart sorts too, a Gantt chart by start date, a pie chart its
 chart switches between pie and doughnut. Area charts switch between stacked and 100 %. A
 Marimekko chart switches between percent and units. A waterfall chart switches between vertical
 and horizontal and between a single and a stacked running total. A line chart switches error bars
-on and off. On a column chart, single series can be drawn as lines, optionally on a secondary
-axis. A Gantt chart switches between all days and Monday to Friday as its working days (M17); the
-dialog behind *Custom...* sets other weekdays and holidays.
+on and off and bridges empty values with straight lines instead of gaps (M32). On a column chart,
+single series can be drawn as lines, optionally on a secondary axis. A Gantt chart switches between
+all days and Monday to Friday as its working days (M17); the dialog behind *Custom...* sets other
+weekdays and holidays.
 
 Switching the layout variant clears the labels the user moved; sorting and colours keep them.
 
@@ -65,6 +66,8 @@ def variants(state: ChartState) -> tuple[Switch, ...]:
         return (
             Switch("menu_error_bars", "ChangeChart?errors=true", state.errors),
             Switch("menu_no_error_bars", "ChangeChart?errors=false", not state.errors),
+            Switch("menu_interpolate", "ChangeChart?interpolate=true", state.interpolate),
+            Switch("menu_no_interpolate", "ChangeChart?interpolate=false", not state.interpolate),
         )
     if state.kind == "dumbbell":
         return (
@@ -214,7 +217,7 @@ def changed(state: ChartState, query: str) -> ChartState:
         return _variant(state, _doughnut(state, value))
     if key == "pareto":
         return _variant(state, _pareto(state, value))
-    if key in ("range", "errors", "horizontal", "stacked"):
+    if key in ("range", "errors", "horizontal", "stacked", "interpolate"):
         return _flag(state, key, value)
     if key == "working":
         return _working(state, value)
@@ -306,12 +309,13 @@ def _flag(state: ChartState, key: str, value: str) -> ChartState:
         "errors": ("column", "bar", "line"),
         "horizontal": ("waterfall", "dumbbell"),
         "stacked": ("waterfall",),
+        "interpolate": ("line",),
     }
     if state.kind not in allowed[key]:
         raise ValueError(f"a {state.kind} chart has no {key} option")
     after = replace(state, **{key: enabled})  # type: ignore[arg-type]
-    if key == "errors":
-        return after  # error bars do not move the labels
+    if key in ("errors", "interpolate"):
+        return after  # they add or bridge points but never move the labels
     return _variant(state, after)
 
 

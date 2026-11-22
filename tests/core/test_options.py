@@ -81,12 +81,33 @@ def test_a_waterfall_offers_horizontal_and_stacked() -> None:
     assert variants(stacked)[3].current
 
 
-def test_a_line_chart_offers_error_bars() -> None:
+def test_a_line_chart_offers_error_bars_and_interpolation() -> None:
     assert variants(sample_line_state()) == (
         Switch("menu_error_bars", "ChangeChart?errors=true", False),
         Switch("menu_no_error_bars", "ChangeChart?errors=false", True),
+        Switch("menu_interpolate", "ChangeChart?interpolate=true", False),
+        Switch("menu_no_interpolate", "ChangeChart?interpolate=false", True),
     )
     assert variants(changed(sample_line_state(), "errors=true"))[0].current
+    interpolated = changed(sample_line_state(), "interpolate=true")
+    assert interpolated.interpolate
+    assert variants(interpolated)[2].current
+    assert not variants(interpolated)[3].current
+
+
+def test_only_a_line_chart_can_interpolate() -> None:
+    with pytest.raises(ValueError, match="no interpolate option"):
+        changed(sample_state(), "interpolate=true")
+    with pytest.raises(ValueError, match="interpolate must be true or false"):
+        changed(sample_line_state(), "interpolate=maybe")
+
+
+def test_interpolation_keeps_the_moved_labels() -> None:
+    # bridging gaps adds points to the polyline but never moves a label, like error bars
+    moved = replace(
+        sample_line_state(), labels=(LabelOffset(LabelKey("value", 0, 0), 100.0, 50.0),)
+    )
+    assert changed(moved, "interpolate=true").labels == moved.labels
 
 
 def test_a_100_percent_chart_offers_no_floating_or_error_bars() -> None:

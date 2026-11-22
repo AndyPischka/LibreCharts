@@ -95,7 +95,7 @@ order. Each milestone has a draft plan in `docs/plans/` and starts after the pre
 
 | | Milestone | Content | Status |
 |---|---|---|---|
-| M32 | Quick wins | Median value lines; linear interpolation of missing values in line charts | [plan](docs/plans/median-value-line-and-line-interpolation.md) |
+| M32 | Quick wins | Median value lines; linear interpolation of missing values in line charts | done |
 | M33 | Linked text fields | Link an Impress text shape to a spreadsheet cell; update with all links | [plan](docs/plans/linked-text-fields.md) |
 | M34 | Mekko "Other" | Combine small segments into an *Other* series below a threshold | [plan](docs/plans/mekko-other-segment.md) |
 | M35 | Chart variants | Gauge/break-out/concentric pies, scatter partitions, candlestick | [plan](docs/plans/chart-variants-gauge-scatter-candlestick.md) |

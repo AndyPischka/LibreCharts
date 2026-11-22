@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Literal, get_args
 
-SCHEMA_VERSION = 21
+SCHEMA_VERSION = 22
 
 ChartKind = Literal[
     "column",
@@ -40,6 +40,7 @@ AxisScale = Literal["linear", "log"]
 Magnitude = Literal[0, 3, 6, 9]
 Separator = Literal[".", ","]
 LabelRole = Literal["value", "total"]
+ValueLineMode = Literal["average", "median"]
 
 AXIS_ANNOTATIONS = frozenset({"axis_break", "value_line"})
 
@@ -161,7 +162,9 @@ class Annotation:
     An axis break and a value line belong to the whole axis, not to a category (``start == end ==
     0`` by convention). ``lower`` and ``upper`` are the values an axis break removes from the
     scale; both ``None`` means automatic (see ``core/axis_break.py``). A value line's ``value`` is
-    the horizontal/vertical level it marks; ``None`` means the average (see ``core/value_line.py``).
+    the horizontal/vertical level it marks; ``None`` means a statistic of the measured data: the
+    average by default, the median with ``value_line_mode="median"`` (M32, see
+    ``core/value_line.py``).
 
     A ``category_gap`` opens between the adjacent categories ``start`` and ``end``
     (``end == start + 1``); it is drawn only while they stay adjacent in display order. A
@@ -180,6 +183,7 @@ class Annotation:
     value: float | None = None
     series_end: int | None = None
     text: str = ""
+    value_line_mode: ValueLineMode | None = None  # only a value line; None means the average
 
     def __post_init__(self) -> None:
         if self.kind not in get_args(AnnotationKind):
@@ -233,6 +237,13 @@ class Annotation:
                 raise ValueError("only a value line has a value")
             if not math.isfinite(self.value):
                 raise ValueError("the value of a value line must be finite")
+        if self.value_line_mode is not None:
+            if self.value_line_mode not in get_args(ValueLineMode):
+                raise ValueError(f"unknown value line mode: {self.value_line_mode!r}")
+            if self.kind != "value_line":
+                raise ValueError("only a value line has a mode")
+            if self.value_line_mode == "average":
+                object.__setattr__(self, "value_line_mode", None)  # the default, not stored
         if self.text and self.kind != "group_bracket":
             raise ValueError("only a group bracket has a text")
         if len(self.text) > 80:
@@ -499,6 +510,9 @@ class ChartState:
     magnitude. Neither combines with a 100 % chart or with the other. ``horizontal`` turns a
     waterfall chart on its side and ``stacked`` stacks the step rows of several series in one column
     per category; both are waterfall only.
+
+    ``interpolate`` bridges empty values of a line chart with a straight line instead of splitting
+    the series into several lines (M32); it has no meaning for the other chart kinds.
     """
 
     kind: ChartKind
@@ -528,6 +542,7 @@ class ChartState:
     pareto: bool = False
     table: TableSpec | None = None
     matrix: MatrixSpec | None = None
+    interpolate: bool = False
     version: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -620,6 +635,10 @@ class ChartState:
                 raise ValueError("a Pareto chart cannot be stacked, floating or combined")
             if self.cells and len(self.cells) > 2:
                 raise ValueError("a Pareto chart has exactly one series")
+        if not isinstance(self.interpolate, bool):  # pyright: ignore
+            raise ValueError("interpolate must be true or false")
+        if self.interpolate and self.kind != "line":
+            raise ValueError("only a line chart can interpolate missing values")
         if self.table is not None and self.kind != "table":
             raise ValueError("only a table chart has table options")
         if self.matrix is not None and self.kind != "matrix":

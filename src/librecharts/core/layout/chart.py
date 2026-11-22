@@ -159,6 +159,7 @@ def _layout(
             length_per_unit,
             errors=errors,
             trends=state.trends,
+            interpolate=state.interpolate,
         )
     if state.kind == "area":
         return layout_area(

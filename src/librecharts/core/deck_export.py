@@ -29,7 +29,16 @@ def state_to_entry(placeholder: str, state: ChartState) -> dict[str, object]:
             "patterns": state.format.patterns,
         },
     }
-    for flag in ("percent", "doughnut", "range", "errors", "horizontal", "stacked", "pareto"):
+    for flag in (
+        "percent",
+        "doughnut",
+        "range",
+        "errors",
+        "horizontal",
+        "stacked",
+        "pareto",
+        "interpolate",
+    ):
         if getattr(state, flag):
             entry[flag] = True
     if state.sort != "none":

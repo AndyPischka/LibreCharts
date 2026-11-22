@@ -27,6 +27,7 @@ from librecharts.core.model import (
     Note,
     TableSpec,
     Trend,
+    ValueLineMode,
 )
 
 _Raw = dict[str, Any]
@@ -211,6 +212,18 @@ def _v20_to_v21(raw: _Raw) -> _Raw:
     return raw
 
 
+def _v21_to_v22(raw: _Raw) -> _Raw:
+    """Version 22 added the median mode of value lines and line interpolation (M32).
+
+    No existing value line shows the median and no existing line chart interpolates, so the mode
+    stays null and the flag false.
+    """
+    annotations: list[Any] = []
+    for annotation in _as_list(raw.get("annotations", [])):
+        annotations.append({**_as_object(annotation), "value_line_mode": None})
+    return {**raw, "annotations": annotations, "interpolate": False}
+
+
 # Maps a schema version to the function that upgrades its raw JSON object to the next version.
 _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     1: _v1_to_v2,
@@ -233,6 +246,7 @@ _MIGRATIONS: dict[int, Callable[[_Raw], _Raw]] = {
     18: _v18_to_v19,
     19: _v19_to_v20,
     20: _v20_to_v21,
+    21: _v21_to_v22,
 }
 
 
@@ -271,6 +285,7 @@ def to_json(state: ChartState) -> str:
             "pareto": state.pareto,
             "table": None if state.table is None else _table_to_raw(state.table),
             "matrix": None if state.matrix is None else _matrix_to_raw(state.matrix),
+            "interpolate": state.interpolate,
         },
         separators=(",", ":"),
         ensure_ascii=False,
@@ -314,6 +329,7 @@ def from_json(text: str) -> ChartState:
             pareto=_as_flag(_get(raw, "pareto"), "pareto"),
             table=_as_table(_get(raw, "table")),
             matrix=_as_matrix(_get(raw, "matrix")),
+            interpolate=_as_flag(_get(raw, "interpolate"), "interpolate"),
             version=raw["v"],
         )
     except ValueError as exc:
@@ -333,6 +349,7 @@ def _annotation_to_raw(annotation: Annotation) -> _Raw:
         "value": annotation.value,
         "series_end": annotation.series_end,
         "text": annotation.text,
+        "value_line_mode": annotation.value_line_mode,
     }
 
 
@@ -506,6 +523,7 @@ def _as_list(value: object) -> list[object]:
 def _as_annotation(value: object) -> Annotation:
     raw = _as_object(value)
     series, series_end = _get(raw, "series"), _get(raw, "series_end")
+    mode = _get(raw, "value_line_mode")
     return Annotation(
         kind=_get(raw, "kind"),
         start=_as_index(_get(raw, "start")),
@@ -518,6 +536,9 @@ def _as_annotation(value: object) -> Annotation:
         value=_as_number(_get(raw, "value")),
         series_end=None if series_end is None else _as_index(series_end),
         text=_as_text(_get(raw, "text"), "the bracket label"),
+        value_line_mode=None
+        if mode is None
+        else cast("ValueLineMode", _as_text(mode, "the value line mode")),
     )
 
 

@@ -67,6 +67,19 @@ def test_a_column_chart_offers_its_variants_and_the_sort_cycle() -> None:
     ]
 
 
+def test_a_line_chart_offers_error_bars_and_interpolation() -> None:
+    line = state_from_table("line", "stacked", [[None, "2024"], ["Sales", 1]])
+    panel = content(line, True, "en-US")
+    assert [b.command for b in panel.options] == [
+        PROTOCOL + "ChangeChart?errors=true",
+        PROTOCOL + "ChangeChart?errors=false",
+        PROTOCOL + "ChangeChart?interpolate=true",
+        PROTOCOL + "ChangeChart?interpolate=false",
+    ]
+    # the current variants are shown but disabled
+    assert [b.enabled for b in panel.options] == [True, False, True, False]
+
+
 def test_a_100_percent_chart_says_so_and_disables_the_100_percent_button() -> None:
     panel = content(replace(sample_state(), percent=True), True, "en-US")
     assert panel.status.startswith("Column chart (100 %), ")

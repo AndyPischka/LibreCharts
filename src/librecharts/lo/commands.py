@@ -904,7 +904,7 @@ def number_format(ctx: Any, frame: Any) -> None:
 
 
 def value_line(ctx: Any, frame: Any) -> None:
-    """Ask for a value line (a target or the average) and add it; one undo step."""
+    """Ask for a value line (a target, the average or the median) and add it; one undo step."""
     found = _annotatable_chart(ctx, frame, "value_line")
     if found is not None:
         group, state = found

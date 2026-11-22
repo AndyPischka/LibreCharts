@@ -66,7 +66,9 @@ Charts are drawn as native shapes and fed from a Calc data sheet.
    them on a secondary axis (*Series as lines*).
    The chart's context menu and the sidebar have a *Format* section: show or hide the value axis and
    gridlines, switch between series labels, a legend or no names, hide the point markers of a line,
-   and set the number format. *Add value line...* draws a target or the average across the plot.
+   and set the number format. *Add value line...* draws a target, the average or the median across
+   the plot. A line chart can *Interpolate missing values*: empty cells are bridged with a straight
+   line instead of splitting the series (the bridged points get no marker and no label).
    The context menu's *Series colour* submenu gives a series another palette colour. The sidebar's
    *Document* section switches the document-wide colour scheme (*Default*, *Grey*, *High contrast*)
    or loads/saves a scheme file. Select several charts and choose *Use the same scale* to compare
@@ -132,9 +134,10 @@ A corporate design file is a colour-scheme file with an optional `check` object:
 ```
 
 Every chart option works as a field: `grouping`, `percent`, `sort`, `doughnut`, `range`, `errors`,
-`horizontal`, `stacked`, `lines`, `secondary`, `colors`, `format`, `calendar`. A chart without a
-placeholder stops the build before anything is written; a placeholder without a chart stays and is
-reported.
+`horizontal`, `stacked`, `lines`, `secondary`, `colors`, `format`, `calendar`, `interpolate`. A chart
+without a placeholder stops the build before anything is written; a placeholder without a chart
+stays and is reported. Annotations are added through the command
+`org.librecharts:AddAnnotation?kind=value_line&mode=median` (the mode is `average` by default).
 
 From a Python script inside LibreOffice, `librecharts.api` offers `build_deck(...)`,
 `update_links(ctx, doc)`, `insert_chart(ctx, doc, slide, spec_json)` and

@@ -1,5 +1,6 @@
 from dataclasses import replace
 
+from librecharts.core import annotations as notes
 from librecharts.core import style
 from librecharts.core.datasheet import (
     sample_gantt_state,
@@ -9,7 +10,7 @@ from librecharts.core.datasheet import (
     sample_waterfall_state,
     state_from_table,
 )
-from librecharts.core.menu import PROTOCOL, SEPARATOR, MenuItem, chart_menu
+from librecharts.core.menu import PROTOCOL, SEPARATOR, MenuItem, annotation_title, chart_menu
 from librecharts.core.model import Annotation, Format, LabelKey, LabelOffset, Link
 
 FORMAT_STATE = Format(axis=True, gridlines=True, series_names="labels")
@@ -484,6 +485,27 @@ def test_menu_is_translated() -> None:
     assert "Differenz 2023 → 2024" in titles
     assert "Kategorien sortieren" in titles
     assert "Format" in titles
+
+
+def test_a_value_line_is_named_after_its_value_or_statistic() -> None:
+    data = notes.measured(sample_state())
+    assert annotation_title(Annotation("value_line", 0, 0, value=42.0), data, "en-US") == (
+        "Value line (42)"
+    )
+    assert annotation_title(Annotation("value_line", 0, 0), data, "en-US") == "Value line (average)"
+    median = Annotation("value_line", 0, 0, value_line_mode="median")
+    assert annotation_title(median, data, "en-US") == "Value line (median)"
+    assert annotation_title(median, data, "de-DE") == "Wertlinie (Median)"
+
+
+def test_a_line_chart_menu_offers_interpolation() -> None:
+    line = state_from_table("line", "stacked", [[None, "2024"], ["Sales", 10]])
+    titles = [item.title for item in chart_menu(line, "en-US").children]
+    assert "Interpolate missing values" in titles  # the current variant (gaps) is not shown
+    bridged = replace(line, interpolate=True)
+    bridged_titles = [item.title for item in chart_menu(bridged, "en-US").children]
+    assert "No interpolation" in bridged_titles
+    assert "Interpolate missing values" not in bridged_titles
 
 
 def test_the_line_submenu_toggles_each_series_and_its_axis() -> None:

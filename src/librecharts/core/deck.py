@@ -61,9 +61,19 @@ _CHART_KEYS = frozenset(
         "colors",
         "format",
         "calendar",
+        "interpolate",
     }
 )
-_FLAGS = ("percent", "doughnut", "range", "errors", "horizontal", "stacked", "pareto")
+_FLAGS = (
+    "percent",
+    "doughnut",
+    "range",
+    "errors",
+    "horizontal",
+    "stacked",
+    "pareto",
+    "interpolate",
+)
 _INDICES = ("lines", "secondary")
 _CALENDAR_KEYS = frozenset({"working_days", "holidays"})
 

@@ -11,6 +11,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ### Added
 - An *Inverted pyramid* button in the sidebar, next to the upright pyramid.
+- **Quick wins** (M32): the value-line dialog offers a *Median* line beside *Average* and a manual
+  value, and a line chart can *Interpolate missing values* (one undo step, also in the sidebar and
+  as `"interpolate": true` in a deck specification) instead of splitting its series at empty cells.
+  Bridged points get no marker and no label; the ends of a series are never extrapolated.
 
 ### Fixed
 - In a vertical dumbbell chart, the label of the lower point now sits below that point instead of

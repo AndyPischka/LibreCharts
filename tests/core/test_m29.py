@@ -28,3 +28,15 @@ def test_a_deck_specification_round_trips_through_the_parser() -> None:
     assert parsed["version"] == 1
     assert parsed["charts"][0]["placeholder"] == "revenue"
     assert parse(text).charts[0].state.cells == state.cells
+
+
+def test_interpolation_is_exported_and_read_back() -> None:
+    from dataclasses import replace
+
+    from librecharts.core.datasheet import sample_line_state
+    from librecharts.core.deck import parse
+
+    state = replace(sample_line_state(), interpolate=True)
+    text = deck_export.to_json([("trend", state)])
+    assert json.loads(text)["charts"][0]["interpolate"] is True
+    assert parse(text).charts[0].state.interpolate is True
