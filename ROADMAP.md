@@ -88,7 +88,22 @@ through Weblate (ADR 0031).
 | M29 | Automation round-trip and audit | Export an existing deck as a deck specification; audit a deck (charts, links, stale sources, design deviations, support data) with jump-to-slide; batch format and data operations | done |
 | M30 | Design and accessibility | Extend the corporate design check to master slides, layouts and pictures; a report dialog; theme colours and fonts; colour-blindness simulation; alternative text for every element; a palette editor | done |
 
+### 8.0: closing the think-cell gaps
+
+Open items of [docs/thinkcell-feature-list.md](docs/thinkcell-feature-list.md), in the agreed
+order. Each milestone has a draft plan in `docs/plans/` and starts after the previous one ships.
+
+| | Milestone | Content | Status |
+|---|---|---|---|
+| M32 | Quick wins | Median value lines; linear interpolation of missing values in line charts | [plan](docs/plans/median-value-line-and-line-interpolation.md) |
+| M33 | Linked text fields | Link an Impress text shape to a spreadsheet cell; update with all links | [plan](docs/plans/linked-text-fields.md) |
+| M34 | Mekko "Other" | Combine small segments into an *Other* series below a threshold | [plan](docs/plans/mekko-other-segment.md) |
+| M35 | Chart variants | Gauge/break-out/concentric pies, scatter partitions, candlestick | [plan](docs/plans/chart-variants-gauge-scatter-candlestick.md) |
+
 ### Research
+
+The full think-cell feature list with per-feature status and complexity estimates lives in
+[docs/thinkcell-feature-list.md](docs/thinkcell-feature-list.md); open items there are the backlog.
 
 | | Topic | Content | Status |
 |---|---|---|---|
