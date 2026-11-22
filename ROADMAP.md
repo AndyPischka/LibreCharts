@@ -80,10 +80,6 @@ through Weblate (ADR 0031).
 | M26 | Layout tools | Distribute shapes evenly, equal gaps, align edges and to the slide; process, pyramid and chevron graphics; a built-in icon set | done |
 | M27 | Chart templates | Save a chart's kind, options, format, colours, annotations and sample data as a template; insert it from the sidebar or the command line | done |
 
-Plans: [M22](docs/plans/labels-and-emphasis.md), [M23](docs/plans/axes-and-trends.md),
-[M24](docs/plans/comparison-charts.md), [M25](docs/plans/table-and-matrix.md),
-[M26](docs/plans/layout-tools.md), [M27](docs/plans/chart-templates.md).
-
 ### 7.0: data, automation and governance
 
 | | Milestone | Content | Status |
@@ -91,9 +87,6 @@ Plans: [M22](docs/plans/labels-and-emphasis.md), [M23](docs/plans/axes-and-trend
 | M28 | Data workflow | Import CSV, ODS or XLSX into any data sheet; insert a chart from copied cells; update data links on open; one shared source for several charts | done |
 | M29 | Automation round-trip and audit | Export an existing deck as a deck specification; audit a deck (charts, links, stale sources, design deviations, support data) with jump-to-slide; batch format and data operations | done |
 | M30 | Design and accessibility | Extend the corporate design check to master slides, layouts and pictures; a report dialog; theme colours and fonts; colour-blindness simulation; alternative text for every element; a palette editor | done |
-
-Plans: [M28](docs/plans/data-workflow.md), [M29](docs/plans/automation-roundtrip.md),
-[M30](docs/plans/design-and-accessibility.md).
 
 ### Research
 
