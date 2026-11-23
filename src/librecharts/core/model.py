@@ -628,6 +628,11 @@ class ChartState:
             raise ValueError(f"a {self.kind} chart has no trendlines")
         if self.trends and self.percent:
             raise ValueError("a 100 % chart has no trendlines")
+        if self.kind == "gantt" and any(
+            a.kind == "value_line" and a.value_line_mode is not None for a in self.annotations
+        ):
+            # date lines stay manual/average, a median of dates would be meaningless
+            raise ValueError("a Gantt date line has no median mode")
         if self.pareto:
             if self.kind not in ("column", "bar"):
                 raise ValueError("only a column or bar chart can be a Pareto chart")

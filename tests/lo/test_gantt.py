@@ -263,6 +263,29 @@ def test_a_date_line_and_a_today_line_are_one_undo_step_each(ctx):
         doc.close(True)
 
 
+def test_a_date_line_refuses_the_median_mode(ctx):
+    doc = new_impress(ctx)
+    try:
+        dispatch(ctx, doc, INSERT)
+        _, chart_id = store.find_charts(first_page(doc))[0]
+        dispatch(ctx, doc, DATE_LINE.format(value=serial(datetime.date(2026, 3, 16))))
+        day = serial(datetime.date(2026, 3, 16))
+        assert [a.value for a in _state(doc, chart_id).annotations] == [day]
+        manager = doc.getUndoManager()
+        depth = len(manager.getAllUndoActionTitles())
+
+        # the automation API cannot give a date line a median mode; nothing changes, no undo step
+        dispatch(ctx, doc, "org.librecharts:AddAnnotation?kind=value_line&mode=median")
+        dispatch(ctx, doc, "org.librecharts:ChangeAnnotation?index=0&mode=median")
+        annotations = _state(doc, chart_id).annotations
+        assert len(annotations) == 1
+        assert annotations[0].value == day
+        assert annotations[0].value_line_mode is None
+        assert len(manager.getAllUndoActionTitles()) == depth
+    finally:
+        doc.close(True)
+
+
 def test_working_days_are_set_in_one_undo_step_and_survive_reload(ctx):
     doc = new_impress(ctx)
     try:

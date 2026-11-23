@@ -496,6 +496,9 @@ def test_a_value_line_is_named_after_its_value_or_statistic() -> None:
     median = Annotation("value_line", 0, 0, value_line_mode="median")
     assert annotation_title(median, data, "en-US") == "Value line (median)"
     assert annotation_title(median, data, "de-DE") == "Wertlinie (Median)"
+    # an explicit value wins over the mode, as in value_line.resolved()
+    both = Annotation("value_line", 0, 0, value=42.0, value_line_mode="median")
+    assert annotation_title(both, data, "en-US") == "Value line (42)"
 
 
 def test_a_line_chart_menu_offers_interpolation() -> None:

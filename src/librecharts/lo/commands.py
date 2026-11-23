@@ -634,9 +634,14 @@ def add_annotation(ctx: Any, frame: Any, query: str) -> None:
     chart; one undo step. Used by tests and scripts; users pick columns instead."""
     annotation = annotations.from_query(query)
     found = _annotatable_chart(ctx, frame, annotation.kind)
-    if found is not None:
-        group, _ = found
+    if found is None:
+        return
+    group, _ = found
+    try:
         chart.add_annotation(frame.getController().getModel(), group, annotation)
+    except ValueError:
+        # the chart state rejects the annotation (e.g. a median mode on a Gantt date line)
+        ui.show_info(ctx, frame, text("annotation_unsupported", ui.ui_locale(ctx)))
 
 
 def pick_annotation(ctx: Any, frame: Any, query: str) -> None:
@@ -1012,10 +1017,17 @@ Update = Callable[[tuple[Annotation, ...]], tuple[Annotation, ...]]
 
 def _update_annotations(ctx: Any, frame: Any, update: Update) -> None:
     found = _annotatable_chart(ctx, frame, None)
-    if found is not None:
-        group, state = found
-        doc = frame.getController().getModel()
-        chart.redraw(doc, group, replace(state, annotations=update(state.annotations)))
+    if found is None:
+        return
+    group, state = found
+    doc = frame.getController().getModel()
+    try:
+        changed_state = replace(state, annotations=update(state.annotations))
+    except ValueError:
+        # a bad index or a state the chart kind rejects (e.g. a median mode on a Gantt date line)
+        ui.show_info(ctx, frame, text("annotation_unsupported", ui.ui_locale(ctx)))
+        return
+    chart.redraw(doc, group, changed_state)
 
 
 def same_scale(ctx: Any, frame: Any) -> None:

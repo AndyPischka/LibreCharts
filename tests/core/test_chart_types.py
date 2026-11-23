@@ -8,6 +8,7 @@ from librecharts.core import annotations as notes
 from librecharts.core import samescale, value_line
 from librecharts.core.datasheet import (
     sample_butterfly_state,
+    sample_gantt_state,
     sample_line_state,
     sample_pie_state,
     sample_scatter_state,
@@ -92,6 +93,22 @@ def test_butterfly_and_pie_charts_can_be_sorted_but_a_scatter_chart_cannot() -> 
 def test_the_new_kinds_have_no_100_percent_variant(state: ChartState) -> None:
     with pytest.raises(ValueError, match="percent"):
         replace(state, percent=True)
+
+
+def test_interpolation_is_a_line_chart_option_only() -> None:
+    assert replace(sample_line_state(), interpolate=True).interpolate
+    with pytest.raises(ValueError, match="interpolate"):
+        replace(sample_state(), interpolate=True)
+
+
+def test_a_gantt_date_line_has_no_median_mode() -> None:
+    median = Annotation("value_line", 0, 0, value_line_mode="median")
+    gantt = sample_gantt_state()
+    # a plain date line is fine, other chart kinds accept the median
+    assert replace(gantt, annotations=(Annotation("value_line", 0, 0),)).annotations
+    assert replace(sample_state(), annotations=(median,)).annotations == (median,)
+    with pytest.raises(ValueError, match="date line"):
+        replace(gantt, annotations=(median,))
 
 
 # --- options -----------------------------------------------------------------------------------

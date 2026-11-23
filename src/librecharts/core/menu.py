@@ -469,12 +469,13 @@ def annotation_title(
         )
         return text("menu_date_line", locale, value=value)
     if annotation.kind == "value_line":
-        if annotation.value_line_mode == "median":
-            value = text("menu_value_line_median", locale)
-        elif annotation.value is None:
-            value = text("menu_value_line_average", locale)
-        else:
+        # the same priority as value_line.resolved(): an explicit value wins over the statistic
+        if annotation.value is not None:
             value = format_value(annotation.value, fmt)
+        elif annotation.value_line_mode == "median":
+            value = text("menu_value_line_median", locale)
+        else:
+            value = text("menu_value_line_average", locale)
         return text("menu_value_line", locale, value=value)
     if annotation.kind == "category_gap":
         return text(
